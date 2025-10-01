@@ -69,13 +69,37 @@ if __name__ == "__main__":
 
     const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
+    function setLanguageUI(lang) {
+	const wrap   = document.getElementById('language-select-wrapper');
+	const select = document.getElementById('language-select');
+	if (!wrap || !select) return false;
+
+	const idx = Array.from(select.options).findIndex(o => o.value === lang);
+	console.log('setLanguageUI -> lang:', lang, 'idx:', idx,
+		    'options:', Array.from(select.options).map(o => o.value));
+
+	if (idx < 0) return false;
+
+	select.selectedIndex = idx;
+
+	const face  = wrap.querySelector('.select-selected');
+	const items = wrap.querySelectorAll('.select-items div');
+	if (face) face.textContent = select.options[idx].text;
+	if (items) items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+
+	return true;
+    }
     function saveCurrentTaskState() {
 	const taskID = window.currentTask;
 	if (!window.taskStates[taskID]) return;
 	
 	// Save Code and Language
 	window.taskStates[taskID].code = window.editor.getValue();
-	
+	const langSelect = document.getElementById('language-select');
+	if (langSelect) {
+		window.taskStates[taskID].language = langSelect.value;
+	}
+
 	// Save Input Pane Content
 	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
 	
@@ -119,50 +143,43 @@ if __name__ == "__main__":
     function loadTaskState(taskID) {
 	const state = window.taskStates[taskID];
 	if (!state) return;
-	
+
 	window.currentTask = taskID;
+	console.log('[loadTaskState] taskID=', taskID);
+	console.log('[loadTaskState] state(language, code len, input len)=',
+		    window.taskStates[taskID]?.language,
+		    window.taskStates[taskID]?.code?.length || 0,
+		    window.taskStates[taskID]?.input?.length || 0
+		   );
+	// (A) Language FIRST
+	if (state.language) setLanguage(state.language, { skipTemplate: true });
 
-	
-	// 1. Load Editor Pane (Code and Language)
-	const langSelect = document.getElementById('language-select');
-	if (langSelect && langSelect.value !== state.language) {
-            
-            langSelect.value = state.language; 
-            
-            // Use the flag to prevent template override in the listener
-            window.__suppressTemplateOnce = true; 
-            
-            // CRITICAL FIX: Dispatch the change event!
-            // This is what triggers the custom select's UI sync listener 
-            // AND the main language-select event listener.
-            langSelect.dispatchEvent(new Event('change', { bubbles: true }));
+	// Update the custom select UI (face + .is-active)
+	const ok = setLanguageUI(state.language);
+	// Make Monaco match; avoid template overwrite this once
+	window.__suppressTemplateOnce = true;
+	const select = document.getElementById('language-select');
+	if (ok && select) {
+	    // Fire change so your existing handlers (including Monaco mode) run
+	    select.dispatchEvent(new Event('change', { bubbles: true }));
 	}
-	
-	// Set the code after the language has been set.
-	window.editor.setValue(state.code); 
 
+	// (B) Then code
+	window.editor.setValue(state.code || "");
 
-	// 2. Load Input Pane
-	const stdinInput = document.getElementById('stdin-input');
-	if (stdinInput) {
-            stdinInput.value = state.input;
-	}
-	
-	// 3. Load Output Pane
+	// Input / Output
+	const stdinInput  = document.getElementById('stdin-input');
 	const stdoutOutput = document.getElementById('stdout-output');
-	if (stdoutOutput) {
-            stdoutOutput.innerHTML = state.output;
-	}
-	
-	// 4. Load Theme State
+	if (stdinInput)   stdinInput.value = state.input  || "";
+	if (stdoutOutput) stdoutOutput.innerHTML = state.output || "";
+
+	// Theme for right panes (unchanged)
 	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
 	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-
 	const shouldBeLight = state.theme === 'light';
-	
 	rtopContainer?.classList.toggle('light-mode', shouldBeLight);
-	rbotContainer?.classList.toggle('light-mode', shouldBeLight); // Fixed: target both
-	
+	rbotContainer?.classList.toggle('light-mode', shouldBeLight);
+
 	console.log(`State loaded for ${taskID}`);
     }
 
@@ -418,6 +435,26 @@ if __name__ == "__main__":
     document.addEventListener('click', closeDropdown);
 })();
 
+// Keep the custom language select UI in sync with the native <select>
+window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
+    console.log("window.syncLanguageSelectorUI")
+  const wrap   = document.getElementById('language-select-wrapper');
+  const select = document.getElementById('language-select');
+  if (!wrap || !select) return;
+    console.log("OK 1");
+  const face  = wrap.querySelector('.select-selected');
+  const items = wrap.querySelectorAll('.select-items div');
+  if (!face) return;
+
+  const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+  face.textContent = select.options[idx]?.text || '';
+
+  if (items && items.length) {
+      console.log("OK 2, length =",items.length);
+      items.forEach((el, i) => {console.log(i,idx,el);el.classList.toggle('is-active', i === idx);});
+  }
+};
+
 // custom select for task
 // --- Custom Select for #language-select ---
 (function initCustomSelectTask() {
@@ -574,18 +611,15 @@ document.addEventListener('DOMContentLoaded', function() {
 		else if (ext === 'java') lang = 'java';
 		else if (ext === 'py') lang = 'python';
 
-		// Sync language select + model, but suppress template injection once
-		if (lang) {
-		    const selectEl = document.getElementById('language-select');
-		    if (selectEl) {
-			window.__suppressTemplateOnce = true;                 // << guard ON (one-shot)
-			selectEl.value = lang;
-			selectEl.dispatchEvent(new Event('change', { bubbles: true })); // updates model + custom face
-		    }
-		}
-
+		// After detecting the uploaded file's language => lang
+		setLanguageUI(lang);                         // DOM sync (face + is-active)
+		window.__suppressTemplateOnce = true;        // prevent template overwrite
+		document.getElementById('language-select')
+		?.dispatchEvent(new Event('change', { bubbles: true }));
+		
 		// Now safely set the uploaded text (template won’t overwrite it)
-		window.editor.setValue(text);
+		window.editor.setValue(text || "" );
+
 	    };
 
 	    reader.readAsText(file);
@@ -598,5 +632,33 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 
+function setLanguage(lang, { skipTemplate = true } = {}) {
+    const selectEl = document.getElementById('language-select');
+    if (!selectEl) return false;
 
+    // Find the option: values are "cpp" | "java" | "python"
+    const idx = Array.from(selectEl.options).findIndex(o => o.value === lang);
+    if (idx < 0) return false;
+
+    if (skipTemplate) window.__suppressTemplateOnce = true;
+
+    const willChange = (selectEl.selectedIndex !== idx);
+    selectEl.selectedIndex = idx;
+
+    // Fire change so: Monaco mode, your listeners, and the custom "face" all update
+    // (change is synchronous, so handlers run before we return)
+    if (willChange) {
+	selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+	// If value was already selected, some codebases don't rebroadcast;
+	// refresh face + Monaco directly to be extra safe:
+	window.syncLanguageSelectorUI?.();
+	const model = window.editor?.getModel?.();
+	if (model && typeof monaco !== 'undefined') {
+	    monaco.editor.setModelLanguage(model, lang);
+	}
+    }
+
+    return true;
+}
 
