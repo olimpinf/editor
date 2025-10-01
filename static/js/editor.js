@@ -1,7 +1,7 @@
 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
 require(['vs/editor/editor.main'], function () {
     // starter templates
-    const templates = {
+    window.templates = {
 	cpp: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -39,19 +39,70 @@ if __name__ == "__main__":
 
     const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
+
+    // === Editor-only theme toggle (scoped to LEFT pane) ===
+    (function initEditorThemeToggle() {
+	if (!window.editor || typeof monaco === 'undefined') return;
+
+	// 1) Find the editor's toggle button *inside* the left pane only
+	const leftPane = document.getElementById('left-pane');
+	const editorToggleBtn = leftPane?.querySelector('.style-toggle-btn');
+	if (!leftPane || !editorToggleBtn) return;
+
+	// 2) Keep a local state so we don't depend on external classes
+	//    Start from the current Monaco theme (assume initial 'vs-dark' in your setup)
+	let editorDark = true;
+
+	// 3) Apply to Monaco + (optional) reflect to the left pane for consistent visuals
+	function applyEditorTheme() {
+	    monaco.editor.setTheme(editorDark ? 'vs-dark' : 'vs');
+	    leftPane.setAttribute('data-theme', editorDark ? 'dark' : 'light'); // optional
+	    leftPane.classList.toggle('theme-dark', editorDark);                // optional
+	    leftPane.classList.toggle('theme-light', !editorDark);              // optional
+	}
+
+	// 4) Wire only the editor button; stop the click from reaching other generic handlers
+	editorToggleBtn.addEventListener('click', (e) => {
+	    e.stopPropagation();
+	    e.stopImmediatePropagation();
+	    editorDark = !editorDark;
+	    applyEditorTheme();
+	});
+
+	// 5) If you *also* want to respond to an app-wide theme change, keep this tiny listener.
+	//    It toggles the editor only if the event originated INSIDE the left pane.
+	document.addEventListener('click', (e) => {
+	    const btn = e.target.closest('.style-toggle-btn');
+	    if (!btn) return;
+	    if (!leftPane.contains(btn)) return; // ignore right-pane toggles
+	    // If your app-wide handler already flipped classes, you could sync to them here.
+	    // For now we do nothing; editor is driven exclusively by the scoped handler above.
+	}, true);
+
+	// 6) Initial paint
+	applyEditorTheme();
+    })();
+
+    
     // Handle language switch
+
     document.getElementById('language-select').addEventListener('change', function(e) {
 	const lang = e.target.value;
 	const model = window.editor.getModel();
-
-	// set syntax
 	monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
-
+	
+	// --- one-shot suppression for programmatic language changes (e.g., uploads) ---
+	if (window.__suppressTemplateOnce) {
+	    window.__suppressTemplateOnce = false;
+	    return; // skip template replacement just this once
+	}
+	// -------------------------------------------------------------------------------
+	
 	const currentValue = window.editor.getValue().trim();
 	if (currentValue !== "" && !Object.values(templates).map(v=>v.trim()).includes(currentValue)) {
 	    if (!confirm("Switching language will replace your current code with a starter template. Continue?")) return;
 	}
-
+	
 	window.editor.setValue(templates[lang] || "// Start coding here");
     });
 
@@ -237,20 +288,78 @@ if __name__ == "__main__":
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.style-toggle-btn').forEach(button => {
     button.addEventListener('click', (event) => {
-      // 1. Go UP to the nearest common ancestor: the element with class 'pane'
-	const pane = event.target.closest('.pane');
-	console.log("pane", pane);
-      if (pane) {
-        // 2. Go DOWN to the specific element where the theme should be applied
-        //    (the sibling of the bar, which contains the text)
-        const contentContainer = pane.querySelector('.pane-container');
-	console.log("contentContainer", contentContainer);
-        
-        // 3. Toggle the 'dark-mode' class on the contentContainer
-        if (contentContainer) {
-          contentContainer.classList.toggle('light-mode');
-        }
-      }
+	const btn = event.target.closest('.style-toggle-btn');
+	if (!btn) return;
+	const scope = btn.dataset.scope || '';
+	if (scope === 'pane') {	    
+	    // 1. Go UP to the nearest common ancestor: the element with class 'pane'
+	    const pane = event.target.closest('.pane');
+	    if (pane) {
+		// 2. Go DOWN to the specific element where the theme should be applied
+		//    (the sibling of the bar, which contains the text)
+		const contentContainer = pane.querySelector('.pane-container');
+		
+		// 3. Toggle the 'dark-mode' class on the contentContainer
+		if (contentContainer) {
+		    contentContainer.classList.toggle('light-mode');
+		}
+	    }
+	}
     });
   });
 });
+
+// === Upload file into editor (keeps custom select in sync, no template override) ===
+(function initUpload() {
+  const btn = document.getElementById('upload-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.cpp,.cc,.cxx,.java,.py,.txt';
+    input.style.display = 'none';
+
+    input.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result ?? "";
+
+        // Confirm before overwriting existing code
+        const current = (window.editor?.getValue() || "").trim();
+        if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
+          if (!confirm(`Replace current code with contents of "${file.name}"?`)) return;
+        }
+
+        // Detect language by extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        let lang = null;
+        if (['cpp','cc','cxx'].includes(ext)) lang = 'cpp';
+        else if (ext === 'java') lang = 'java';
+        else if (ext === 'py') lang = 'python';
+
+        // Sync language select + model, but suppress template injection once
+        if (lang) {
+          const selectEl = document.getElementById('language-select');
+          if (selectEl) {
+            window.__suppressTemplateOnce = true;                 // << guard ON (one-shot)
+            selectEl.value = lang;
+            selectEl.dispatchEvent(new Event('change', { bubbles: true })); // updates model + custom face
+          }
+        }
+
+        // Now safely set the uploaded text (template won’t overwrite it)
+        window.editor.setValue(text);
+      };
+
+      reader.readAsText(file);
+    });
+
+    document.body.appendChild(input);
+    input.click();
+    input.remove();
+  });
+})();
