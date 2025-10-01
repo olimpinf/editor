@@ -4,9 +4,9 @@
     --bar-bg: #3b5caa;
     --bar-color: #fff;
     --pane-bg: #f8f9fb;
-    --pane-color: #000;
-    --pane-dark-bg: #000;
-    --pane-dark-color: #fff;
+    --pane-color: #f8f8f8;
+    --pane-dark-bg: #202020;
+    --pane-dark-color: #f8f8f8;
     --accent: #ff7a18;
     --muted: #e6e9ee;
 
@@ -232,25 +232,6 @@ body.pane-expanded .pane:not(.expanded) {
 /* match toolbar spacing/look */
 .bar .custom-select { margin-left: 0; }
 
-/* dark/light */
-/* Define variables globally (defaulting to Dark Mode) */
-/* .pane-container { */
-/*     padding: 10px; */
-/*   /\* General Background/Text Colors *\/ */
-/*   --pane-bg-color: #2e2e2e;       /\* Dark gray background *\/ */
-/*   --pane-text-color: #fff;     /\* Light text *\/ */
-/*   /\* Make it take up all available vertical space *\/ */
-/*   flex-grow: 1; /\* NEW: Allows the container to fill the remaining space *\/ */
-  
-/*   /\* Ensure scrolling happens here if content overflows *\/ */
-/*   overflow: auto;  */
-    
-/*   /\* This block applies the light theme by default *\/ */
-/*   border: 1px solid var(--pane-border-color); */
-/*   /\* Make sure the border is on the content, not the outer pane *\/ */
-
-/* } */
-
 .pane-container {
   /* CRITICAL: Allows the container to fill the remaining space */
   flex-grow: 1; 
@@ -276,4 +257,34 @@ body.pane-expanded .pane:not(.expanded) {
 }
 
 
+/* Base: textarea uses pane-scoped variables */
 
+#stdin-input {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: none;
+  outline: none;
+  font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  background: var(--stdin-bg);
+  color: var(--stdin-fg);
+  border-top: none;
+}
+
+/* Make the content let the textarea fill the pane */
+
+#pane-rtop .content {
+    padding: 0; overflow: hidden;
+}
+
+/* Dark variants — cover common class/attribute names your toggle might use */
+#pane-rtop.theme-dark,
+#pane-rtop.dark,
+#pane-rtop.dark-mode,
+#pane-rtop[data-theme="dark"],
+body.dark #pane-rtop,
+body.dark-mode #pane-rtop {
+  --stdin-bg: #202020;  /* dark background */
+  --stdin-fg: #fff;  /* light text */
+}

@@ -54,24 +54,24 @@
   <div class="right">
     <div class="pane" id="pane-rtop" data-pane="rtop">
       <div class="bar">
-        <span class="title">Entrada</span>
+        <span>Entrada</span>
         <div class="controls">
 	  <!-- Dark mode button -->
-	  <button id="input" class="style-toggle-btn" data-scope="pane">
+	  <button class="style-toggle-btn" data-scope="pane">
             <img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light">
 	  </button>
           <button aria-label="Expand" class="btn-expand" data-target="pane-rtop">⛶</button>
         </div>
       </div>
+        <!-- Editable input area -->
       <div class="pane-container">
-        <p>Right top pane: logs, output, or instructions.</p>
-        <pre>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae.</pre>
+	<textarea id="stdin-input" spellcheck="false" placeholder="Type input here…"></textarea>
       </div>
     </div>
 
     <div class="pane" id="pane-rbot" data-pane="rbot">
       <div class="bar">
-        <span class="title">Saída</span>
+        <span>Saída</span>
         <div class="controls">
 	  <!-- Dark mode button -->
 	  <button id="output" class="style-toggle-btn" data-scope="pane">
@@ -80,7 +80,7 @@
           <button aria-label="Expand" class="btn-expand" data-target="pane-rbot">⛶</button>
         </div>
       </div>
-      <div class="pane-container">
+      <div id="stdout-output" class="pane-container">
         <p>Right bottom pane: test cases, hints, or other tools.</p>
         <p>Example content here may scroll separately from the left pane.</p>
       </div>

@@ -109,8 +109,10 @@ if __name__ == "__main__":
     // Run button
     document.getElementById('run-btn').addEventListener('click', () => {
 	const code = window.editor.getValue();
+	const stdin = document.getElementById('stdin-input')?.value ?? "";
 	console.log("=== Running code ===\n", code);
-	alert("Run button pressed! (Code logged in console for now)");
+	console.log("=== With stdin ===\n", stdin);
+	alert("Run pressed! (Code + stdin logged in console for now)");
     });
 
     // Clear button
