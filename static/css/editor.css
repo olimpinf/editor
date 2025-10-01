@@ -3,13 +3,15 @@
     --bar-height: 40px;
     --bar-bg: #3b5caa;
     --bar-color: #fff;
-    --pane-bg: #f8f9fb;
-    --pane-color: #f8f8f8;
-    --pane-dark-bg: #202020;
-    --pane-dark-color: #f8f8f8;
     --accent: #ff7a18;
     --muted: #e6e9ee;
 
+    /* Define global colors for text/background for clarity */
+    --pane-light-bg: #f8f9fb;
+    --pane-light-color: #111827;
+    --pane-dark-bg: #202020;
+    --pane-dark-color: #f0f0f0;
+    
 html,body{
     height:100%;
     margin:0;
@@ -232,59 +234,72 @@ body.pane-expanded .pane:not(.expanded) {
 /* match toolbar spacing/look */
 .bar .custom-select { margin-left: 0; }
 
+/* --- Base Pane-Container Styling (Light Mode Default) --- */
 .pane-container {
-  /* CRITICAL: Allows the container to fill the remaining space */
-  flex-grow: 1; 
-  overflow: auto; /* Handles scrolling for content overflow */
-  
-  /* Use padding for content *inside* the container, not border/background */
-  padding: 10px; 
-  
-  /* THEME APPLICATION */
-  background-color: var(--pane-bg);
-  color: var(--pane-color);
+    /* 1. Define theme variables locally, defaulting to LIGHT */
+    --content-bg: var(--pane-light-bg);
+    --content-fg: var(--pane-light-color);
+    
+    /* 2. Apply general structure and default theme */
+    flex-grow: 1; 
+    overflow: auto;
+    padding: 10px;
+    
+    background-color: var(--content-bg);
+    color: var(--content-fg);
 }
 
+/* --- Dark Mode Override (When 'light-mode' is TOGGLED OFF) --- */
+.pane-container:not(.light-mode) {
+    --content-bg: var(--pane-dark-bg);
+    --content-fg: var(--pane-dark-color);
+}
+
+/* --- Light Mode Override (When 'light-mode' is TOGGLED ON) --- */
 .pane-container.light-mode {
-  /* General Background/Text Colors */
-  background-color: var(--pane-bg);
-  color: var(--pane-color);
+    --content-bg: var(--pane-light-bg);
+    --content-fg: var(--pane-light-color);
 }
-
-.pane-container {
-  background-color: var(--pane-dark-bg);
-  color: var(--pane-dark-color);
-}
-
 
 /* Base: textarea uses pane-scoped variables */
 
+/* Base: textarea uses pane-scoped variables */
+#pane-rtop { 
+  /* light defaults */
+  --stdin-bg: #ffffff;
+  --stdin-fg: #111827;
+}
+
+/* --- Input (textarea) and Output Styling Fixes --- */
+
+/* 1. STDIN TEXTAREA */
 #stdin-input {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  resize: none;
-  border: none;
-  outline: none;
-  font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  background: var(--stdin-bg);
-  color: var(--stdin-fg);
-  border-top: none;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 10px 12px;
+    
+    /* Apply the pane's theme variables directly */
+    background: var(--content-bg);
+    color: var(--content-fg);
+    
+    /* Input/Output Font Fix (Monospace) */
+    font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
-/* Make the content let the textarea fill the pane */
-
-#pane-rtop .content {
-    padding: 0; overflow: hidden;
+/* 2. STDOUT Output Pane (Fixes for font and theme application) */
+#stdout-output {
+    /* Apply the pane's theme variables directly */
+    background: var(--content-bg);
+    color: var(--content-fg);
+    
+    /* Output Font Fix (Monospace) */
+    font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
-
-/* Dark variants — cover common class/attribute names your toggle might use */
-#pane-rtop.theme-dark,
-#pane-rtop.dark,
-#pane-rtop.dark-mode,
-#pane-rtop[data-theme="dark"],
-body.dark #pane-rtop,
-body.dark-mode #pane-rtop {
-  --stdin-bg: #202020;  /* dark background */
-  --stdin-fg: #fff;  /* light text */
+/* Ensure paragraphs inside output pane also use the correct color */
+#stdout-output p, #stdout-output pre {
+    color: var(--content-fg);
 }
