@@ -1,2 +1,2 @@
 # editor
-Editor para online complete
+Editor para provas.

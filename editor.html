@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Editor OBI</title>
+<link href="static/css/editor.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container" id="container">
+  <div class="left">
+    <!-- Left Pane -->
+    <div class="pane" id="left-pane">
+      <div class="bar">
+	<span>Editor</span>
+	<div class="controls">
+	  <!-- Run button -->
+	  <button id="run-btn" title="Run">
+            <img src="https://img.icons8.com/ios-filled/20/ffffff/play--v1.png" alt="Run">
+	  </button>
+	  <!-- Download button -->
+	  <button id="download-btn" title="Download">
+            <img src="https://img.icons8.com/ios-filled/20/ffffff/download.png" alt="Download">
+	  </button>
+	  <!-- Clear button -->
+	  <button id="clear-btn" title="Clear">
+            <img src="https://img.icons8.com/ios-filled/20/ffffff/delete.png" alt="Clear">
+	  </button>
+	  <!-- Dark mode button -->
+	  <button class="style-toggle-btn" title="Style">
+            <img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light">
+	  </button>
+	  <div style="margin-left:40px"></div>
+	  <!-- Language selector -->
+	  <div class="custom-select" id="language-select-wrapper"<div class="custom-select" id="language-select-wrapper">
+	       <select id="language-select">
+		 <option value="cpp">C++</option>
+		 <option value="java">Java</option>
+		 <option value="python">Python</option>
+	       </select>
+	  </div>
+	  <button aria-label="Expand" class="btn-expand" data-target="left-pane">⛶</button>
+	</div>
+      </div>
+      <div id="editor-container" style="height: calc(100% - 30px);"></div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="pane" id="pane-rtop" data-pane="rtop">
+      <div class="bar">
+        <span class="title">Entrada</span>
+        <div class="controls">
+	  <!-- Dark mode button -->
+	  <button id="input" class="style-toggle-btn">
+            <img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light">
+	  </button>
+          <button aria-label="Expand" class="btn-expand" data-target="pane-rtop">⛶</button>
+        </div>
+      </div>
+      <div class="pane-container">
+        <p>Right top pane: logs, output, or instructions.</p>
+        <pre>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae.</pre>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-rbot" data-pane="rbot">
+      <div class="bar">
+        <span class="title">Saída</span>
+        <div class="controls">
+          <button aria-label="Expand" class="btn-expand" data-target="pane-rbot">⛶</button>
+        </div>
+      </div>
+      <div class="content">
+        <p>Right bottom pane: test cases, hints, or other tools.</p>
+        <p>Example content here may scroll separately from the left pane.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="static/js/editor.js"></script>
+
+</body>
+</html>
