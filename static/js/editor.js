@@ -87,9 +87,6 @@ if __name__ == "__main__":
 	if (!wrap || !select) return false;
 
 	const idx = Array.from(select.options).findIndex(o => o.value === lang);
-	console.log('setLanguageUI -> lang:', lang, 'idx:', idx,
-		    'options:', Array.from(select.options).map(o => o.value));
-
 	if (idx < 0) return false;
 
 	select.selectedIndex = idx;
@@ -128,7 +125,6 @@ if __name__ == "__main__":
         
 	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
 	
-	console.log(`State saved for ${taskID}`);
     }
     
     // --- Handle Task Switch ---
@@ -189,7 +185,6 @@ if __name__ == "__main__":
 	rtopContainer?.classList.toggle('light-mode', shouldBeLight);
 	rbotContainer?.classList.toggle('light-mode', shouldBeLight);
 
-	console.log(`State loaded for ${taskID}`);
     }
 
 
@@ -236,14 +231,53 @@ if __name__ == "__main__":
 	applyEditorTheme();
     })();
 
-    
-    // Handle language switch
+    // Download buttons
+    function downloadContent(filename, content) {
+	const blob = new Blob([content], { type: 'text/plain' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = filename;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
+    }
 
+
+    document.getElementById('download-btn')?.addEventListener('click', () => {
+	const baseFilename = getSanitizedTaskName();
+	
+	const langSelect = document.getElementById('language-select');
+	const lang = langSelect ? langSelect.value : 'txt';
+	let ext = 'txt';
+	if (lang === 'cpp') ext = 'cpp';
+	else if (lang === 'java') ext = 'java';
+	else if (lang === 'python') ext = 'py';
+	
+	const filename = `${baseFilename}.${ext}`;
+	const content = window.editor.getValue(); 	
+	downloadContent(filename, content);
+    });
+
+    document.getElementById('download-input-btn')?.addEventListener('click', () => {
+	const content = document.getElementById('stdin-input')?.value ?? "";
+	downloadContent('entrada.txt', content);
+    });
+
+    document.getElementById('download-output-btn')?.addEventListener('click', () => {
+	// Get text content from the <pre> tag inside the output container
+	const outputContainer = document.getElementById('stdout-output');
+	const preElement = outputContainer?.querySelector('pre');
+	
+	// Fallback to container's text content if <pre> isn't found
+	const content = preElement ? preElement.textContent : (outputContainer?.textContent ?? "");
+
+	downloadContent('saida.txt', content);
+    });
 
     document.getElementById('language-select').addEventListener('change', function(e) {
 	const lang = e.target.value;
-	
-	console.log("change in language-select");
 	
 	// Check if the change was programmatic (task switch)
 	if (window.__suppressTemplateOnce) {
@@ -463,11 +497,9 @@ if __name__ == "__main__":
 
 // Keep the custom language select UI in sync with the native <select>
 window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
-    console.log("window.syncLanguageSelectorUI")
   const wrap   = document.getElementById('language-select-wrapper');
   const select = document.getElementById('language-select');
   if (!wrap || !select) return;
-    console.log("OK 1");
   const face  = wrap.querySelector('.select-selected');
   const items = wrap.querySelectorAll('.select-items div');
   if (!face) return;
@@ -476,8 +508,7 @@ window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
   face.textContent = select.options[idx]?.text || '';
 
   if (items && items.length) {
-      console.log("OK 2, length =",items.length);
-      items.forEach((el, i) => {console.log(i,idx,el);el.classList.toggle('is-active', i === idx);});
+      items.forEach((el, i) => {el.classList.toggle('is-active', i === idx);});
   }
 };
 
@@ -605,56 +636,96 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === Upload file into editor (keeps custom select in sync, no template override) ===
-(function initUpload() {
-    const btn = document.getElementById('upload-btn');
+// === Generic File Upload Handler ===
+
+/**
+ * Handles file selection and routes content to the correct pane based on the button clicked.
+ * @param {HTMLElement} btn The button that was clicked.
+ */
+function initializeFileUploader(btn) {
     if (!btn) return;
 
     btn.addEventListener('click', () => {
-	const input = document.createElement('input');
-	input.type = 'file';
+        const input = document.createElement('input');
+        input.type = 'file';
+        // Allow all file types (code or text)
 	input.accept = '.cpp,.cc,.cxx,.java,.py,.txt';
-	input.style.display = 'none';
+        input.style.display = 'none';
 
-	input.addEventListener('change', (event) => {
-	    const file = event.target.files?.[0];
-	    if (!file) return;
+        input.addEventListener('change', (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
 
-	    const reader = new FileReader();
-	    reader.onload = (e) => {
-		const text = e.target.result ?? "";
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result ?? "";
+                const targetPane = btn.closest('#left-pane') ? 'editor' : 
+                                   btn.closest('#pane-rtop') ? 'input' : null;
 
-		// Confirm before overwriting existing code
-		const current = (window.editor?.getValue() || "").trim();
-		if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
-		    if (!confirm(`Replace current code with contents of "${file.name}"?`)) return;
-		}
+                if (!targetPane) return; // Safety check
 
-		// Detect language by extension
-		const ext = file.name.split('.').pop().toLowerCase();
-		let lang = null;
-		if (['cpp','cc','cxx'].includes(ext)) lang = 'cpp';
-		else if (ext === 'java') lang = 'java';
-		else if (ext === 'py') lang = 'python';
+                // --- 1. HANDLE INPUT PANE UPLOAD ---
+                if (targetPane === 'input') {
+                    const inputEl = document.getElementById('stdin-input');
 
-		// After detecting the uploaded file's language => lang
-		setLanguageUI(lang);                         // DOM sync (face + is-active)
-		window.__suppressTemplateOnce = true;        // prevent template overwrite
-		document.getElementById('language-select')
-		?.dispatchEvent(new Event('change', { bubbles: true }));
-		
-		// Now safely set the uploaded text (template won’t overwrite it)
-		window.editor.setValue(text || "" );
+                    // Confirm before overwriting input
+                    if (inputEl.value.trim() !== "") {
+                        if (!confirm(`Replace current input with contents of "${file.name}"?`)) return;
+                    }
+                    
+                    inputEl.value = text;
+                    saveCurrentTaskState(); 
+                    return;
+                }
 
-	    };
+                // --- 2. HANDLE EDITOR PANE UPLOAD (Existing Logic) ---
+                
+                // Confirm before overwriting existing code
+                const current = (window.editor?.getValue() || "").trim();
+                if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
+                    if (!confirm(`Replace current code with contents of "${file.name}"?`)) return;
+                }
 
-	    reader.readAsText(file);
-	});
+                // Detect language by extension 
+                const ext = file.name.split('.').pop().toLowerCase();
+                let lang = null;
+                if (['cpp','cc','cxx'].includes(ext)) lang = 'cpp';
+                else if (ext === 'java') lang = 'java';
+                else if (ext === 'py') lang = 'python';
 
-	document.body.appendChild(input);
-	input.click();
-	input.remove();
+                // Sync language select + model, but suppress template injection once
+                if (lang) {
+                    const selectEl = document.getElementById('language-select');
+                    if (selectEl) {
+                        window.__suppressTemplateOnce = true;                 // << guard ON (one-shot)
+                        selectEl.value = lang;
+                        selectEl.dispatchEvent(new Event('change', { bubbles: true })); // updates model + custom face
+                    }
+                }
+
+                // Now safely set the uploaded text (template won’t overwrite it)
+                window.editor.setValue(text || "" );
+                saveCurrentTaskState();
+            };
+
+            reader.readAsText(file);
+        });
+
+        document.body.appendChild(input);
+        input.click();
+        input.remove();
     });
+}
+
+// === Initialize both buttons ===
+(function initUpload() {
+    // Editor Pane Button
+    const editorBtn = document.getElementById('upload-btn');
+    initializeFileUploader(editorBtn);
+
+    // Input Pane Button
+    const inputBtn = document.getElementById('upload-input-btn');
+    initializeFileUploader(inputBtn);
 })();
 
 
@@ -726,4 +797,23 @@ function displayProgramOutput(programOutputText) {
     
     // Remember to save the new output to the current task state
     saveCurrentTaskState(); 
+}
+
+function getSanitizedTaskName() {
+    const taskSelect = document.getElementById('task-select');
+    if (!taskSelect) {
+        return 'program'; // Fallback name
+    }
+    
+    // Get the visible text of the currently selected option
+    const rawName = taskSelect.options[taskSelect.selectedIndex]?.text ?? 'program';
+    
+    // Sanitize: replace common separators (spaces, colons, parentheses) with underscores, 
+    // and remove any remaining invalid characters.
+    let sanitizedName = rawName.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
+    
+    // Avoid starting/ending with an underscore and convert to lowercase for consistency
+    sanitizedName = sanitizedName.toLowerCase().replace(/^_|_$/g, '');
+    
+    return sanitizedName || 'program'; // Final fallback
 }

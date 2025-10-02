@@ -1,6 +1,7 @@
 :root{
-    --gap: 10px;
+    --gap: 5px;
     --bar-height: 40px;
+    --status-bar-height: 20px;
     --bar-bg: #3b5caa;
     --bar-color: #fff;
     --accent: #ff7a18;
@@ -20,18 +21,20 @@ html,body{
     /* background: #eef2f6; */
 }
 
-/* Main 2-column layout: left|right */
-.container{
-    display: grid;
-    grid-template-columns: 2fr 1fr; /* left half, right half */
-    gap: var(--gap);
-    height:100vh;
-    padding: var(--gap);
-    box-sizing: border-box;
+/* Main 2-column layout: left|right plus status bar*/
+.container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr auto; /* left fills, right top+bottom, footer auto height */
+  gap: var(--gap);
+  height: 100vh;
+  padding: var(--gap);
+  box-sizing: border-box;
 }
 
 /* Left single pane */
 .left {
+    grid-row: 1 / span 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -44,10 +47,21 @@ html,body{
 
 /* Right column split into two rows */
 .right {
+  grid-row: 1 / span 2;
     display: grid;
     grid-template-rows: 1fr 1fr; /* top / bottom */
     gap: var(--gap);
     min-width:0;
+}
+
+/* Footer row spans both columns */
+#pane-footer {
+  grid-column: 1 / -1;  /* stretch across full width */
+  height: var(--status-bar-height);
+  margin-top: -6px;
+}
+#pane-footer .bar {
+  justify-content: center; /* center contents */
 }
 
 .pane {
@@ -61,6 +75,29 @@ html,body{
   border-radius: 4px; /* Optional: Rounded corners */
   overflow: hidden; /* Important for containing the contents inside the border */
 }
+
+.status-bar {
+  background-color: var(--bar-bg);
+  color: var(--bar-color);
+  padding: 4px 6px;
+  display: flex;
+  justify-content: center;   /* center horizontally */
+  align-items: center;       /* center vertically */
+  flex-shrink: 0;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Links inside: no underline, inherit color */
+.status-bar a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.status-bar a:hover {
+  text-decoration: underline; /* optional hover effect */
+}
+
 
 .bar {
   background-color: var(--bar-bg);
@@ -98,7 +135,6 @@ html,body{
     justify-content:center;
     cursor:pointer;
     border-radius:6px;
-    margin-left:20px
 }
 
 .bar button:hover{
