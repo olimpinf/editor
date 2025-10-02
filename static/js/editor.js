@@ -824,12 +824,12 @@ function getSanitizedTaskName() {
     return sanitizedName || 'program'; // Final fallback
 }
 
-// ===== Run / Status bar =====
-const MIN_INTERVAL_MS = 20_000; // 60s cooldown
+// ===== Run / Status bar (cooldown starts at RUN CLICK) =====
+const MIN_INTERVAL_MS = 60_000; // adjust per exam
 
 let runInProgress   = false;
 let runningTaskId   = null;
-let lastRunAtMs     = 0;
+let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
 
 function getCurrentTaskId() {
@@ -840,19 +840,21 @@ function getTaskLabel(taskId) {
   return (window.taskStates?.[taskId]?.title) || taskId;
 }
 
-// Single writer for the status bar
 function setStatusLabel(text, { spinning = false } = {}) {
   const labelEl = document.getElementById('status-label');
   const spinEl  = document.getElementById('status-spinner');
   if (!labelEl || !spinEl) return;
-
-  labelEl.innerHTML = text;          // allow <strong> label
+  labelEl.innerHTML = text;
   spinEl.hidden = !spinning;
 }
 
-function secondsLeftSince(ts) {
-  const left = MIN_INTERVAL_MS - (Date.now() - ts);
+function cooldownLeft() {
+  if (!lastRunStartMs) return 0;
+  const left = MIN_INTERVAL_MS - (Date.now() - lastRunStartMs);
   return Math.max(0, Math.ceil(left / 1000));
+}
+function canStartRun() {
+  return !runInProgress && cooldownLeft() === 0;
 }
 
 function stopCooldownTicker() {
@@ -861,22 +863,17 @@ function stopCooldownTicker() {
     cooldownTimerId = null;
   }
 }
-
 function startCooldownTicker() {
-  // prevent multiple tickers
+  // avoid duplicates
   stopCooldownTicker();
   cooldownTimerId = setInterval(() => {
-    const left = secondsLeftSince(lastRunAtMs);
-    if (left <= 0) {
+    if (!runInProgress && cooldownLeft() === 0) {
       stopCooldownTicker();
-      paintStatus(); // final repaint to Idle
-    } else {
-      paintStatus(); // repaint countdown
     }
+    paintStatus(); // repaint while ticking
   }, 1000);
 }
 
-// Draw status without scheduling anything
 function paintStatus() {
   const viewingTask = getCurrentTaskId();
 
@@ -886,9 +883,9 @@ function paintStatus() {
     return;
   }
 
-  const cooldownLeft = secondsLeftSince(lastRunAtMs);
-  if (cooldownLeft > 0) {
-    setStatusLabel(`Cooldown: ${cooldownLeft}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+  const left = cooldownLeft();
+  if (left > 0) {
+    setStatusLabel(`Cooldown: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
   } else {
     setStatusLabel(`Idle — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
   }
@@ -900,24 +897,20 @@ function disableRunButton(disabled) {
 }
 
 async function handleRunClick() {
-  // Cooldown block (but allow status to show why)
-  const cooldownLeft = secondsLeftSince(lastRunAtMs);
-  if (!runInProgress && cooldownLeft > 0) {
-    paintStatus();    // will show cooldown
-    return;
-  }
-  // Single run at a time
-  if (runInProgress) {
-    paintStatus();    // already running; status shows which
+  // Block when not allowed; show why
+  if (!canStartRun()) {
+    paintStatus(); // will show Running or Cooldown
     return;
   }
 
-  // Start run
+  // Start run: mark start time NOW and start cooldown ticker
+  lastRunStartMs = Date.now();
+  startCooldownTicker();
+
   runInProgress = true;
   runningTaskId = getCurrentTaskId();
   disableRunButton(true);
-  stopCooldownTicker();       // stop any prior ticker
-  paintStatus();              // shows "Running — <task>"
+  paintStatus(); // "Running — <task>"
 
   try {
     // Build payload
@@ -928,32 +921,25 @@ async function handleRunClick() {
       input: document.getElementById('stdin-input')?.value || ''
     };
 
-    // TODO: replace with your real request
-    await new Promise(res => setTimeout(res, 3500)); // simulate compile/execute
+    // TODO: replace with real backend request
+    await new Promise(res => setTimeout(res, 1500));
 
-    // Update output pane (example)
+    // Example output update
     const outEl = document.getElementById('stdout-output');
     if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
 
-    // Finish + start cooldown
-    lastRunAtMs = Date.now();
-    runInProgress = false;
-    runningTaskId = null;
-    disableRunButton(false);
-
-    paintStatus();      // first "Cooldown: 60s — <viewed>"
-    startCooldownTicker();
-
   } catch (err) {
     console.error('Run error:', err);
-    // Still start cooldown to avoid hammering
-    lastRunAtMs = Date.now();
+    // (We still keep the cooldown from click)
+  } finally {
     runInProgress = false;
-    runningTaskId = null;
-    disableRunButton(false);
+    runningTaskId  = null;
 
-    paintStatus();
-    startCooldownTicker();
+    // Re-enable Run if cooldown has already expired during the run
+    disableRunButton(!canStartRun());
+
+    paintStatus(); // will show Cooldown or Idle
+    // ticker is already running; it will stop itself when cooldown hits 0 and nothing is running
   }
 }
 
@@ -969,5 +955,5 @@ async function handleRunClick() {
 
 // Call this at the end of loadTaskState(taskID)
 window.onTaskViewChanged = function () {
-  paintStatus(); // reflect viewed task; no timers started here
+  paintStatus();
 };
