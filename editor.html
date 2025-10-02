@@ -116,7 +116,13 @@
   </div>
   <div class="pane" id="pane-footer" data-pane="footer">
     <div class="status-bar">
-      <a href="https://olimpiada.ic.unicamp.br" target="_blank">Olimpíada Brasileira de Informática</a>
+      <div class="status-left">
+	<a href="https://olimpiada.ic.unicamp.br" target="_blank" rel="noopener">Olimpíada Brasileira de Informática</a>
+      </div>
+      <div class="status-right" id="run-status" aria-live="polite">
+	<span id="status-label">Idle — —</span>
+	<span class="spinner" id="status-spinner" hidden></span>
+      </div>
     </div>
   </div>
 </div>

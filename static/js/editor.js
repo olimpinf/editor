@@ -30,6 +30,7 @@ if __name__ == "__main__":
     window.taskStates = {
 	// Initial State for Tasks
 	task1: {
+	    title: 'Tarefa 1',
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
@@ -37,6 +38,7 @@ if __name__ == "__main__":
             theme: 'dark'
 	},
 	task2: {
+	    title: 'Tarefa 2',
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
@@ -44,6 +46,7 @@ if __name__ == "__main__":
             theme: 'dark'
 	},
 	task3: {
+	    title: 'Tarefa 3',
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
@@ -51,6 +54,7 @@ if __name__ == "__main__":
             theme: 'dark'
 	},
 	task4: {
+	    title: 'Tarefa 4',
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
@@ -58,6 +62,7 @@ if __name__ == "__main__":
             theme: 'dark'
 	},
 	task5: {
+	    title: 'Tarefa 5',
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
@@ -66,7 +71,7 @@ if __name__ == "__main__":
 	}
     };
 
-    window.currentTask = 'task1'; // Default starting task
+    window.currentTask = 'Tarefa 1'; // Default starting task
     
     // Initialize editor
     window.editor = monaco.editor.create(document.getElementById('editor-container'), {
@@ -153,6 +158,7 @@ if __name__ == "__main__":
 	if (!state) return;
 
 	window.currentTask = taskID;
+	window.onTaskViewChanged?.();
 	// (A) Language FIRST
 	if (state.language) setLanguage(state.language, { skipTemplate: true });
 
@@ -299,14 +305,14 @@ if __name__ == "__main__":
     });
     
     // Run button
-    document.getElementById('run-btn').addEventListener('click', () => {
-	const code = window.editor.getValue();
-	const stdin = document.getElementById('stdin-input')?.value ?? "";
-	console.log("=== Running code ===\n", code);
-	console.log("=== With stdin ===\n", stdin);
-	alert("Run pressed! (Code + stdin logged in console for now)");
-	displayProgramOutput("Resultado de execução");
-    });
+    // document.getElementById('run-btn').addEventListener('click', () => {
+    // 	const code = window.editor.getValue();
+    // 	const stdin = document.getElementById('stdin-input')?.value ?? "";
+    // 	console.log("=== Running code ===\n", code);
+    // 	console.log("=== With stdin ===\n", stdin);
+    // 	alert("Run pressed! (Code + stdin logged in console for now)");
+    // 	displayProgramOutput("Resultado de execução");
+    // });
 
     // Clear button
     document.getElementById('clear-btn').addEventListener('click', () => {
@@ -817,3 +823,151 @@ function getSanitizedTaskName() {
     
     return sanitizedName || 'program'; // Final fallback
 }
+
+// ===== Run / Status bar =====
+const MIN_INTERVAL_MS = 20_000; // 60s cooldown
+
+let runInProgress   = false;
+let runningTaskId   = null;
+let lastRunAtMs     = 0;
+let cooldownTimerId = null;
+
+function getCurrentTaskId() {
+  return window.currentTask || null;
+}
+function getTaskLabel(taskId) {
+  if (!taskId) return '—';
+  return (window.taskStates?.[taskId]?.title) || taskId;
+}
+
+// Single writer for the status bar
+function setStatusLabel(text, { spinning = false } = {}) {
+  const labelEl = document.getElementById('status-label');
+  const spinEl  = document.getElementById('status-spinner');
+  if (!labelEl || !spinEl) return;
+
+  labelEl.innerHTML = text;          // allow <strong> label
+  spinEl.hidden = !spinning;
+}
+
+function secondsLeftSince(ts) {
+  const left = MIN_INTERVAL_MS - (Date.now() - ts);
+  return Math.max(0, Math.ceil(left / 1000));
+}
+
+function stopCooldownTicker() {
+  if (cooldownTimerId) {
+    clearInterval(cooldownTimerId);
+    cooldownTimerId = null;
+  }
+}
+
+function startCooldownTicker() {
+  // prevent multiple tickers
+  stopCooldownTicker();
+  cooldownTimerId = setInterval(() => {
+    const left = secondsLeftSince(lastRunAtMs);
+    if (left <= 0) {
+      stopCooldownTicker();
+      paintStatus(); // final repaint to Idle
+    } else {
+      paintStatus(); // repaint countdown
+    }
+  }, 1000);
+}
+
+// Draw status without scheduling anything
+function paintStatus() {
+  const viewingTask = getCurrentTaskId();
+
+  if (runInProgress) {
+    const label = getTaskLabel(runningTaskId);
+    setStatusLabel(`Running — <strong>${label}</strong>`, { spinning: true });
+    return;
+  }
+
+  const cooldownLeft = secondsLeftSince(lastRunAtMs);
+  if (cooldownLeft > 0) {
+    setStatusLabel(`Cooldown: ${cooldownLeft}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+  } else {
+    setStatusLabel(`Idle — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+  }
+}
+
+function disableRunButton(disabled) {
+  const btn = document.getElementById('run-btn');
+  if (btn) btn.disabled = !!disabled;
+}
+
+async function handleRunClick() {
+  // Cooldown block (but allow status to show why)
+  const cooldownLeft = secondsLeftSince(lastRunAtMs);
+  if (!runInProgress && cooldownLeft > 0) {
+    paintStatus();    // will show cooldown
+    return;
+  }
+  // Single run at a time
+  if (runInProgress) {
+    paintStatus();    // already running; status shows which
+    return;
+  }
+
+  // Start run
+  runInProgress = true;
+  runningTaskId = getCurrentTaskId();
+  disableRunButton(true);
+  stopCooldownTicker();       // stop any prior ticker
+  paintStatus();              // shows "Running — <task>"
+
+  try {
+    // Build payload
+    const payload = {
+      taskId: runningTaskId,
+      code: window.editor?.getValue?.() || '',
+      language: document.getElementById('language-select')?.value || 'cpp',
+      input: document.getElementById('stdin-input')?.value || ''
+    };
+
+    // TODO: replace with your real request
+    await new Promise(res => setTimeout(res, 3500)); // simulate compile/execute
+
+    // Update output pane (example)
+    const outEl = document.getElementById('stdout-output');
+    if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
+
+    // Finish + start cooldown
+    lastRunAtMs = Date.now();
+    runInProgress = false;
+    runningTaskId = null;
+    disableRunButton(false);
+
+    paintStatus();      // first "Cooldown: 60s — <viewed>"
+    startCooldownTicker();
+
+  } catch (err) {
+    console.error('Run error:', err);
+    // Still start cooldown to avoid hammering
+    lastRunAtMs = Date.now();
+    runInProgress = false;
+    runningTaskId = null;
+    disableRunButton(false);
+
+    paintStatus();
+    startCooldownTicker();
+  }
+}
+
+// Wire once on load
+(function initRunStatusBar() {
+  const btn = document.getElementById('run-btn');
+  if (btn && !btn.__wired) {
+    btn.addEventListener('click', handleRunClick);
+    btn.__wired = true;
+  }
+  paintStatus();
+})();
+
+// Call this at the end of loadTaskState(taskID)
+window.onTaskViewChanged = function () {
+  paintStatus(); // reflect viewed task; no timers started here
+};
