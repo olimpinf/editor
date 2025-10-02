@@ -42,6 +42,8 @@
               <option value="task1">Tarefa 1</option>
               <option value="task2">Tarefa 2</option>
               <option value="task3">Tarefa 3</option>
+              <option value="task3">Tarefa 4</option>
+              <option value="task3">Tarefa 5</option>
             </select>
 	  </div>
 	  <!-- Language selector -->
@@ -64,6 +66,10 @@
       <div class="bar">
         <span>Entrada</span>
         <div class="controls">
+	  <!-- Clear button -->
+	  <button id="clear-input-btn" title="Clear">
+            <img src="https://img.icons8.com/ios-filled/20/ffffff/delete.png" alt="Clear">
+	  </button>
 	  <!-- Dark mode button -->
 	  <button class="style-toggle-btn" data-scope="pane">
             <img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light">
@@ -73,7 +79,7 @@
       </div>
         <!-- Editable input area -->
       <div class="pane-container">
-	<textarea id="stdin-input" spellcheck="false" placeholder="Type input here…"></textarea>
+	<textarea id="stdin-input" spellcheck="false" placeholder="Digite sua entrada aqui…"></textarea>
       </div>
     </div>
 
@@ -81,6 +87,10 @@
       <div class="bar">
         <span>Saída</span>
         <div class="controls">
+	  <!-- Clear button -->
+	  <button id="clear-output-btn" title="Clear">
+            <img src="https://img.icons8.com/ios-filled/20/ffffff/delete.png" alt="Clear">
+	  </button>
 	  <!-- Dark mode button -->
 	  <button id="output" class="style-toggle-btn" data-scope="pane">
             <img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light">
@@ -89,8 +99,6 @@
         </div>
       </div>
       <div id="stdout-output" class="pane-container">
-        <p>Right bottom pane: test cases, hints, or other tools.</p>
-        <p>Example content here may scroll separately from the left pane.</p>
       </div>
     </div>
   </div>

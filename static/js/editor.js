@@ -28,29 +28,41 @@ if __name__ == "__main__":
 
     // Central object to store all task states
     window.taskStates = {
-	// Initial State for Task 1
+	// Initial State for Tasks
 	task1: {
             code: window.templates.cpp,
             language: 'cpp',
-            input: 'Task 1 default input data.',
-            output: 'Task 1 default output (logs, hints, etc.).',
-            theme: 'dark' // Store the theme preference
+            input: '',
+            output: '<pre></pre>',
+            theme: 'dark'
 	},
-	// Initial State for Task 2
 	task2: {
             code: window.templates.cpp,
             language: 'cpp',
-            input: 'Task 2 default input data.',
-            output: 'Task 2 default output (logs, hints, etc.).',
-            theme: 'dark' // Store the theme preference
+            input: '',
+            output: '<pre></pre>',
+            theme: 'dark'
 	},
-	// Initial State for Task 3
 	task3: {
             code: window.templates.cpp,
             language: 'cpp',
-            input: 'Task 3 default input data.',
-            output: 'Task 3 default output (logs, hints, etc.).',
-            theme: 'dark' // Store the theme preference
+            input: '',
+            output: '<pre>',
+            theme: 'dark'
+	},
+	task4: {
+            code: window.templates.cpp,
+            language: 'cpp',
+            input: '',
+            output: '<pre>',
+            theme: 'dark'
+	},
+	task5: {
+            code: window.templates.cpp,
+            language: 'cpp',
+            input: '',
+            output: '<pre>',
+            theme: 'dark'
 	}
     };
 
@@ -64,7 +76,7 @@ if __name__ == "__main__":
 	automaticLayout: true,
 	fontSize: 14,
 	minimap: { enabled: false },
-	padding: { top: 10 }   // 👈 adds margin on top
+	padding: { top: 10 }  
     });
 
     const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
@@ -145,12 +157,6 @@ if __name__ == "__main__":
 	if (!state) return;
 
 	window.currentTask = taskID;
-	console.log('[loadTaskState] taskID=', taskID);
-	console.log('[loadTaskState] state(language, code len, input len)=',
-		    window.taskStates[taskID]?.language,
-		    window.taskStates[taskID]?.code?.length || 0,
-		    window.taskStates[taskID]?.input?.length || 0
-		   );
 	// (A) Language FIRST
 	if (state.language) setLanguage(state.language, { skipTemplate: true });
 
@@ -169,9 +175,12 @@ if __name__ == "__main__":
 
 	// Input / Output
 	const stdinInput  = document.getElementById('stdin-input');
-	const stdoutOutput = document.getElementById('stdout-output');
 	if (stdinInput)   stdinInput.value = state.input  || "";
-	if (stdoutOutput) stdoutOutput.innerHTML = state.output || "";
+
+	const stdoutOutput = document.getElementById('stdout-output');
+	if (stdoutOutput) {
+            stdoutOutput.innerHTML = state.output; 
+	}
 
 	// Theme for right panes (unchanged)
 	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
@@ -262,6 +271,7 @@ if __name__ == "__main__":
 	console.log("=== Running code ===\n", code);
 	console.log("=== With stdin ===\n", stdin);
 	alert("Run pressed! (Code + stdin logged in console for now)");
+	displayProgramOutput("Resultado de execução");
     });
 
     // Clear button
@@ -269,6 +279,22 @@ if __name__ == "__main__":
 	if (confirm("Are you sure you want to clear all code?")) {
 	    window.editor.setValue("// Start coding here");
 	}
+        saveCurrentTaskState();
+    });    
+    // Clear Input button
+    document.getElementById('clear-input-btn').addEventListener('click', () => {
+	const inputElement = document.getElementById('stdin-input');
+
+	if (inputElement) {
+            inputElement.value = "";
+	}        
+        saveCurrentTaskState();
+    });    
+    // Clear Output button
+    document.getElementById('clear-output-btn').addEventListener('click', () => {
+	const outputElement = document.getElementById('stdout-output');    
+    outputElement.innerHTML = `<pre></pre>`;
+
     });    
 });
 
@@ -662,3 +688,42 @@ function setLanguage(lang, { skipTemplate = true } = {}) {
     return true;
 }
 
+/**
+ * Replaces characters that have special meaning in HTML with their entity equivalents.
+ * This prevents the output text from being rendered as HTML, mitigating XSS risks.
+ * * @param {string} unsafeText The raw text output from the compiled program.
+ * @returns {string} The safe, escaped HTML string.
+ */
+function escapeHtml(unsafeText) {
+    if (typeof unsafeText !== 'string') {
+        unsafeText = String(unsafeText);
+    }
+    return unsafeText.replace(/[&<>"']/g, function(match) {
+        switch (match) {
+            case '&':
+                return '&amp;';
+            case '<':
+                return '&lt;';
+            case '>':
+                return '&gt;';
+            case '"':
+                return '&quot;';
+            case "'":
+                return '&#39;';
+            default:
+                return match;
+        }
+    });
+}
+
+function displayProgramOutput(programOutputText) {
+    const stdoutOutput = document.getElementById('stdout-output');
+    
+    // Escape the output text to prevent HTML injection, then wrap it in <pre>
+    const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
+    
+    stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
+    
+    // Remember to save the new output to the current task state
+    saveCurrentTaskState(); 
+}
