@@ -103,34 +103,6 @@ if __name__ == "__main__":
 
 	return true;
     }
-    function saveCurrentTaskState() {
-	const taskID = window.currentTask;
-	if (!window.taskStates[taskID]) return;
-	
-	// Save Code and Language
-	window.taskStates[taskID].code = window.editor.getValue();
-	const langSelect = document.getElementById('language-select');
-	if (langSelect) {
-		window.taskStates[taskID].language = langSelect.value;
-	}
-
-	// Save Input Pane Content
-	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
-	
-	// Save Output Pane Content (Use innerHTML if it contains rich content)
-	window.taskStates[taskID].output = document.getElementById('stdout-output')?.innerHTML ?? "";
-	
-	// Save Theme State (check the class on the pane-container elements)
-	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-	
-	// Check if both right panes are set to light mode
-	const isLight = rtopContainer?.classList.contains('light-mode') && 
-              rbotContainer?.classList.contains('light-mode');
-        
-	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
-	
-    }
     
     // --- Handle Task Switch ---
     document.getElementById('task-select')?.addEventListener('change', function(e) {
@@ -305,14 +277,15 @@ if __name__ == "__main__":
     });
     
     // Run button
-    // document.getElementById('run-btn').addEventListener('click', () => {
-    // 	const code = window.editor.getValue();
-    // 	const stdin = document.getElementById('stdin-input')?.value ?? "";
-    // 	console.log("=== Running code ===\n", code);
-    // 	console.log("=== With stdin ===\n", stdin);
-    // 	alert("Run pressed! (Code + stdin logged in console for now)");
-    // 	displayProgramOutput("Resultado de execução");
-    // });
+    document.getElementById('run-btn').addEventListener('click', () => {
+	const code = window.editor.getValue();
+	// const stdin = document.getElementById('stdin-input')?.value ?? "";
+	console.log("=== Running code ===\n", code);
+	// console.log("=== With stdin ===\n", stdin);
+	alert("Run pressed! (Code + stdin logged in console for now)");
+	submitCode(code, "C++20 / g++");
+	//displayProgramOutput("Resultado de execução");
+    });
 
     // Clear button
     document.getElementById('clear-btn').addEventListener('click', () => {
@@ -333,9 +306,52 @@ if __name__ == "__main__":
     // Clear Output button
     document.getElementById('clear-output-btn').addEventListener('click', () => {
 	const outputElement = document.getElementById('stdout-output');    
-    outputElement.innerHTML = `<pre></pre>`;
+	outputElement.innerHTML = `<pre></pre>`;
 
-    });    
+    });
+
+    function saveCurrentTaskState() {
+	const taskID = window.currentTask;
+	if (!window.taskStates[taskID]) return;
+	
+	// Save Code and Language
+	window.taskStates[taskID].code = window.editor.getValue();
+	const langSelect = document.getElementById('language-select');
+	if (langSelect) {
+	    window.taskStates[taskID].language = langSelect.value;
+	}
+
+	// Save Input Pane Content
+	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
+	
+	// Save Output Pane Content (Use innerHTML if it contains rich content)
+	window.taskStates[taskID].output = document.getElementById('stdout-output')?.innerHTML ?? "";
+	
+	// Save Theme State (check the class on the pane-container elements)
+	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
+	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
+	
+	// Check if both right panes are set to light mode
+	const isLight = rtopContainer?.classList.contains('light-mode') && 
+              rbotContainer?.classList.contains('light-mode');
+	
+	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
+	
+    }
+
+    function displayProgramOutput(programOutputText) {
+	const stdoutOutput = document.getElementById('stdout-output');
+	
+	// Escape the output text to prevent HTML injection, then wrap it in <pre>
+	const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
+	
+	stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
+	
+	// Remember to save the new output to the current task state
+	saveCurrentTaskState(); 
+    }
+    
+
 });
 
 
@@ -503,19 +519,19 @@ if __name__ == "__main__":
 
 // Keep the custom language select UI in sync with the native <select>
 window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
-  const wrap   = document.getElementById('language-select-wrapper');
-  const select = document.getElementById('language-select');
-  if (!wrap || !select) return;
-  const face  = wrap.querySelector('.select-selected');
-  const items = wrap.querySelectorAll('.select-items div');
-  if (!face) return;
+    const wrap   = document.getElementById('language-select-wrapper');
+    const select = document.getElementById('language-select');
+    if (!wrap || !select) return;
+    const face  = wrap.querySelector('.select-selected');
+    const items = wrap.querySelectorAll('.select-items div');
+    if (!face) return;
 
-  const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
-  face.textContent = select.options[idx]?.text || '';
+    const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+    face.textContent = select.options[idx]?.text || '';
 
-  if (items && items.length) {
-      items.forEach((el, i) => {el.classList.toggle('is-active', i === idx);});
-  }
+    if (items && items.length) {
+	items.forEach((el, i) => {el.classList.toggle('is-active', i === idx);});
+    }
 };
 
 // custom select for task
@@ -666,7 +682,7 @@ function initializeFileUploader(btn) {
             reader.onload = (e) => {
                 const text = e.target.result ?? "";
                 const targetPane = btn.closest('#left-pane') ? 'editor' : 
-                                   btn.closest('#pane-rtop') ? 'input' : null;
+                      btn.closest('#pane-rtop') ? 'input' : null;
 
                 if (!targetPane) return; // Safety check
 
@@ -777,33 +793,23 @@ function escapeHtml(unsafeText) {
     }
     return unsafeText.replace(/[&<>"']/g, function(match) {
         switch (match) {
-            case '&':
-                return '&amp;';
-            case '<':
-                return '&lt;';
-            case '>':
-                return '&gt;';
-            case '"':
-                return '&quot;';
-            case "'":
-                return '&#39;';
-            default:
-                return match;
+        case '&':
+            return '&amp;';
+        case '<':
+            return '&lt;';
+        case '>':
+            return '&gt;';
+        case '"':
+            return '&quot;';
+        case "'":
+            return '&#39;';
+        default:
+            return match;
         }
     });
 }
 
-function displayProgramOutput(programOutputText) {
-    const stdoutOutput = document.getElementById('stdout-output');
-    
-    // Escape the output text to prevent HTML injection, then wrap it in <pre>
-    const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
-    
-    stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
-    
-    // Remember to save the new output to the current task state
-    saveCurrentTaskState(); 
-}
+
 
 function getSanitizedTaskName() {
     const taskSelect = document.getElementById('task-select');
@@ -825,7 +831,7 @@ function getSanitizedTaskName() {
 }
 
 // ===== Run / Status bar (cooldown starts at RUN CLICK) =====
-const MIN_INTERVAL_MS = 60_000; // adjust per exam
+const MIN_INTERVAL_MS = 10_000; // adjust per exam
 
 let runInProgress   = false;
 let runningTaskId   = null;
@@ -833,127 +839,128 @@ let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
 
 function getCurrentTaskId() {
-  return window.currentTask || null;
+    return window.currentTask || null;
 }
 function getTaskLabel(taskId) {
-  if (!taskId) return '—';
-  return (window.taskStates?.[taskId]?.title) || taskId;
+    if (!taskId) return '—';
+    return (window.taskStates?.[taskId]?.title) || taskId;
 }
 
 function setStatusLabel(text, { spinning = false } = {}) {
-  const labelEl = document.getElementById('status-label');
-  const spinEl  = document.getElementById('status-spinner');
-  if (!labelEl || !spinEl) return;
-  labelEl.innerHTML = text;
-  spinEl.hidden = !spinning;
+    const labelEl = document.getElementById('status-label');
+    const spinEl  = document.getElementById('status-spinner');
+    if (!labelEl || !spinEl) return;
+    labelEl.innerHTML = text;
+    spinEl.hidden = !spinning;
 }
 
 function cooldownLeft() {
-  if (!lastRunStartMs) return 0;
-  const left = MIN_INTERVAL_MS - (Date.now() - lastRunStartMs);
-  return Math.max(0, Math.ceil(left / 1000));
+    if (!lastRunStartMs) return 0;
+    const left = MIN_INTERVAL_MS - (Date.now() - lastRunStartMs);
+    return Math.max(0, Math.ceil(left / 1000));
 }
 function canStartRun() {
-  return !runInProgress && cooldownLeft() === 0;
+    return !runInProgress && cooldownLeft() === 0;
 }
 
 function stopCooldownTicker() {
-  if (cooldownTimerId) {
-    clearInterval(cooldownTimerId);
-    cooldownTimerId = null;
-  }
+    if (cooldownTimerId) {
+	clearInterval(cooldownTimerId);
+	cooldownTimerId = null;
+    }
 }
 function startCooldownTicker() {
-  // avoid duplicates
-  stopCooldownTicker();
-  cooldownTimerId = setInterval(() => {
-    if (!runInProgress && cooldownLeft() === 0) {
-      stopCooldownTicker();
-    }
-    paintStatus(); // repaint while ticking
-  }, 1000);
+    // avoid duplicates
+    stopCooldownTicker();
+    cooldownTimerId = setInterval(() => {
+	if (!runInProgress && cooldownLeft() === 0) {
+	    stopCooldownTicker();
+	}
+	paintStatus(); // repaint while ticking
+    }, 1000);
 }
 
 function paintStatus() {
-  const viewingTask = getCurrentTaskId();
+    const viewingTask = getCurrentTaskId();
 
-  if (runInProgress) {
-    const label = getTaskLabel(runningTaskId);
-    setStatusLabel(`Running — <strong>${label}</strong>`, { spinning: true });
-    return;
-  }
+    if (runInProgress) {
+	const label = getTaskLabel(runningTaskId);
+	setStatusLabel(`Executando — <strong>${label}</strong>`, { spinning: true });
+	return;
+    }
 
-  const left = cooldownLeft();
-  if (left > 0) {
-    setStatusLabel(`Cooldown: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-  } else {
-    setStatusLabel(`Idle — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-  }
+    const left = cooldownLeft();
+    if (left > 0) {
+	setStatusLabel(`Espera: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+    } else {
+	//setStatusLabel(`Inativo — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+	setStatusLabel(`Inativo`, { spinning: false });
+    }
 }
 
 function disableRunButton(disabled) {
-  const btn = document.getElementById('run-btn');
-  if (btn) btn.disabled = !!disabled;
+    const btn = document.getElementById('run-btn');
+    if (btn) btn.disabled = !!disabled;
 }
 
 async function handleRunClick() {
-  // Block when not allowed; show why
-  if (!canStartRun()) {
-    paintStatus(); // will show Running or Cooldown
-    return;
-  }
+    // Block when not allowed; show why
+    if (!canStartRun()) {
+	paintStatus(); // will show Running or Cooldown
+	return;
+    }
 
-  // Start run: mark start time NOW and start cooldown ticker
-  lastRunStartMs = Date.now();
-  startCooldownTicker();
+    // Start run: mark start time NOW and start cooldown ticker
+    lastRunStartMs = Date.now();
+    startCooldownTicker();
 
-  runInProgress = true;
-  runningTaskId = getCurrentTaskId();
-  disableRunButton(true);
-  paintStatus(); // "Running — <task>"
+    runInProgress = true;
+    runningTaskId = getCurrentTaskId();
+    //disableRunButton(true);
+    paintStatus(); // "Running — <task>"
 
-  try {
-    // Build payload
-    const payload = {
-      taskId: runningTaskId,
-      code: window.editor?.getValue?.() || '',
-      language: document.getElementById('language-select')?.value || 'cpp',
-      input: document.getElementById('stdin-input')?.value || ''
-    };
+    try {
+	// Build payload
+	const payload = {
+	    taskId: runningTaskId,
+	    code: window.editor?.getValue?.() || '',
+	    language: document.getElementById('language-select')?.value || 'cpp',
+	    input: document.getElementById('stdin-input')?.value || ''
+	};
 
-    // TODO: replace with real backend request
-    await new Promise(res => setTimeout(res, 1500));
+	// TODO: replace with real backend request
+	await new Promise(res => setTimeout(res, 1500));
 
-    // Example output update
-    const outEl = document.getElementById('stdout-output');
-    if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
+	// Example output update
+	const outEl = document.getElementById('stdout-output');
+	if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
 
-  } catch (err) {
-    console.error('Run error:', err);
-    // (We still keep the cooldown from click)
-  } finally {
-    runInProgress = false;
-    runningTaskId  = null;
+    } catch (err) {
+	console.error('Run error:', err);
+	// (We still keep the cooldown from click)
+    } finally {
+	runInProgress = false;
+	runningTaskId  = null;
 
-    // Re-enable Run if cooldown has already expired during the run
-    disableRunButton(!canStartRun());
+	// Re-enable Run if cooldown has already expired during the run
+	//disableRunButton(!canStartRun());
 
-    paintStatus(); // will show Cooldown or Idle
-    // ticker is already running; it will stop itself when cooldown hits 0 and nothing is running
-  }
+	paintStatus(); // will show Cooldown or Idle
+	// ticker is already running; it will stop itself when cooldown hits 0 and nothing is running
+    }
 }
 
 // Wire once on load
 (function initRunStatusBar() {
-  const btn = document.getElementById('run-btn');
-  if (btn && !btn.__wired) {
-    btn.addEventListener('click', handleRunClick);
-    btn.__wired = true;
-  }
-  paintStatus();
+    const btn = document.getElementById('run-btn');
+    if (btn && !btn.__wired) {
+	btn.addEventListener('click', handleRunClick);
+	btn.__wired = true;
+    }
+    paintStatus();
 })();
 
 // Call this at the end of loadTaskState(taskID)
 window.onTaskViewChanged = function () {
-  paintStatus();
+    paintStatus();
 };
