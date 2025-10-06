@@ -84,6 +84,8 @@ if __name__ == "__main__":
 	padding: { top: 10 }  
     });
 
+    initFirstTaskIfNeeded();
+
     // 1) Editor content changes
     if (window.editor?.onDidChangeModelContent) {
 	window.editor.onDidChangeModelContent(() => {
@@ -130,7 +132,6 @@ if __name__ == "__main__":
     document.getElementById('task-select')?.addEventListener('change', function(e) {
 	const newTaskID = e.target.value;
 
-	console.log("CHANGING TASK to", newTaskID);
 	// 1. Save the state of the OLD task
 	//saveCurrentTaskState();
 	//scheduleSaveSnapshot();	
@@ -148,46 +149,6 @@ if __name__ == "__main__":
 
     }
 
-
-    function loadTaskStateOld(taskID) {
-	const state = window.taskStates[taskID];
-	if (!state) return;
-
-	window.currentTask = taskID;
-	window.onTaskViewChanged?.();
-	// (A) Language FIRST
-	if (state.language) setLanguage(state.language, { skipTemplate: true });
-
-	// Update the custom select UI (face + .is-active)
-	const ok = setLanguageUI(state.language);
-	// Make Monaco match; avoid template overwrite this once
-	window.__suppressTemplateOnce = true;
-	const select = document.getElementById('language-select');
-	if (ok && select) {
-	    // Fire change so your existing handlers (including Monaco mode) run
-	    select.dispatchEvent(new Event('change', { bubbles: true }));
-	}
-
-	// (B) Then code
-	window.editor.setValue(state.code || "");
-
-	// Input / Output
-	const stdinInput  = document.getElementById('stdin-input');
-	if (stdinInput)   stdinInput.value = state.input  || "";
-
-	const stdoutOutput = document.getElementById('stdout-output');
-	if (stdoutOutput) {
-            stdoutOutput.innerHTML = state.output; 
-	}
-
-	// Theme for right panes (unchanged)
-	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-	const shouldBeLight = state.theme === 'light';
-	rtopContainer?.classList.toggle('light-mode', shouldBeLight);
-	rbotContainer?.classList.toggle('light-mode', shouldBeLight);
-
-    }
 
 
     // === Editor-only theme toggle (scoped to LEFT pane) ===
@@ -299,12 +260,12 @@ if __name__ == "__main__":
             delete window.currentTestInterval;
             console.log("Stopped previous test execution.");
 	}
+	runningTaskId = getCurrentTaskId()
 	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / CPython", 'java': 'Java / JDK'};
 	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
 	const code = window.editor.getValue();
 	const input = document.getElementById('stdin-input')?.value ?? "";
 	const selectedLanguage = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
-	console.log("selectedLanguage",selectedLanguage);
 	const language = cmsLanguage[selectedLanguage];
 	const languageExtension = cmsExtension[selectedLanguage];
 
@@ -354,7 +315,7 @@ if __name__ == "__main__":
 	const outputElement = document.getElementById('stdout-output');    
 	outputElement.innerHTML = '';
 	outputBuffer = '';
-
+	scheduleSaveSnapshot();
     });
 
     // Font size button
@@ -400,35 +361,6 @@ if __name__ == "__main__":
 	    applyFontSize(sizes[idx]);
 	});
     })();
-    
-    // function saveCurrentTaskState() {
-    // 	const taskID = window.currentTask;
-    // 	if (!window.taskStates[taskID]) return;
-	
-    // 	// Save Code and Language
-    // 	window.taskStates[taskID].code = window.editor.getValue();
-    // 	const langSelect = document.getElementById('language-select');
-    // 	if (langSelect) {
-    // 	    window.taskStates[taskID].language = langSelect.value;
-    // 	}
-
-    // 	// Save Input Pane Content
-    // 	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
-	
-    // 	// Save Output Pane Content (Use innerHTML if it contains rich content)
-    // 	window.taskStates[taskID].output = document.getElementById('stdout-output')?.innerHTML ?? "";
-	
-    // 	// Save Theme State (check the class on the pane-container elements)
-    // 	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-    // 	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-	
-    // 	// Check if both right panes are set to light mode
-    // 	const isLight = rtopContainer?.classList.contains('light-mode') && 
-    //           rbotContainer?.classList.contains('light-mode');
-	
-    // 	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
-	
-    // }
 
 });
 
@@ -1068,7 +1000,7 @@ async function pollTestStatus(testId) {
 
         try {
             const result = await cmsTestStatus(testId);
-            const { status, status_text, compilation_stderr, execution_time, memory, output } = result;
+            const { status, status_text, compilation_stdout, compilation_stderr, execution_time, memory, output } = result;
 
             if (status == EVALUATED) {
                 // 1. STOP POLLING
@@ -1081,11 +1013,9 @@ async function pollTestStatus(testId) {
 		program_output += formatOutput(output + "\n");
 		program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
                 displayProgramOutput(program_output);
-                console.log('program_output', program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
-		console.log(status_text, execution_time, memory);
-                console.log(`Test ID ${testId} completed: Status: ${status_text}`);
 		scheduleSaveSnapshot();
+		runningTaskId = null;
 	    } else if (status == COMPILATION_FAILED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1093,15 +1023,14 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "\nErro de compilação:\n";
 		program_output = formatOutput(program_output, "DodgerBlue");
+		program_output += formatOutput(compilation_stdout, "red");
 		program_output += formatOutput(compilation_stderr, "red");
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
-		console.log(status_text, execution_time, memory);
-                console.log(`Test ID ${testId} completed: Status: ${status_text}`);
 		scheduleSaveSnapshot();
+		runningTaskId = null;
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
-                console.log(`Test ID ${testId} status: ${status_text}. Polling again in ${POLLING_INTERVAL_MS / 1000}s...`);
 		setStatusLabel(`${ status_text }`, { spinning: true });
             } else { 
                 // 1. STOP POLLING
@@ -1111,22 +1040,18 @@ async function pollTestStatus(testId) {
 		var program_output = "\nErro indefinido\n";
 		program_output = formatOutput(program_output, "red");
                 displayProgramOutput(programOutput);
-		//console.log(status_text, execution_time, memory);
-                console.error(`Test ID ${testId} failed: ${status_text}`);
 		scheduleSaveSnapshot();
+		runningTaskId = null;
             }
 
         } catch (error) {
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
-            console.error("Error during status polling:", error);
 	    var program_output = "\nErro de processamento\n";
 	    program_output = formatOutput(program_output, "red");
             displayProgramOutput(programOutput);
-	    //console.log(status_text, execution_time, memory);
-            console.error(`Test ID ${testId} failed: ${status_text}`);
 	    scheduleSaveSnapshot();
-
+	    runningTaskId = null;
         }
     };
 
@@ -1137,14 +1062,7 @@ async function pollTestStatus(testId) {
 }
 
 function displayProgramOutput(programOutputText) {
-    const stdoutOutput = document.getElementById('stdout-output');
-    
-    outputBuffer += programOutputText;
-    stdoutOutput.innerHTML = `${outputBuffer}`;
-    
-    // Remember to save the new output to the current task state
-    scheduleSaveSnapshot();	
-    //saveCurrentTaskState(); 
+  setOutputForTask(runningTaskId, programOutputText, { append: true });
 }
 
 function formatOutput(str, textColor="") {
@@ -1175,27 +1093,22 @@ function storageKey(taskId) {
   return `${STORAGE_PREFIX}${taskId}`;
 }
 function saveSnapshot(taskId, snap) {
-    console.log("in saveSnapshot", taskId);
-    console.log("in saveSnapshot", snap);
   try { localStorage.setItem(storageKey(taskId), JSON.stringify(snap)); }
   catch (e) { console.warn("saveSnapshot failed", e); }
 }
 
 function loadSnapshot(taskId) {
-    console.log("in loadSnapshot", taskId);
   try {
       const key = storageKey(taskId);
     const raw = localStorage.getItem(key);
 
     if (raw) {
 	// Normal case: restore previous snapshot
-	console.log("found snapshot",JSON.parse(raw));
       return JSON.parse(raw);
     } else if (window.taskStates?.[taskId]) {
       // Initialize from your default window.taskStates
       const init = { ...window.taskStates[taskId] };
       localStorage.setItem(key, JSON.stringify(init));
-      console.log(`Initialized ${taskId} in localStorage from defaults.`);
       return init;
     } else {
       console.warn("loadSnapshot: no state found for", taskId);
@@ -1219,17 +1132,38 @@ function readCurrentPanes() {
 
 // Debounced saver
 let _saveTimer = null;
+// function scheduleSaveSnapshot() {
+//     if (_suppressSnapshot) return;
+//     if (!window.currentTask) return;
+//     clearTimeout(_saveTimer);
+//     _saveTimer = setTimeout(() => {
+//     saveSnapshot(window.currentTask, readCurrentPanes());
+//   }, 400);
+// }
+
 function scheduleSaveSnapshot() {
-    if (_suppressSnapshot) return;
-    console.log("in scheduleSaveSnapshot");
-    if (!window.currentTask) {console.log("returning"); return;}
-    clearTimeout(_saveTimer);
-    console.log("start timer");
-    _saveTimer = setTimeout(() => {
-	console.log("timer snapshot");
-    saveSnapshot(window.currentTask, readCurrentPanes());
+  if (_suppressSnapshot) return;
+  if (!window.currentTask) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(storageKey(window.currentTask), JSON.stringify(readCurrentPanes()));
+      // After a successful save, check and (maybe) warn:
+      checkStorageQuotaAndWarn();
+    } catch (e) {
+      // QuotaExceededError or other storage errors
+      console.warn("saveSnapshot failed:", e);
+      alert(
+`Your browser storage for this site is full.
+Please clear space, then try again.
+
+Tip: Use the editor's "Clear saved tasks" to remove old snapshots.`
+      );
+    }
   }, 400);
 }
+
+
 
 // Editor changes
 if (window.editor?.onDidChangeModelContent) {
@@ -1240,69 +1174,18 @@ if (window.editor?.onDidChangeModelContent) {
 const _stdin = document.getElementById("stdin-input");
 if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 
-// Whenever you programmatically update the OUTPUT, call scheduleSaveSnapshot() afterwards.
-// Example: after a run finishes and you set stdout innerHTML:
-// outEl.innerHTML = "..."; scheduleSaveSnapshot();
 
-// function loadTaskState(taskID) {
-//   const state = window.taskStates[taskID];
-//   if (!state) return;
-
-//   window.currentTask = taskID;
-
-//     console.log("in loadTaskState", taskID);
-//   // Try local snapshot first
-//   const snap = loadSnapshot(taskID);
-
-//   // 1) Language FIRST (use snapshot if available)
-//   const lang = snap?.language ?? state.language;
-//   if (lang) {
-//     // if you have setLanguage(...) wrapper, use it; else do your select/dispatch flow here
-//     if (window.setLanguage) window.setLanguage(lang, { skipTemplate: true });
-//     else {
-//       const sel = document.getElementById("language-select");
-//       if (sel) {
-//         const idx = Array.from(sel.options).findIndex(o => o.value === lang);
-//         if (idx !== -1) {
-//           window.__suppressTemplateOnce = true;
-//           sel.selectedIndex = idx;
-//           sel.dispatchEvent(new Event("change", { bubbles: true }));
-//         }
-//       }
-//     }
-//   }
-
-//     // 2) Code
-//     console.log("load code");
-//   const code = snap?.code ?? state.code ?? "";
-//     console.log("load code", code);
-//   window.editor?.setValue?.(code);
-
-//   // 3) Input
-//   const stdin = document.getElementById("stdin-input");
-//   if (stdin) stdin.value = snap?.input ?? state.input ?? "";
-
-//   // 4) Output
-//   const stdout = document.getElementById("stdout-output");
-//   if (stdout) stdout.innerHTML = snap?.output ?? state.output ?? "";
-
-//   // (Optional) update any status/task labels you keep
-//   window.onTaskViewChanged?.();
-
-//   // Save an immediate snapshot so newly-opened tasks are persisted quickly
-//   //scheduleSaveSnapshot();
-// }
+let _suppressSnapshot = false;
 
 function loadTaskState(taskID) {
-    console.log("in loadTaskState", taskID);
   //const state = window.taskStates[taskID];
-  //if (!state) return;
+    //if (!state) return;
+    console.log("storage usage",logStorageUsage());
   window.currentTask = taskID;
 
   _suppressSnapshot = true; // stop debounced saves during programmatic updates
    const snap = loadSnapshot(taskID);
 
-    console.log("got snap");
   // (A) Language first (however you do it)
   const lang = snap?.language
   if (lang) {
@@ -1320,7 +1203,7 @@ function loadTaskState(taskID) {
       }
     }
   }
-  //if (window.setLanguage) window.setLanguage(state.language, { skipTemplate: true });
+
   // (B) Code
   window.editor?.setValue?.(snap?.code || "");
   // (C) Input
@@ -1329,7 +1212,177 @@ function loadTaskState(taskID) {
   // (D) Output
   const out = document.getElementById("stdout-output");
   if (out) out.innerHTML = snap?.output || "";
-
+    if (_outputBuffers[taskID])
+	_outputBuffers[taskID] = snap?.output || "";
   _suppressSnapshot = false; // re-enable
   //scheduleSaveSnapshot();    // take one clean snapshot for this task
 }
+
+// ===== Storage quota monitor =====
+const QUOTA_BYTES    = 5 * 1024 * 1024;            // ~5MB default per-origin (approx)
+const WARN_FRACTION  = 0.80;                       // warn at 80%
+const WARN_KEY       = "obi:quotaWarnedThisSession";
+
+// Byte length (UTF-8) of a string
+function byteLen(str) {
+  try { return new TextEncoder().encode(String(str)).length; }
+  catch { return String(str).length * 2; } // rough fallback
+}
+
+// Approximate localStorage usage in bytes
+function localStorageUsageBytes() {
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    const v = localStorage.getItem(k);
+    total += byteLen(k) + byteLen(v);
+  }
+  return total;
+}
+
+// Check and (optionally) alert if close to or over quota
+function checkStorageQuotaAndWarn({forceAlert = false} = {}) {
+  const used = localStorageUsageBytes();
+  const pct  = used / QUOTA_BYTES;
+  const warned = sessionStorage.getItem(WARN_KEY) === "1";
+
+  if ((pct >= WARN_FRACTION || forceAlert) && !warned) {
+    const mbUsed = (used / (1024 * 1024)).toFixed(2);
+    const mbTotal = (QUOTA_BYTES / (1024 * 1024)).toFixed(1);
+    alert(
+`Your browser storage is almost full (${mbUsed} MB of ~${mbTotal} MB).
+Please clear space to keep your code safe.
+
+You can clear old task snapshots from this editor (recommended) or clear some browser storage for this site.`
+    );
+    sessionStorage.setItem(WARN_KEY, "1");
+  }
+  return { usedBytes: used, quotaBytes: QUOTA_BYTES, percent: pct };
+}
+
+// Remove only this editor’s snapshots (non-destructive for other app data)
+function clearEditorSnapshots() {
+  const toRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX)) toRemove.push(k);
+  }
+  toRemove.forEach(k => localStorage.removeItem(k));
+  // Allow new warnings after cleanup
+  sessionStorage.removeItem(WARN_KEY);
+  alert(`Cleared ${toRemove.length} saved task snapshot(s).`);
+}
+
+// Optional: quick helper to show usage in console
+function logStorageUsage() {
+  const { usedBytes, quotaBytes, percent } = checkStorageQuotaAndWarn();
+  console.log(`localStorage usage: ${usedBytes} / ${quotaBytes} bytes (${Math.round(percent*100)}%)`);
+}
+
+// ---- First-load boot for task1 ----
+window.__initialTaskBootDone = false;
+
+function initFirstTaskIfNeeded() {
+  if (window.__initialTaskBootDone) return;
+
+  const tid = 'task1';
+  const key = storageKey(tid);
+
+  // Try snapshot
+  let snap = null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) snap = JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to read task1 snapshot:', e);
+  }
+
+  // Fallback to your default
+  const def = window.taskStates?.[tid] || {
+    title: 'Tarefa 1',
+    code: window.templates?.cpp || '',
+    language: 'cpp',
+    input: '',
+    output: '',
+    theme: 'dark'
+  };
+
+  // If there was no snapshot, seed it now
+  if (!snap) {
+    try { localStorage.setItem(key, JSON.stringify(def)); }
+    catch (e) { console.warn('Seeding task1 snapshot failed:', e); }
+  }
+
+  // Merge snapshot (if any) onto default and update the in-memory state
+  const merged = { ...def, ...(snap || {}) };
+  if (!window.taskStates) window.taskStates = {};
+  window.taskStates[tid] = merged;
+
+  // Load the task into the UI without firing snapshot saves mid-load
+  _suppressSnapshot = true;
+  loadTaskState(tid);
+  _suppressSnapshot = false;
+
+  // Take a clean snapshot and optionally warn about quota
+  scheduleSaveSnapshot();
+  if (typeof checkStorageQuotaAndWarn === 'function') {
+    checkStorageQuotaAndWarn();
+  }
+
+  window.__initialTaskBootDone = true;
+}
+
+// --- Per-task output buffers ---
+const _outputBuffers = Object.create(null); // { taskId: htmlString }
+
+// Get/seed a snapshot for any task
+function ensureSnapshot(taskId) {
+  const key = storageKey(taskId);
+  let snap = null;
+  try {
+    const raw = localStorage.getItem(key);
+    snap = raw ? JSON.parse(raw) : null;
+  } catch {}
+  if (!snap) {
+    // seed from defaults if available
+    snap = (window.taskStates && window.taskStates[taskId])
+      ? { ...window.taskStates[taskId] }
+      : { title: taskId, code: "", input: "", output: "", language: "" };
+    try { localStorage.setItem(key, JSON.stringify(snap)); } catch {}
+  }
+  return snap;
+}
+
+// Save only the output for a given task snapshot
+function persistTaskOutput(taskId, htmlOutput) {
+  const key = storageKey(taskId);
+  const snap = ensureSnapshot(taskId);
+  snap.output = htmlOutput;
+  try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {
+    console.warn("persistTaskOutput failed:", e);
+  }
+  // keep in-memory state in sync if present
+  if (window.taskStates?.[taskId]) {
+    window.taskStates[taskId].output = htmlOutput;
+  }
+}
+
+// Unified setter (append or replace) that targets a specific task
+function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
+  if (!taskId) return;
+
+    const prev = _outputBuffers[taskId] || "";
+    console.log("PREV", prev);
+  const next = append ? prev + htmlChunk : htmlChunk;
+  _outputBuffers[taskId] = next;
+
+  // If the user is viewing this task, also update the DOM
+  if (window.currentTask === taskId) {
+    const out = document.getElementById('stdout-output');
+    if (out) out.innerHTML = next; // if output is plain text, prefer textContent
+  }
+
+  // Persist snapshot for THAT task (not the current one)
+  persistTaskOutput(taskId, next);
+}
+
