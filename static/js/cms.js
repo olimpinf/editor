@@ -64,14 +64,14 @@ async function taskList() {
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-async function cmsSubmit(codeContent, language) {
+async function cmsSubmit(codeContent, language, languageExtension) {
     // --- Configuration ---
      const SUBMIT_API_URL = "/api/sacolas/submit";
     
     
     // The name of the file field in the multipart form (e.g., "sacolas.cpp")
     const fileNameField = "sacolas.%l";
-    const fileName = "sacolas.cpp"; 
+    const fileName = "sacolas" + languageExtension; 
 
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
@@ -130,13 +130,14 @@ async function cmsSubmit(codeContent, language) {
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-async function cmsTest(codeContent, inputContent, language) {
+async function cmsTest(codeContent, inputContent, language, languageExtension) {
     // --- Configuration ---
      const TEST_API_URL = "/api/sacolas/test";
     
     // The name of the file field in the multipart form (e.g., "sacolas.cpp")
     const fileNameField = "sacolas.%l";
-    const fileName = "sacolas.cpp"; 
+    const fileName = "sacolas." + languageExtension; 
+
     
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });

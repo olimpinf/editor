@@ -274,40 +274,39 @@ if __name__ == "__main__":
             delete window.currentTestInterval;
             console.log("Stopped previous test execution.");
 	}
-	
+	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / CPython", 'java': 'Java / JDK'};
+	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
 	const code = window.editor.getValue();
 	const input = document.getElementById('stdin-input')?.value ?? "";
-	//const language = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
-	const language = "C++20 / g++"
+	const selectedLanguage = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
+	console.log("selectedLanguage",selectedLanguage);
+	const language = cmsLanguage[selectedLanguage];
+	const languageExtension = cmsExtension[selectedLanguage];
 
-	// Clear output pane and show loading state
-	//displayProgramOutput("Submitting code to CMS...");
-
-	console.log("=== Submitting code to CMS ===\n", code);
-	const label = getTaskLabel(runningTaskId);
-	setStatusLabel(`Enviando - <strong>${label}</strong>`, { spinning: false });
-	
+	setStatusLabel("Enviando...", { spinning: false });
+	const initMessage = "\n" + getLocalizedTime() + ": submissão enviada\n";
+	displayProgramOutput(formatOutput(initMessage, color="DodgerBlue"));
 	try {
-            // 1. Submit the code and get the test ID
-            const submissionResult = await cmsTest(code, input, language);
+            // Submit the code and get the test ID
+            const submissionResult = await cmsTest(code, input, language, languageExtension);
             const testId = submissionResult.data.id;
             
             console.log("Submission successful. Starting polling for ID:", testId);
 
-            // 2. Start polling for the status
+            // Start polling for the status
             await pollTestStatus(testId);
 
 	} catch (error) {
             console.error("CMS Test Submission Failed:", error);
-	    setStatusLabel(`Submissão falhou - <strong>${label}</strong>`, { spinning: false });
+	    setStatusLabel("Submissão falhou", { spinning: false });
             displayProgramOutput("Submissão falhou.", color="red");
 	}
     });
 
     // Clear button
     document.getElementById('clear-btn').addEventListener('click', () => {
-	if (confirm("Are you sure you want to clear all code?")) {
-	    window.editor.setValue("// Start coding here");
+	if (confirm("Tem certeza que deseja limpar a área de código??")) {
+	    window.editor.setValue("");
 	}
         saveCurrentTaskState();
     });    
@@ -1051,6 +1050,7 @@ async function pollTestStatus(testId) {
 		program_output += formatOutput(output + "\n");
 		program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
                 displayProgramOutput(program_output);
+                console.log('program_output', program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
                 console.log(`Test ID ${testId} completed: Status: ${status_text}`);
@@ -1059,7 +1059,7 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = "Erro de compilação:\n";
+		var program_output = "\nErro de compilação:\n";
 		program_output = formatOutput(program_output, "DodgerBlue");
 		program_output += formatOutput(compilation_stderr, "red");
                 displayProgramOutput(program_output);
@@ -1072,11 +1072,12 @@ async function pollTestStatus(testId) {
                 console.log(`Test ID ${testId} status: ${status_text}. Polling again in ${POLLING_INTERVAL_MS / 1000}s...`);
 		setStatusLabel(`${ status_text }`, { spinning: true });
             } else { 
-                // Handle compilation error, runtime error, or other failure states
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
 		setStatusLabel(`Erro - <strong>${label}</strong>`, { spinning: true });		
-                displayProgramOutput(output);
+		var program_output = "\nErro indefinido\n";
+		program_output = formatOutput(program_output, "red");
+                displayProgramOutput(programOutput);
 		//console.log(status_text, execution_time, memory);
                 console.error(`Test ID ${testId} failed: ${status_text}`);
             }
@@ -1100,9 +1101,7 @@ async function pollTestStatus(testId) {
 function displayProgramOutput(programOutputText) {
     const stdoutOutput = document.getElementById('stdout-output');
     
-    // Escape the output text to prevent HTML injection, then wrap it in <pre>
     outputBuffer += programOutputText;
-    //stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
     stdoutOutput.innerHTML = `${outputBuffer}`;
     
     // Remember to save the new output to the current task state
@@ -1120,3 +1119,12 @@ function formatOutput(str, textColor="") {
     return styledHtml;
 }
     
+function getLocalizedTime(locale = 'pt-BR') {
+    const now = new Date();
+    
+    // Uses the user's local settings (or 'en-US' if specified)
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+
+    const formattedTime = now.toLocaleTimeString(locale, timeOptions);
+    return formattedTime
+}
