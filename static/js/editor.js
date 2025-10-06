@@ -331,12 +331,49 @@ if __name__ == "__main__":
     });
 
     // Font size button
-    document.getElementById('size-btn').addEventListener('click', () => {
-	console.log("click on size-btn");
-        //saveCurrentTaskState();
-    });    
+    (function setupFontCycler() {
+	const btn = document.getElementById("font-btn");
+	if (!btn) return;
 
+	// cycle order: medium (default) → small → large → medium ...
+	const sizes = ["medium", "small", "large"];
+	const fontMap = { small: 10, medium: 12, large: 14 };
+	let idx = 0;
 
+	// restore saved size if any
+	const saved = localStorage.getItem("editorFontSize");
+	if (saved && sizes.includes(saved)) {
+	    idx = sizes.indexOf(saved);
+	}
+
+	function applyFontSize(size) {
+	    const pt = fontMap[size];
+
+	    // Update Monaco editor
+	    if (window.editor) {
+		window.editor.updateOptions({ fontSize: pt });
+	    }
+
+	    // Update input & output panes
+	    const stdin = document.getElementById("stdin-input");
+	    const stdout = document.getElementById("stdout-output");
+	    if (stdin) stdin.style.fontSize = `${pt}px`;
+	    if (stdout) stdout.style.fontSize = `${pt}px`;
+
+	    // Persist and log
+	    localStorage.setItem("editorFontSize", size);
+	}
+
+	// apply initial size
+	applyFontSize(sizes[idx]);
+
+	// cycle on button click
+	btn.addEventListener("click", () => {
+	    idx = (idx + 1) % sizes.length;
+	    applyFontSize(sizes[idx]);
+	});
+    })();
+    
     function saveCurrentTaskState() {
 	const taskID = window.currentTask;
 	if (!window.taskStates[taskID]) return;
@@ -1002,14 +1039,6 @@ async function pollTestStatus(testId) {
         try {
             const result = await cmsTestStatus(testId);
             const { status, status_text, compilation_stderr, execution_time, memory, output } = result;
-
-	    console.log("status",status);
-	    console.log("status_text",status_text);
-            // Update the status display immediately
-            // if (outputContainer) {
-            //     // Display the current status text
-            //     outputContainer.innerHTML = `<pre>Status: ${status_text} | Time: ${execution_time} | Memory: ${memory}\n\n[Waiting for final output...]</pre>`;
-            // }
 
             if (status == EVALUATED) {
                 // 1. STOP POLLING
