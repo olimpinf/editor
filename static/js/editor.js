@@ -291,9 +291,11 @@ if __name__ == "__main__":
 	const language = "C++20 / g++"
 
 	// Clear output pane and show loading state
-	displayProgramOutput("Submitting code to CMS...");
+	//displayProgramOutput("Submitting code to CMS...");
 
 	console.log("=== Submitting code to CMS ===\n", code);
+	const label = getTaskLabel(runningTaskId);
+	setStatusLabel(`Enviando - <strong>${label}</strong>`, { spinning: false });
 	
 	try {
             // 1. Submit the code and get the test ID
@@ -307,6 +309,7 @@ if __name__ == "__main__":
 
 	} catch (error) {
             console.error("CMS Test Submission Failed:", error);
+	    setStatusLabel(`Submissão falhou - <strong>${label}</strong>`, { spinning: false });
             displayProgramOutput("Submission failed.");
 	}
     });
@@ -331,6 +334,7 @@ if __name__ == "__main__":
     document.getElementById('clear-output-btn').addEventListener('click', () => {
 	const outputElement = document.getElementById('stdout-output');    
 	outputElement.innerHTML = `<pre></pre>`;
+	outputBuffer = '';
 
     });
 
@@ -365,6 +369,7 @@ if __name__ == "__main__":
 
 });
 
+var outputBuffer = "";
 
 (function() {
     const expandButtons = document.querySelectorAll('.btn-expand');
@@ -900,13 +905,13 @@ function paintStatus() {
 	return;
     }
 
-    const left = cooldownLeft();
-    if (left > 0) {
-	setStatusLabel(`Espera: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-    } else {
-	//setStatusLabel(`Inativo — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-	setStatusLabel(`Inativo`, { spinning: false });
-    }
+    // const left = cooldownLeft();
+    // if (left > 0) {
+    // 	setStatusLabel(`Espera: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+    // } else {
+    // 	//setStatusLabel(`Inativo — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
+    // 	setStatusLabel(`Inativo`, { spinning: false });
+    // }
 }
 
 function disableRunButton(disabled) {
@@ -962,21 +967,21 @@ async function handleRunClick() {
 }
 
 // Wire once on load
-(function initRunStatusBar() {
-    const btn = document.getElementById('run-btn');
-    if (btn && !btn.__wired) {
-	btn.addEventListener('click', handleRunClick);
-	btn.__wired = true;
-    }
-    paintStatus();
-})();
+// (function initRunStatusBar() {
+//     const btn = document.getElementById('run-btn');
+//     if (btn && !btn.__wired) {
+// 	btn.addEventListener('click', handleRunClick);
+// 	btn.__wired = true;
+//     }
+//     paintStatus();
+// })();
 
 // Call this at the end of loadTaskState(taskID)
 window.onTaskViewChanged = function () {
     paintStatus();
 };
 
-const POLLING_INTERVAL_MS = 2000; // Poll every 2 seconds
+const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
 
 /**
  * Polls the CMS server for the status of a test execution until completion.
@@ -986,41 +991,62 @@ async function pollTestStatus(testId) {
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
     
-    // Initial display while waiting
-    if (outputContainer) {
-        outputContainer.innerHTML = '<pre>Status: Running... (ID: ' + testId + ')</pre>';
-    }
-
+    const label = getTaskLabel(runningTaskId);
+    
     // Define the polling loop function
     const checkStatus = async () => {
+	const COMPILING = 1;
+	const COMPILATION_FAILED = 2;
+	const EVALUATING = 3;
+	const EVALUATED = 4;
+
         try {
             const result = await cmsTestStatus(testId);
-            const { status_text, execution_time, memory, output } = result;
+            const { status, status_text, compilation_stderr, execution_time, memory, output } = result;
 
+	    console.log("status",status);
+	    console.log("status_text",status_text);
             // Update the status display immediately
-            if (outputContainer) {
-                // Display the current status text
-                outputContainer.innerHTML = `<pre>Status: ${status_text} | Time: ${execution_time} | Memory: ${memory}\n\n[Waiting for final output...]</pre>`;
-            }
+            // if (outputContainer) {
+            //     // Display the current status text
+            //     outputContainer.innerHTML = `<pre>Status: ${status_text} | Time: ${execution_time} | Memory: ${memory}\n\n[Waiting for final output...]</pre>`;
+            // }
 
-            if (status_text === "Executed" || status_text === "Compilation failed") {
+            if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
-		
                 // 2. DISPLAY FINAL RESULTS
-                displayProgramOutput(output);
+		var program_output = "Saída:\n";
+		program_output += "---------\n";
+		program_output += output + "\n";
+		program_output += "---------\n";
+		program_output += `Tempo: ${execution_time} | Memória: ${memory}\n`
+                displayProgramOutput(program_output);
+		setStatusLabel(`${ status_text }`, { spinning: false });
+		console.log(status_text, execution_time, memory);
+                console.log(`Test ID ${testId} completed: Status: ${status_text}`);
+	    } else if (status == COMPILATION_FAILED) {
+                // 1. STOP POLLING
+                clearInterval(window.currentTestInterval);
+                delete window.currentTestInterval; // Clean up the interval reference
+                // 2. DISPLAY FINAL RESULTS
+		var program_output = "Erro de compilação:\n";
+		program_output += compilation_stderr;
+                displayProgramOutput(program_output);
+		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
                 console.log(`Test ID ${testId} completed: Status: ${status_text}`);
 		
-            } else if (status_text === "Compiling..." || status_text === "Executing...") {
+            } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
                 console.log(`Test ID ${testId} status: ${status_text}. Polling again in ${POLLING_INTERVAL_MS / 1000}s...`);
-		
+		setStatusLabel(`${ status_text }`, { spinning: true });
             } else { 
                 // Handle compilation error, runtime error, or other failure states
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
+		setStatusLabel(`Erro - <strong>${label}</strong>`, { spinning: true });		
                 displayProgramOutput(output);
 		//console.log(status_text, execution_time, memory);
                 console.error(`Test ID ${testId} failed: ${status_text}`);
@@ -1046,7 +1072,8 @@ function displayProgramOutput(programOutputText) {
     const stdoutOutput = document.getElementById('stdout-output');
     
     // Escape the output text to prevent HTML injection, then wrap it in <pre>
-    const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
+    outputBuffer += programOutputText;
+    const safeOutput = escapeHtml(outputBuffer); // Assuming you have an escape function
     
     stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
     
