@@ -4,15 +4,26 @@
   <defs>
     <style>
       .st0 {
+        stroke: #fff;
+      }
+
+      .st0, .st1 {
         fill: none;
-        stroke: #231f20;
         stroke-miterlimit: 10;
+      }
+
+      .st1 {
+        stroke: #fafbfb;
+      }
+
+      .st2 {
+        fill: #fafbfb;
       }
     </style>
   </defs>
   <g>
     <path class="st0" d="M20.1,1.1s0,0,0,0v37.9s0,0,0,0c10.5,0,18.9-8.5,18.9-18.9S30.5,1.1,20.1,1.1Z"/>
-    <path d="M1.1,20c0,10.5,8.5,18.9,18.9,18.9V1.1c-10.5,0-18.9,8.5-18.9,18.9Z"/>
+    <path class="st2" d="M1.1,20c0,10.5,8.5,18.9,18.9,18.9V1.1c-10.5,0-18.9,8.5-18.9,18.9Z"/>
   </g>
-  <circle class="st0" cx="20.1" cy="20" r="18.9"/>
+  <circle class="st1" cx="20.1" cy="20" r="18.9"/>
 </svg>
