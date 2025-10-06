@@ -310,7 +310,7 @@ if __name__ == "__main__":
 	} catch (error) {
             console.error("CMS Test Submission Failed:", error);
 	    setStatusLabel(`Submissão falhou - <strong>${label}</strong>`, { spinning: false });
-            displayProgramOutput("Submission failed.");
+            displayProgramOutput("Submissão falhou.", color="red");
 	}
     });
 
@@ -321,6 +321,7 @@ if __name__ == "__main__":
 	}
         saveCurrentTaskState();
     });    
+
     // Clear Input button
     document.getElementById('clear-input-btn').addEventListener('click', () => {
 	const inputElement = document.getElementById('stdin-input');
@@ -330,10 +331,11 @@ if __name__ == "__main__":
 	}        
         saveCurrentTaskState();
     });    
+
     // Clear Output button
     document.getElementById('clear-output-btn').addEventListener('click', () => {
 	const outputElement = document.getElementById('stdout-output');    
-	outputElement.innerHTML = `<pre></pre>`;
+	outputElement.innerHTML = '';
 	outputBuffer = '';
 
     });
@@ -1017,11 +1019,11 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = "Saída:\n";
+		var program_output = "Execução terminou sem erros.\nSaída produzida:\n";
 		program_output += "---------\n";
-		program_output += output + "\n";
-		program_output += "---------\n";
-		program_output += `Tempo: ${execution_time} | Memória: ${memory}\n`
+		program_output = formatOutput(program_output, "DodgerBlue");
+		program_output += formatOutput(output + "\n");
+		program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
@@ -1032,7 +1034,8 @@ async function pollTestStatus(testId) {
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "Erro de compilação:\n";
-		program_output += compilation_stderr;
+		program_output = formatOutput(program_output, "DodgerBlue");
+		program_output += formatOutput(compilation_stderr, "red");
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
@@ -1073,11 +1076,21 @@ function displayProgramOutput(programOutputText) {
     
     // Escape the output text to prevent HTML injection, then wrap it in <pre>
     outputBuffer += programOutputText;
-    const safeOutput = escapeHtml(outputBuffer); // Assuming you have an escape function
-    
-    stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
+    //stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
+    stdoutOutput.innerHTML = `${outputBuffer}`;
     
     // Remember to save the new output to the current task state
     //saveCurrentTaskState(); 
+}
+
+function formatOutput(str, textColor="") {
+    if (typeof str !== 'string') {
+        str = String(str);
+    }
+    
+    const htmlContent = str.replace(/\n/g, '<br/>');
+    const styledHtml = `<div style="color: ${textColor || 'inherit'};">${htmlContent}</div>`;
+
+    return styledHtml;
 }
     
