@@ -34,7 +34,7 @@ if __name__ == "__main__":
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
-            output: '<pre></pre>',
+            output: '',
             theme: 'dark'
 	},
 	task2: {
@@ -42,7 +42,7 @@ if __name__ == "__main__":
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
-            output: '<pre></pre>',
+            output: '',
             theme: 'dark'
 	},
 	task3: {
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
-            output: '<pre>',
+            output: '',
             theme: 'dark'
 	},
 	task4: {
@@ -58,7 +58,7 @@ if __name__ == "__main__":
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
-            output: '<pre>',
+            output: '',
             theme: 'dark'
 	},
 	task5: {
@@ -66,7 +66,7 @@ if __name__ == "__main__":
             code: window.templates.cpp,
             language: 'cpp',
             input: '',
-            output: '<pre>',
+            output: '',
             theme: 'dark'
 	}
     };
@@ -83,6 +83,28 @@ if __name__ == "__main__":
 	minimap: { enabled: false },
 	padding: { top: 10 }  
     });
+
+    // 1) Editor content changes
+    if (window.editor?.onDidChangeModelContent) {
+	window.editor.onDidChangeModelContent(() => {
+	    scheduleSaveSnapshot();
+	});
+    }
+    
+    // 2) STDIN textarea changes
+    const stdin = document.getElementById("stdin-input");
+    if (stdin && !stdin.__wiredSnapshot) {
+	stdin.addEventListener("input", scheduleSaveSnapshot);
+	stdin.__wiredSnapshot = true;
+    }
+    
+    // 3) Language changes (if you want them persisted too)
+    const langSel = document.getElementById("language-select");
+    if (langSel && !langSel.__wiredSnapshot) {
+	langSel.addEventListener("change", scheduleSaveSnapshot);
+	langSel.__wiredSnapshot = true;
+    }
+
 
     const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
@@ -107,9 +129,11 @@ if __name__ == "__main__":
     // --- Handle Task Switch ---
     document.getElementById('task-select')?.addEventListener('change', function(e) {
 	const newTaskID = e.target.value;
-	
+
+	console.log("CHANGING TASK to", newTaskID);
 	// 1. Save the state of the OLD task
-	saveCurrentTaskState();
+	//saveCurrentTaskState();
+	//scheduleSaveSnapshot();	
 	
 	// 2. Load the state of the NEW task
 	loadTaskState(newTaskID);
@@ -125,7 +149,7 @@ if __name__ == "__main__":
     }
 
 
-    function loadTaskState(taskID) {
+    function loadTaskStateOld(taskID) {
 	const state = window.taskStates[taskID];
 	if (!state) return;
 
@@ -236,12 +260,13 @@ if __name__ == "__main__":
     document.getElementById('download-output-btn')?.addEventListener('click', () => {
 	// Get text content from the <pre> tag inside the output container
 	const outputContainer = document.getElementById('stdout-output');
-	const preElement = outputContainer?.querySelector('pre');
-	
-	// Fallback to container's text content if <pre> isn't found
-	const content = preElement ? preElement.textContent : (outputContainer?.textContent ?? "");
-
-	downloadContent('saida.txt', content);
+	const htmlContent = outputContainer?.innerHTML ?? "";
+	const openingTagRegex = /<div.*?>/gi;    
+	const closingTagRegex = /<\/div>/gi;
+	let cleanedContent = htmlContent.replace(openingTagRegex, '');
+        cleanedContent = cleanedContent.replace(closingTagRegex, '');
+	const txtContent = cleanedContent.replace(/<br\s*\/?>/gi, '\n');
+	downloadContent('saida.txt', txtContent);
     });
 
     document.getElementById('language-select').addEventListener('change', function(e) {
@@ -301,6 +326,7 @@ if __name__ == "__main__":
 	    setStatusLabel("Submissão falhou", { spinning: false });
             displayProgramOutput("Submissão falhou.", color="red");
 	}
+	scheduleSaveSnapshot();	
     });
 
     // Clear button
@@ -308,7 +334,8 @@ if __name__ == "__main__":
 	if (confirm("Tem certeza que deseja limpar a área de código??")) {
 	    window.editor.setValue("");
 	}
-        saveCurrentTaskState();
+	scheduleSaveSnapshot();	
+        //saveCurrentTaskState();
     });    
 
     // Clear Input button
@@ -318,7 +345,8 @@ if __name__ == "__main__":
 	if (inputElement) {
             inputElement.value = "";
 	}        
-        saveCurrentTaskState();
+	scheduleSaveSnapshot();	
+        //saveCurrentTaskState();
     });    
 
     // Clear Output button
@@ -373,34 +401,34 @@ if __name__ == "__main__":
 	});
     })();
     
-    function saveCurrentTaskState() {
-	const taskID = window.currentTask;
-	if (!window.taskStates[taskID]) return;
+    // function saveCurrentTaskState() {
+    // 	const taskID = window.currentTask;
+    // 	if (!window.taskStates[taskID]) return;
 	
-	// Save Code and Language
-	window.taskStates[taskID].code = window.editor.getValue();
-	const langSelect = document.getElementById('language-select');
-	if (langSelect) {
-	    window.taskStates[taskID].language = langSelect.value;
-	}
+    // 	// Save Code and Language
+    // 	window.taskStates[taskID].code = window.editor.getValue();
+    // 	const langSelect = document.getElementById('language-select');
+    // 	if (langSelect) {
+    // 	    window.taskStates[taskID].language = langSelect.value;
+    // 	}
 
-	// Save Input Pane Content
-	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
+    // 	// Save Input Pane Content
+    // 	window.taskStates[taskID].input = document.getElementById('stdin-input')?.value ?? "";
 	
-	// Save Output Pane Content (Use innerHTML if it contains rich content)
-	window.taskStates[taskID].output = document.getElementById('stdout-output')?.innerHTML ?? "";
+    // 	// Save Output Pane Content (Use innerHTML if it contains rich content)
+    // 	window.taskStates[taskID].output = document.getElementById('stdout-output')?.innerHTML ?? "";
 	
-	// Save Theme State (check the class on the pane-container elements)
-	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
+    // 	// Save Theme State (check the class on the pane-container elements)
+    // 	const rtopContainer = document.querySelector('#pane-rtop .pane-container');
+    // 	const rbotContainer = document.querySelector('#pane-rbot .pane-container');
 	
-	// Check if both right panes are set to light mode
-	const isLight = rtopContainer?.classList.contains('light-mode') && 
-              rbotContainer?.classList.contains('light-mode');
+    // 	// Check if both right panes are set to light mode
+    // 	const isLight = rtopContainer?.classList.contains('light-mode') && 
+    //           rbotContainer?.classList.contains('light-mode');
 	
-	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
+    // 	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
 	
-    }
+    // }
 
 });
 
@@ -700,7 +728,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		    // 3. Toggle the 'dark-mode' class on the contentContainer
 		    if (contentContainer) {
 			contentContainer.classList.toggle('light-mode');
-			setTimeout(saveCurrentTaskState, 0); // Save state on the next tick
+			//setTimeout(saveCurrentTaskState, 0); // Save state on the next tick
+			scheduleSaveSnapshot();	
 
 		    }
 		}
@@ -747,7 +776,8 @@ function initializeFileUploader(btn) {
                     }
                     
                     inputEl.value = text;
-                    saveCurrentTaskState(); 
+                    //saveCurrentTaskState(); 
+		    scheduleSaveSnapshot();	
                     return;
                 }
 
@@ -778,7 +808,8 @@ function initializeFileUploader(btn) {
 
                 // Now safely set the uploaded text (template won’t overwrite it)
                 window.editor.setValue(text || "" );
-                saveCurrentTaskState();
+                //saveCurrentTaskState();
+		scheduleSaveSnapshot();	
             };
 
             reader.readAsText(file);
@@ -983,8 +1014,8 @@ async function handleRunClick() {
 	await new Promise(res => setTimeout(res, 1500));
 
 	// Example output update
-	const outEl = document.getElementById('stdout-output');
-	if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
+	//const outEl = document.getElementById('stdout-output');
+	//if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
 
     } catch (err) {
 	console.error('Run error:', err);
@@ -1054,6 +1085,7 @@ async function pollTestStatus(testId) {
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
                 console.log(`Test ID ${testId} completed: Status: ${status_text}`);
+		scheduleSaveSnapshot();
 	    } else if (status == COMPILATION_FAILED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1066,12 +1098,13 @@ async function pollTestStatus(testId) {
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		console.log(status_text, execution_time, memory);
                 console.log(`Test ID ${testId} completed: Status: ${status_text}`);
-		
+		scheduleSaveSnapshot();
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
                 console.log(`Test ID ${testId} status: ${status_text}. Polling again in ${POLLING_INTERVAL_MS / 1000}s...`);
 		setStatusLabel(`${ status_text }`, { spinning: true });
             } else { 
+                // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
 		setStatusLabel(`Erro - <strong>${label}</strong>`, { spinning: true });		
@@ -1080,15 +1113,20 @@ async function pollTestStatus(testId) {
                 displayProgramOutput(programOutput);
 		//console.log(status_text, execution_time, memory);
                 console.error(`Test ID ${testId} failed: ${status_text}`);
+		scheduleSaveSnapshot();
             }
 
         } catch (error) {
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
             console.error("Error during status polling:", error);
-            if (outputContainer) {
-                outputContainer.innerHTML = '<pre>Error during polling. Check console.</pre>';
-            }
+	    var program_output = "\nErro de processamento\n";
+	    program_output = formatOutput(program_output, "red");
+            displayProgramOutput(programOutput);
+	    //console.log(status_text, execution_time, memory);
+            console.error(`Test ID ${testId} failed: ${status_text}`);
+	    scheduleSaveSnapshot();
+
         }
     };
 
@@ -1105,6 +1143,7 @@ function displayProgramOutput(programOutputText) {
     stdoutOutput.innerHTML = `${outputBuffer}`;
     
     // Remember to save the new output to the current task state
+    scheduleSaveSnapshot();	
     //saveCurrentTaskState(); 
 }
 
@@ -1127,4 +1166,170 @@ function getLocalizedTime(locale = 'pt-BR') {
 
     const formattedTime = now.toLocaleTimeString(locale, timeOptions);
     return formattedTime
+}
+
+// === Per-task snapshot persistence ===
+const STORAGE_PREFIX = "obi:taskstate:v1:";
+
+function storageKey(taskId) {
+  return `${STORAGE_PREFIX}${taskId}`;
+}
+function saveSnapshot(taskId, snap) {
+    console.log("in saveSnapshot", taskId);
+    console.log("in saveSnapshot", snap);
+  try { localStorage.setItem(storageKey(taskId), JSON.stringify(snap)); }
+  catch (e) { console.warn("saveSnapshot failed", e); }
+}
+
+function loadSnapshot(taskId) {
+    console.log("in loadSnapshot", taskId);
+  try {
+      const key = storageKey(taskId);
+    const raw = localStorage.getItem(key);
+
+    if (raw) {
+	// Normal case: restore previous snapshot
+	console.log("found snapshot",JSON.parse(raw));
+      return JSON.parse(raw);
+    } else if (window.taskStates?.[taskId]) {
+      // Initialize from your default window.taskStates
+      const init = { ...window.taskStates[taskId] };
+      localStorage.setItem(key, JSON.stringify(init));
+      console.log(`Initialized ${taskId} in localStorage from defaults.`);
+      return init;
+    } else {
+      console.warn("loadSnapshot: no state found for", taskId);
+      return null;
+    }
+  } catch (e) {
+    console.warn("loadSnapshot failed", e);
+    return null;
+  }
+}
+
+function readCurrentPanes() {
+  return {
+    code: window.editor?.getValue?.() || "",
+    input: document.getElementById("stdin-input")?.value || "",
+    // If your output is HTML, you can store innerHTML; if it’s plain text, prefer textContent.
+    output: document.getElementById("stdout-output")?.innerHTML || "",
+    language: document.getElementById("language-select")?.value || ""
+  };
+}
+
+// Debounced saver
+let _saveTimer = null;
+function scheduleSaveSnapshot() {
+    if (_suppressSnapshot) return;
+    console.log("in scheduleSaveSnapshot");
+    if (!window.currentTask) {console.log("returning"); return;}
+    clearTimeout(_saveTimer);
+    console.log("start timer");
+    _saveTimer = setTimeout(() => {
+	console.log("timer snapshot");
+    saveSnapshot(window.currentTask, readCurrentPanes());
+  }, 400);
+}
+
+// Editor changes
+if (window.editor?.onDidChangeModelContent) {
+  window.editor.onDidChangeModelContent(() => scheduleSaveSnapshot());
+}
+
+// Stdin textarea changes
+const _stdin = document.getElementById("stdin-input");
+if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
+
+// Whenever you programmatically update the OUTPUT, call scheduleSaveSnapshot() afterwards.
+// Example: after a run finishes and you set stdout innerHTML:
+// outEl.innerHTML = "..."; scheduleSaveSnapshot();
+
+// function loadTaskState(taskID) {
+//   const state = window.taskStates[taskID];
+//   if (!state) return;
+
+//   window.currentTask = taskID;
+
+//     console.log("in loadTaskState", taskID);
+//   // Try local snapshot first
+//   const snap = loadSnapshot(taskID);
+
+//   // 1) Language FIRST (use snapshot if available)
+//   const lang = snap?.language ?? state.language;
+//   if (lang) {
+//     // if you have setLanguage(...) wrapper, use it; else do your select/dispatch flow here
+//     if (window.setLanguage) window.setLanguage(lang, { skipTemplate: true });
+//     else {
+//       const sel = document.getElementById("language-select");
+//       if (sel) {
+//         const idx = Array.from(sel.options).findIndex(o => o.value === lang);
+//         if (idx !== -1) {
+//           window.__suppressTemplateOnce = true;
+//           sel.selectedIndex = idx;
+//           sel.dispatchEvent(new Event("change", { bubbles: true }));
+//         }
+//       }
+//     }
+//   }
+
+//     // 2) Code
+//     console.log("load code");
+//   const code = snap?.code ?? state.code ?? "";
+//     console.log("load code", code);
+//   window.editor?.setValue?.(code);
+
+//   // 3) Input
+//   const stdin = document.getElementById("stdin-input");
+//   if (stdin) stdin.value = snap?.input ?? state.input ?? "";
+
+//   // 4) Output
+//   const stdout = document.getElementById("stdout-output");
+//   if (stdout) stdout.innerHTML = snap?.output ?? state.output ?? "";
+
+//   // (Optional) update any status/task labels you keep
+//   window.onTaskViewChanged?.();
+
+//   // Save an immediate snapshot so newly-opened tasks are persisted quickly
+//   //scheduleSaveSnapshot();
+// }
+
+function loadTaskState(taskID) {
+    console.log("in loadTaskState", taskID);
+  //const state = window.taskStates[taskID];
+  //if (!state) return;
+  window.currentTask = taskID;
+
+  _suppressSnapshot = true; // stop debounced saves during programmatic updates
+   const snap = loadSnapshot(taskID);
+
+    console.log("got snap");
+  // (A) Language first (however you do it)
+  const lang = snap?.language
+  if (lang) {
+    // if you have setLanguage(...) wrapper, use it; else do your select/dispatch flow here
+    if (window.setLanguage) window.setLanguage(lang, { skipTemplate: true });
+    else {
+      const sel = document.getElementById("language-select");
+      if (sel) {
+        const idx = Array.from(sel.options).findIndex(o => o.value === lang);
+        if (idx !== -1) {
+          window.__suppressTemplateOnce = true;
+          sel.selectedIndex = idx;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+    }
+  }
+  //if (window.setLanguage) window.setLanguage(state.language, { skipTemplate: true });
+  // (B) Code
+  window.editor?.setValue?.(snap?.code || "");
+  // (C) Input
+  const stdin = document.getElementById("stdin-input");
+  if (stdin) stdin.value = snap?.input || "";
+  // (D) Output
+  const out = document.getElementById("stdout-output");
+  if (out) out.innerHTML = snap?.output || "";
+
+  _suppressSnapshot = false; // re-enable
+  //scheduleSaveSnapshot();    // take one clean snapshot for this task
 }
