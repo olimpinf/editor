@@ -185,27 +185,17 @@ if __name__ == "__main__":
 	    leftPane.setAttribute('data-theme', editorDark ? 'dark' : 'light'); // optional
 	    leftPane.classList.toggle('theme-dark', editorDark);                // optional
 	    leftPane.classList.toggle('theme-light', !editorDark);              // optional
+	    const rtopContainer = document.querySelector('#pane-rtop .pane-container');
+	    const rbotContainer = document.querySelector('#pane-rbot .pane-container');
+	    rtopContainer?.classList.toggle('light-mode', !editorDark);
+	    rbotContainer?.classList.toggle('light-mode', !editorDark);
 	}
 
-	// 4) Wire only the editor button; stop the click from reaching other generic handlers
 	editorToggleBtn.addEventListener('click', (e) => {
-	    e.stopPropagation();
-	    e.stopImmediatePropagation();
 	    editorDark = !editorDark;
 	    applyEditorTheme();
 	});
 
-	// 5) If you *also* want to respond to an app-wide theme change, keep this tiny listener.
-	//    It toggles the editor only if the event originated INSIDE the left pane.
-	document.addEventListener('click', (e) => {
-	    const btn = e.target.closest('.style-toggle-btn');
-	    if (!btn) return;
-	    if (!leftPane.contains(btn)) return; // ignore right-pane toggles
-	    // If your app-wide handler already flipped classes, you could sync to them here.
-	    // For now we do nothing; editor is driven exclusively by the scoped handler above.
-	}, true);
-
-	// 6) Initial paint
 	applyEditorTheme();
     })();
 
@@ -339,6 +329,13 @@ if __name__ == "__main__":
 	outputBuffer = '';
 
     });
+
+    // Font size button
+    document.getElementById('size-btn').addEventListener('click', () => {
+	console.log("click on size-btn");
+        //saveCurrentTaskState();
+    });    
+
 
     function saveCurrentTaskState() {
 	const taskID = window.currentTask;
