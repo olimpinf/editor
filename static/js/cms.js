@@ -64,11 +64,10 @@ async function taskList() {
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-async function submitCode(codeContent, language) {
+async function cmsSubmit(codeContent, language) {
     // --- Configuration ---
      const SUBMIT_API_URL = "/api/sacolas/submit";
     
-    const fileExtension = language.includes("C++") ? "cpp" : "txt"; 
     
     // The name of the file field in the multipart form (e.g., "sacolas.cpp")
     const fileNameField = "sacolas.%l";
@@ -126,6 +125,99 @@ async function submitCode(codeContent, language) {
     }
 }
 
+
+/*
+ * @param {string} codeContent - The raw source code string from the editor.
+ * @param {string} language - The programming language string (e.g., 'C++20 / g++').
+ */
+async function cmsTest(codeContent, inputContent, language) {
+    // --- Configuration ---
+     const TEST_API_URL = "/api/sacolas/test";
+    
+    // The name of the file field in the multipart form (e.g., "sacolas.cpp")
+    const fileNameField = "sacolas.%l";
+    const fileName = "sacolas.cpp"; 
+    
+    const formData = new FormData();
+    const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
+    const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
+    
+    // Example: formData.append("sacolas.cpp", Blob, "sacolas.cpp")
+    formData.append(fileNameField, codeBlob, fileName);
+    formData.append("input", inputBlob, "input.txt");
+    
+    formData.append("language", language);
+
+    console.log(`Sending test...`);
+    
+    try {
+        const response = await fetch(TEST_API_URL, {
+            method: 'POST',
+            body: formData, // fetch automatically sets Content-Type: multipart/form-data
+            redirect: 'manual' // Prevents fetch from following 302/303 redirects
+        });
+
+        const status = response.status;
+        const contentType = response.headers.get('content-type');
+
+        console.log(`Response Status Code: ${status}`);
+
+        if (status === 302 || status === 303) {
+            // Success: CMS returned a redirect (302/303) to the status page.
+            const redirectLocation = response.headers.get('Location');
+            console.log(`Submission successful (received redirect)! Location: ${redirectLocation}`);
+            return { success: true, redirect: redirectLocation };
+            
+        } else if (status >= 200 && status < 300) {
+            // Success: 200 OK. Try to parse JSON or display text.
+            let data = {};
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                data = await response.text();
+            }
+            console.log("Submission successful! Response body:", data);
+            return { success: true, data: data };
+            
+        } else {
+            // Failure: Non-success status code (4xx, 5xx).
+            const errorText = await response.text();
+            console.error(`Submission failed with status code ${status}. Response text:`, errorText.substring(0, 500) + '...');
+            return { success: false, status: status, error: errorText };
+        }
+
+    } catch (err) {
+        console.error("An error occurred during POST submission:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Get status of a test submission
+ */
+async function cmsTestStatus(id) {
+    const url = "/api/sacolas/test/" + id
+
+    console.log("in test_status");
+    try {
+        const resp = await fetch(url, {
+             method: "GET" 
+         });
+
+        if (!resp.ok) {
+            console.error("Test Status failed with status", resp.status);
+	    data = {status: 0, status_text: "Erro"};
+            return;
+        }
+
+        const data = await resp.json();
+	console.log(data)
+	return data;
+	
+    } catch (err) {
+         console.error("Error during task list retrieval:", err); 
+    }
+}
 
 
 

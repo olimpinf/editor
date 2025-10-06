@@ -277,14 +277,38 @@ if __name__ == "__main__":
     });
     
     // Run button
-    document.getElementById('run-btn').addEventListener('click', () => {
+    document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
+	// Clear any previous running tests
+	if (window.currentTestInterval) {
+            clearInterval(window.currentTestInterval);
+            delete window.currentTestInterval;
+            console.log("Stopped previous test execution.");
+	}
+	
 	const code = window.editor.getValue();
-	// const stdin = document.getElementById('stdin-input')?.value ?? "";
-	console.log("=== Running code ===\n", code);
-	// console.log("=== With stdin ===\n", stdin);
-	alert("Run pressed! (Code + stdin logged in console for now)");
-	submitCode(code, "C++20 / g++");
-	//displayProgramOutput("Resultado de execução");
+	const input = document.getElementById('stdin-input')?.value ?? "";
+	//const language = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
+	const language = "C++20 / g++"
+
+	// Clear output pane and show loading state
+	displayProgramOutput("Submitting code to CMS...");
+
+	console.log("=== Submitting code to CMS ===\n", code);
+	
+	try {
+            // 1. Submit the code and get the test ID
+            const submissionResult = await cmsTest(code, input, language);
+            const testId = submissionResult.data.id;
+            
+            console.log("Submission successful. Starting polling for ID:", testId);
+
+            // 2. Start polling for the status
+            await pollTestStatus(testId);
+
+	} catch (error) {
+            console.error("CMS Test Submission Failed:", error);
+            displayProgramOutput("Submission failed.");
+	}
     });
 
     // Clear button
@@ -338,19 +362,6 @@ if __name__ == "__main__":
 	window.taskStates[taskID].theme = isLight ? 'light' : 'dark';
 	
     }
-
-    function displayProgramOutput(programOutputText) {
-	const stdoutOutput = document.getElementById('stdout-output');
-	
-	// Escape the output text to prevent HTML injection, then wrap it in <pre>
-	const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
-	
-	stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
-	
-	// Remember to save the new output to the current task state
-	saveCurrentTaskState(); 
-    }
-    
 
 });
 
@@ -964,3 +975,82 @@ async function handleRunClick() {
 window.onTaskViewChanged = function () {
     paintStatus();
 };
+
+const POLLING_INTERVAL_MS = 2000; // Poll every 2 seconds
+
+/**
+ * Polls the CMS server for the status of a test execution until completion.
+ * @param {string} testId The ID returned by cmsTest.
+ */
+async function pollTestStatus(testId) {
+    // Reference the output pane container
+    const outputContainer = document.getElementById('stdout-output');
+    
+    // Initial display while waiting
+    if (outputContainer) {
+        outputContainer.innerHTML = '<pre>Status: Running... (ID: ' + testId + ')</pre>';
+    }
+
+    // Define the polling loop function
+    const checkStatus = async () => {
+        try {
+            const result = await cmsTestStatus(testId);
+            const { status_text, execution_time, memory, output } = result;
+
+            // Update the status display immediately
+            if (outputContainer) {
+                // Display the current status text
+                outputContainer.innerHTML = `<pre>Status: ${status_text} | Time: ${execution_time} | Memory: ${memory}\n\n[Waiting for final output...]</pre>`;
+            }
+
+            if (status_text === "Executed" || status_text === "Compilation failed") {
+                // 1. STOP POLLING
+                clearInterval(window.currentTestInterval);
+                delete window.currentTestInterval; // Clean up the interval reference
+		
+                // 2. DISPLAY FINAL RESULTS
+                displayProgramOutput(output);
+		console.log(status_text, execution_time, memory);
+                console.log(`Test ID ${testId} completed: Status: ${status_text}`);
+		
+            } else if (status_text === "Compiling..." || status_text === "Executing...") {
+                // CONTINUE POLLING (Interval handles the next call)
+                console.log(`Test ID ${testId} status: ${status_text}. Polling again in ${POLLING_INTERVAL_MS / 1000}s...`);
+		
+            } else { 
+                // Handle compilation error, runtime error, or other failure states
+                clearInterval(window.currentTestInterval);
+                delete window.currentTestInterval;
+                displayProgramOutput(output);
+		//console.log(status_text, execution_time, memory);
+                console.error(`Test ID ${testId} failed: ${status_text}`);
+            }
+
+        } catch (error) {
+            clearInterval(window.currentTestInterval);
+            delete window.currentTestInterval;
+            console.error("Error during status polling:", error);
+            if (outputContainer) {
+                outputContainer.innerHTML = '<pre>Error during polling. Check console.</pre>';
+            }
+        }
+    };
+
+    // Start the interval and save its ID so we can stop it later
+    // We run checkStatus immediately once, and then start the interval
+    await checkStatus(); 
+    window.currentTestInterval = setInterval(checkStatus, POLLING_INTERVAL_MS);
+}
+
+function displayProgramOutput(programOutputText) {
+    const stdoutOutput = document.getElementById('stdout-output');
+    
+    // Escape the output text to prevent HTML injection, then wrap it in <pre>
+    const safeOutput = escapeHtml(programOutputText); // Assuming you have an escape function
+    
+    stdoutOutput.innerHTML = `<pre>${safeOutput}</pre>`;
+    
+    // Remember to save the new output to the current task state
+    //saveCurrentTaskState(); 
+}
+    
