@@ -640,35 +640,18 @@ window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
 
     // Close on outside click
     document.addEventListener('click', closeDropdown);
+
+    document.addEventListener('click', (e) => {
+	const btn = e.target.closest('#global-style-toggle');
+	if (!btn) return;
+
+	const now = getCurrentTheme();             // 'light' or 'dark'
+	const next = now === 'light' ? 'dark' : 'light';
+	setThemeForCurrentTask(next);
+    });
+    
 })();
 
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.style-toggle-btn').forEach(button => {
-	button.addEventListener('click', (event) => {
-	    const btn = event.target.closest('.style-toggle-btn');
-	    if (!btn) return;
-	    const scope = btn.dataset.scope || '';
-	    if (scope === 'pane') {	    
-		// 1. Go UP to the nearest common ancestor: the element with class 'pane'
-		const pane = event.target.closest('.pane');
-		if (pane) {
-		    // 2. Go DOWN to the specific element where the theme should be applied
-		    //    (the sibling of the bar, which contains the text)
-		    const contentContainer = pane.querySelector('.pane-container');
-		    
-		    // 3. Toggle the 'dark-mode' class on the contentContainer
-		    if (contentContainer) {
-			contentContainer.classList.toggle('light-mode');
-			//setTimeout(saveCurrentTaskState, 0); // Save state on the next tick
-			scheduleSaveSnapshot();	
-
-		    }
-		}
-	    }
-	});
-    });
-});
 
 // === Generic File Upload Handler ===
 
@@ -1194,9 +1177,9 @@ if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 let _suppressSnapshot = false;
 
 function loadTaskState(taskID) {
-  //const state = window.taskStates[taskID];
+  const state = window.taskStates[taskID];
     //if (!state) return;
-    console.log("storage usage",logStorageUsage());
+  console.log("storage usage" ,logStorageUsage());
   window.currentTask = taskID;
 
   _suppressSnapshot = true; // stop debounced saves during programmatic updates
@@ -1230,7 +1213,13 @@ function loadTaskState(taskID) {
   if (out) out.innerHTML = snap?.output || "";
     if (_outputBuffers[taskID])
 	_outputBuffers[taskID] = snap?.output || "";
-  _suppressSnapshot = false; // re-enable
+
+  // Theme: apply for all panes + Monaco
+  const theme = state.theme === 'light' ? 'light' : 'dark';
+  applyGlobalTheme(theme);
+
+
+    _suppressSnapshot = false; // re-enable
   //scheduleSaveSnapshot();    // take one clean snapshot for this task
 }
 
@@ -1405,3 +1394,243 @@ function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
   persistTaskOutput(taskId, next);
 }
 
+function applyGlobalTheme(mode) {
+  // mode: 'light' or 'dark'
+  const light = (mode === 'light');
+
+  // Right panes: add/remove .light-mode on their content containers
+  const rtop = document.querySelector('#pane-rtop .pane-container');
+  const rbot = document.querySelector('#pane-rbot .pane-container');
+  rtop?.classList.toggle('light-mode', light);
+  rbot?.classList.toggle('light-mode', light);
+
+  // Monaco editor theme (left pane)
+  if (window.monaco?.editor && window.editor) {
+    window.monaco.editor.setTheme(light ? 'vs' : 'vs-dark');
+  }
+}
+
+function getCurrentTheme() {
+  // Prefer the current task state if present
+  const taskId = window.currentTask;
+  const state = taskId && window.taskStates ? window.taskStates[taskId] : null;
+  if (state?.theme === 'light' || state?.theme === 'dark') {
+    return state.theme;
+  }
+  // Fallback: infer from right-top pane
+  const rtop = document.querySelector('#pane-rtop .pane-container');
+  const isLight = !!rtop && rtop.classList.contains('light-mode');
+  return isLight ? 'light' : 'dark';
+}
+
+function setThemeForCurrentTask(mode) {
+  // Persist in memory & snapshot
+  if (window.currentTask && window.taskStates?.[window.currentTask]) {
+    window.taskStates[window.currentTask].theme = mode;
+  }
+  applyGlobalTheme(mode);
+  scheduleSaveSnapshot?.();
+}
+
+
+/* ======================================================
+   Small Modules Refactor (no build step, safe to inline)
+   Namespace: window.App
+   ====================================================== */
+(function (window, document) {
+  "use strict";
+  window.App = window.App || {};
+
+  /* -------------------- TaskState -------------------- */
+  window.App.TaskState = (function () {
+    const getKey = (taskId) => `taskState:${taskId}`;
+
+    function save(taskId, state) {
+      try {
+        localStorage.setItem(getKey(taskId), JSON.stringify(state));
+      } catch (_) {}
+    }
+
+    function load(taskId) {
+      try {
+        const raw = localStorage.getItem(getKey(taskId));
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return { save, load };
+  })();
+
+  /* -------------------- Theme -------------------- */
+  window.App.Theme = (function () {
+    const ROOT = document.documentElement;
+    function get() {
+      return ROOT.dataset.theme || "dark";
+    }
+    function set(theme) {
+      ROOT.dataset.theme = theme;
+    }
+    function toggle() {
+      set(get() === "dark" ? "light" : "dark");
+    }
+    return { get, set, toggle };
+  })();
+
+  /* -------------------- Accessible Custom Select -------------------- */
+  window.App.AccessibleSelect = (function () {
+    /**
+     * Enhances a custom select made of:
+     * <div class="custom-select" role="combobox" aria-haspopup="listbox" aria-expanded="false"
+     *      aria-controls="lang-list" aria-label="Language" tabindex="0">
+     *   <span class="custom-select__label" id="lang-label">C++</span>
+     *   <ul class="custom-select__list" id="lang-list" role="listbox" tabindex="-1" hidden>
+     *     <li role="option" aria-selected="true" data-value="cpp">C++</li>
+     *     <li role="option" data-value="python">Python</li>
+     *     ...
+     *   </ul>
+     * </div>
+     */
+    function enhance(root) {
+      if (!root) return;
+      const label = root.querySelector(".custom-select__label");
+      const list = root.querySelector("[role='listbox']");
+      const options = Array.from(list?.querySelectorAll("[role='option']") || []);
+
+      function open() {
+        root.setAttribute("aria-expanded", "true");
+        list.hidden = false;
+        list.focus({ preventScroll: true });
+        const selected = options.find(o => o.getAttribute("aria-selected") === "true") || options[0];
+        if (selected) setActive(selected);
+      }
+
+      function close() {
+        root.setAttribute("aria-expanded", "false");
+        list.hidden = true;
+        root.focus({ preventScroll: true });
+      }
+
+      function setActive(el) {
+        options.forEach(o => o.classList.remove("is-active"));
+        el.classList.add("is-active");
+        list.setAttribute("aria-activedescendant", el.id || "");
+      }
+
+      function select(el, fireChange=true) {
+        options.forEach(o => o.setAttribute("aria-selected", String(o === el)));
+        if (label) label.textContent = el.textContent;
+        root.dataset.value = el.dataset.value || el.getAttribute("data-value");
+        if (fireChange) {
+          root.dispatchEvent(new CustomEvent("customselect:change", {
+            bubbles: true,
+            detail: { value: root.dataset.value, label: el.textContent }
+          }));
+        }
+        close();
+      }
+
+      function onClick(e) {
+        const opt = e.target.closest("[role='option']");
+        if (opt) {
+          e.preventDefault();
+          select(opt);
+        }
+      }
+
+      function onKeyDown(e) {
+        const key = e.key;
+        const currentIdx = options.findIndex(o => o.classList.contains("is-active"));
+        const move = (delta) => {
+          const idx = Math.max(0, Math.min(options.length - 1, (currentIdx < 0 ? 0 : currentIdx) + delta));
+          const next = options[idx];
+          if (next) setActive(next);
+          e.preventDefault();
+        };
+
+        if (key === "Enter" || key === " ") {
+          const active = options.find(o => o.classList.contains("is-active")) || options[0];
+          if (root.getAttribute("aria-expanded") === "true") select(active);
+          else open();
+          e.preventDefault();
+        } else if (key === "ArrowDown") {
+          if (root.getAttribute("aria-expanded") !== "true") return open();
+          move(1);
+        } else if (key === "ArrowUp") {
+          if (root.getAttribute("aria-expanded") !== "true") return open();
+          move(-1);
+        } else if (key === "Home") {
+          setActive(options[0]); e.preventDefault();
+        } else if (key === "End") {
+          setActive(options[options.length - 1]); e.preventDefault();
+        } else if (key === "Escape") {
+          close(); e.preventDefault();
+        }
+      }
+
+      function onRootKeyDown(e) {
+        if (e.key === "Enter" || e.key === " ") {
+          open(); e.preventDefault();
+        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          open(); e.preventDefault();
+        }
+      }
+
+      // Mouse / focus handlers
+      root.addEventListener("click", (e) => {
+        const expanded = root.getAttribute("aria-expanded") === "true";
+        if (!expanded) open(); else if (e.target === root || e.target === label) close();
+      });
+      list.addEventListener("click", onClick);
+      list.addEventListener("keydown", onKeyDown);
+      root.addEventListener("keydown", onRootKeyDown);
+
+      // Init selection
+      const selected = options.find(o => o.getAttribute("aria-selected") === "true") || options[0];
+      if (selected) {
+        if (!selected.id) selected.id = `${root.id || "custom-select"}-opt-${Math.random().toString(36).slice(2,7)}`;
+        select(selected, false);
+        setActive(selected);
+      }
+
+      // Close when clicking outside
+      document.addEventListener("click", (e) => {
+        if (!root.contains(e.target)) {
+          if (root.getAttribute("aria-expanded") === "true") close();
+        }
+      });
+    }
+
+    function enhanceAll(scope=document) {
+      scope.querySelectorAll(".custom-select[role='combobox']").forEach(enhance);
+    }
+
+    return { enhance, enhanceAll };
+  })();
+
+  /* -------------------- Snapshots (placeholder API) -------------------- */
+  window.App.Snapshots = (function () {
+    function warnIfLarge(text, threshold=100000) {
+      if (!text || typeof text !== "string") return;
+      if (text.length > threshold) {
+        console.warn("Snapshot size is large; consider trimming inputs/outputs.");
+      }
+    }
+    return { warnIfLarge };
+  })();
+
+})(window, document);
+/* ====================== End Modules ====================== */
+
+
+/* Initialize Accessible Custom Selects once DOM is ready */
+(function(){
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function(){ 
+      if (window.App && App.AccessibleSelect) App.AccessibleSelect.enhanceAll(document);
+    });
+  } else {
+    if (window.App && App.AccessibleSelect) App.AccessibleSelect.enhanceAll(document);
+  }
+})();

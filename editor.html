@@ -9,11 +9,50 @@
 <body>
 
 <div class="container" id="container">
+<!-- Global toolbar (full width) -->
+<div class="main-toolbar" id="global-toolbar">
+  <div class="bar">
+    <span class="title">EditorOBI</span>
+    <div class="controls">
+      <!-- Font size (global) -->
+      <button id="font-btn" data-scope="global" title="Font size">
+        <img src="static/img/icon-font-size.svg" height="17pt" alt="Font size">
+      </button>
+
+      <!-- Dark/Light (global) -->
+      <!-- in the top toolbar -->
+      <button class="style-toggle-btn" id="global-style-toggle" title="Dark/Light">
+	<img src="static/img/icon-theme.svg" height="17pt" alt="Dark/Light">
+      </button>
+
+      <!-- Task selector (global) -->
+      <div role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0" class="custom-select" id="task-select-wrapper">
+        <select id="task-select">
+          <option value="task1">Tarefa 1</option>
+          <option value="task2">Tarefa 2</option>
+          <option value="task3">Tarefa 3</option>
+          <option value="task4">Tarefa 4</option>
+          <option value="task5">Tarefa 5</option>
+        </select>
+      </div>
+
+      <!-- Language selector (global) -->
+      <div role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0" class="custom-select" id="language-select-wrapper">
+        <select id="language-select">
+          <option value="cpp">C++</option>
+          <option value="java">Java</option>
+          <option value="python">Python</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
   <div class="left">
     <!-- Left Pane -->
     <div class="pane" id="left-pane">
       <div class="bar">
-	<span>EditorOBI</span>
+	<span>Código</span>
 	<div class="controls">
 	  <!-- Run button -->
 	  <button id="run-btn" title="Run">
@@ -31,34 +70,6 @@
 	  <button id="clear-btn" title="Clear">
             <img src="static/img/icon-thrash.svg" height="17pt" alt="Clear code">
 	  </button>
-	  <!-- Font font size button -->
-	  <button id="font-btn" data-scope="editor" title="Font size">
-            <img src="static/img/icon-font-size.svg" height="17pt" alt="Font size">
-	  </button>
-	  <!-- Dark mode button -->
-	  <button class="style-toggle-btn" data-scope="editor" title="Dark/Light">
-            <!--img src="https://img.icons8.com/?size=20&id=28rO6I0klOD8&format=png&color=ffffff" alt="Dark/Light"-->
-            <img src="static/img/icon-theme.svg" height="17pt" alt="Dark/Light">
-	  </button>
-	  <div style="margin-left:10px"></div>
-	  <!-- Task selector -->
-	  <div class="custom-select" id="task-select-wrapper">
-            <select id="task-select">
-              <option value="task1">Tarefa 1</option>
-              <option value="task2">Tarefa 2</option>
-              <option value="task3">Tarefa 3</option>
-              <option value="task3">Tarefa 4</option>
-              <option value="task3">Tarefa 5</option>
-            </select>
-	  </div>
-	  <!-- Language selector -->
-	  <div class="custom-select" id="language-select-wrapper">
-	       <select id="language-select">
-		 <option value="cpp">C++</option>
-		 <option value="java">Java</option>
-		 <option value="python">Python</option>
-	       </select>
-	  </div>
 	  <button aria-label="Expand" class="btn-expand" data-target="left-pane">⛶</button>
 	</div>
       </div>

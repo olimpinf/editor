@@ -2,7 +2,8 @@
     --gap: 5px;
     --bar-height: 40px;
     --status-bar-height: 20px;
-    --bar-bg: #3b5caa;
+    --main-bar-bg: #2047c1;
+    --bar-bg: RoyalBlue;
     --bar-color: #fff;
     --accent: #ff7a18;
     --muted: #e6e9ee;
@@ -21,11 +22,11 @@ html,body{
     /* background: #eef2f6; */
 }
 
-/* Main 2-column layout: left|right plus status bar*/
+/* Main 2-column layout: toolbar | (left|right) | footer */
 .container {
   display: grid;
-  grid-template-columns: 5fr 3fr;           /* was 1fr 1fr -> now 5/8 : 3/8 */
-  grid-template-rows: 1fr 1fr auto;
+  grid-template-columns: 5fr 3fr;        /* keep your 5/8 : 3/8 split */
+  grid-template-rows: auto 1fr 1fr auto; /* NEW: toolbar, two content rows, footer */
   gap: var(--gap);
   height: 100vh;
   padding: var(--gap);
@@ -33,38 +34,77 @@ html,body{
   background: #ddd;
 }
 
-/* Left single pane */
+
+
+/* Toolbar spans full width on the first row */
+.main-toolbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.main-toolbar .bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;  /* left | center | right structure */
+  align-items: center;
+  background-color: var(--main-bar-bg);
+  color: var(--bar-color);
+  padding: 10px 10px;
+  border-radius: 4px; /* Optional: Rounded corners */
+}
+
+.main-toolbar .title {
+  grid-column: 1;
+  justify-self: start;
+  font-size: 18px;
+  color: var(--bar-color);
+}
+
+.main-toolbar .controls {
+  grid-column: 2;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Optional right group if you ever add something later */
+.main-toolbar .extra {
+  grid-column: 3;
+  justify-self: end;
+}
+
+/* Left and right cover the two middle rows */
 .left {
-  grid-column: 1;                            /* explicit column */
-  grid-row: 1 / span 2;                      /* same as before */
+  grid-column: 1;
+  grid-row: 2 / span 2;   /* rows 2-3 */
   display: flex;
   flex-direction: column;
   min-width: 0;
   height: 100%;
 }
 
-/* Right column split into two rows */
 .right {
-  grid-column: 2;                             /* explicit column */
-  grid-row: 1 / span 2;                       /* same as before */
+  grid-column: 2;
+  grid-row: 2 / span 2;   /* rows 2-3 */
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: var(--gap);
   min-width: 0;
 }
 
+/* Footer spans both columns on the last row */
+#pane-footer {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  height: var(--status-bar-height);
+  margin-top: 0; /* ensure no negative margin */
+}
+
+
 .left .pane {
     flex: 1;        /* NEW: make pane expand to full height */
 }
 
-
-/* Footer row spans both columns */
-#pane-footer {
-  grid-column: 1 / -1;                        /* span across both */
-  height: var(--status-bar-height);
-  /* remove negative margins that can cause misalignment */
-  margin-top: 0;
-}
 
 #pane-footer .bar {
   justify-content: center; /* center contents */
@@ -83,7 +123,7 @@ html,body{
 }
 
 .status-bar {
-  background: var(--bar-bg);
+  background: var(--main-bar-bg);
   color: var(--bar-color);
   display: flex;
   justify-content: space-between; /* left & right */
@@ -129,18 +169,13 @@ html,body{
 .bar {
   background-color: var(--bar-bg);
   color: var(--bar-color);
-  padding: 8px 10px; /* Adjust padding as needed */
+  padding: 1px 10px; /* Adjust padding as needed */
   
   /* Flexbox for inner elements (title, controls) */
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0; /* Ensures the bar doesn't shrink when content grows */
-}
-.bar .title {
-    font-weight:600;
-    font-size:14px;
-    color: #fff;
 }
 
 .bar .controls {
@@ -338,6 +373,8 @@ body.pane-expanded .pane:not(.expanded) {
 
 /* match toolbar spacing/look */
 .bar .custom-select { margin-left: 0; }
+
+
 
 /* --- Base Pane-Container Styling (Light Mode Default) --- */
 .pane-container {
