@@ -270,7 +270,7 @@ if __name__ == "__main__":
 	const languageExtension = cmsExtension[selectedLanguage];
 
 	setStatusLabel("Enviando...", { spinning: false });
-	const initMessage = "\n" + getLocalizedTime() + ": submissão enviada\n";
+	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 	displayProgramOutput(formatOutput(initMessage, color="DodgerBlue"));
 	try {
             // Submit the code and get the test ID
@@ -683,7 +683,7 @@ function initializeFileUploader(btn) {
         const input = document.createElement('input');
         input.type = 'file';
         // Allow all file types (code or text)
-	input.accept = '.cpp,.cc,.cxx,.java,.py,.txt';
+	input.accept = '.cpp,.cc,.cxx,.java,.py,.txt,.in';
         input.style.display = 'none';
 
         input.addEventListener('change', (event) => {
