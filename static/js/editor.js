@@ -261,7 +261,7 @@ if __name__ == "__main__":
             console.log("Stopped previous test execution.");
 	}
 	runningTaskId = getCurrentTaskId()
-	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / CPython", 'java': 'Java / JDK'};
+	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
 	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
 	const code = window.editor.getValue();
 	const input = document.getElementById('stdin-input')?.value ?? "";
@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
 	setStatusLabel("Enviando...", { spinning: false });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
-	displayProgramOutput(formatOutput(initMessage, color="DodgerBlue"));
+	displayProgramOutput(formatOutput(initMessage, color="DeepSkyBlue"));
 	try {
             // Submit the code and get the test ID
             const submissionResult = await cmsTest(code, input, language, languageExtension);
@@ -1000,20 +1000,32 @@ async function pollTestStatus(testId) {
 
         try {
             const result = await cmsTestStatus(testId);
-            const { status, status_text, compilation_stdout, compilation_stderr, execution_time, memory, output } = result;
+            const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = "Execução terminou sem erros.\nSaída produzida:\n";
-		program_output += "---------\n";
-		program_output = formatOutput(program_output, "DodgerBlue");
-		program_output += formatOutput(output + "\n");
-		program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
-                displayProgramOutput(program_output);
-		setStatusLabel(`${ status_text }`, { spinning: false });
+		var program_output = "";
+		if (execution_stderr === "") {
+		    program_output += "Execução terminou sem erros.\nSaída produzida:\n";
+		    program_output += "---------\n";
+		    program_output = formatOutput(program_output, "DodgerBlue");
+		    program_output += formatOutput(output + "\n");
+		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+                    displayProgramOutput(program_output);
+		    setStatusLabel(`${ status_text }`, { spinning: false });
+		}
+		else {
+		    program_output += "Execução terminou com erros:\n";
+		    program_output += "---------\n";
+		    program_output = formatOutput(program_output, "DodgerBlue");
+		    program_output += formatOutput(execution_stderr, "red");
+		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+                    displayProgramOutput(program_output);
+		    setStatusLabel(`${ status_text }`, { spinning: false });
+		} 
 		scheduleSaveSnapshot();
 		runningTaskId = null;
 	    } else if (status == COMPILATION_FAILED) {
@@ -1022,9 +1034,13 @@ async function pollTestStatus(testId) {
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "\nErro de compilação:\n";
+		program_output += "---------\n";
 		program_output = formatOutput(program_output, "DodgerBlue");
 		program_output += formatOutput(compilation_stdout, "red");
 		program_output += formatOutput(compilation_stderr, "red");
+                displayProgramOutput(program_output);
+		program_output = "---------\n";
+		program_output = formatOutput(program_output, "DodgerBlue");
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		scheduleSaveSnapshot();
@@ -1372,14 +1388,17 @@ function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
   if (!taskId) return;
 
     const prev = _outputBuffers[taskId] || "";
-    console.log("PREV", prev);
+
   const next = append ? prev + htmlChunk : htmlChunk;
   _outputBuffers[taskId] = next;
 
   // If the user is viewing this task, also update the DOM
   if (window.currentTask === taskId) {
     const out = document.getElementById('stdout-output');
-    if (out) out.innerHTML = next; // if output is plain text, prefer textContent
+      if (out) {
+	  out.innerHTML = next;
+	  out.scrollTo({ top: out.scrollHeight, behavior: "smooth" });
+      }
   }
 
   // Persist snapshot for THAT task (not the current one)
