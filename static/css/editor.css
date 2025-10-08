@@ -24,8 +24,8 @@ html,body{
 /* Main 2-column layout: left|right plus status bar*/
 .container {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 1fr 1fr auto; /* left fills, right top+bottom, footer auto height */
+  grid-template-columns: 5fr 3fr;           /* was 1fr 1fr -> now 5/8 : 3/8 */
+  grid-template-rows: 1fr 1fr auto;
   gap: var(--gap);
   height: 100vh;
   padding: var(--gap);
@@ -35,32 +35,37 @@ html,body{
 
 /* Left single pane */
 .left {
-    grid-row: 1 / span 2;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    height: 100%;   /* NEW: fill full column height */
+  grid-column: 1;                            /* explicit column */
+  grid-row: 1 / span 2;                      /* same as before */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+/* Right column split into two rows */
+.right {
+  grid-column: 2;                             /* explicit column */
+  grid-row: 1 / span 2;                       /* same as before */
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--gap);
+  min-width: 0;
 }
 
 .left .pane {
     flex: 1;        /* NEW: make pane expand to full height */
 }
 
-/* Right column split into two rows */
-.right {
-  grid-row: 1 / span 2;
-    display: grid;
-    grid-template-rows: 1fr 1fr; /* top / bottom */
-    gap: var(--gap);
-    min-width:0;
-}
 
 /* Footer row spans both columns */
 #pane-footer {
-  grid-column: 1 / -1;  /* stretch across full width */
+  grid-column: 1 / -1;                        /* span across both */
   height: var(--status-bar-height);
-  margin-top: -6px;
+  /* remove negative margins that can cause misalignment */
+  margin-top: 0;
 }
+
 #pane-footer .bar {
   justify-content: center; /* center contents */
 }
@@ -120,10 +125,6 @@ html,body{
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-/* Optional: compact the gap above the footer row */
-#pane-footer { margin-top: -var(--gap); }
-
 
 .bar {
   background-color: var(--bar-bg);
@@ -199,10 +200,25 @@ body.pane-expanded .pane:not(.expanded) {
 
 /* small responsive tweak */
 @media (max-width: 800px){
-    .container { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr 1fr; }
-    .right { grid-template-rows: none; grid-auto-rows: 1fr; }
+  .container {
+    grid-template-columns: 1fr;               /* single column */
+    grid-template-rows: auto auto auto;       /* left, right, footer */
+  }
+  .left {
+    grid-column: 1;
+    grid-row: 1;                               /* first block */
+  }
+  .right {
+    grid-column: 1;
+    grid-row: 2;                               /* second block */
+    display: grid;
+    grid-auto-rows: 1fr;
+  }
+  #pane-footer {
+    grid-column: 1 / -1;                       /* still full width */
+    grid-row: 3;
+  }
 }
-
 
 /* Custom select (accessible: native select is still present) */
 .custom-select-task {
@@ -388,3 +404,48 @@ body.pane-expanded .pane:not(.expanded) {
 #stdout-output p, #stdout-output pre {
     color: var(--content-fg);
 
+/* --- Scrollbar Styling (for better contrast in dark mode) --- */
+
+/* Works on Chrome, Edge, Safari (WebKit/Blink) */
+.pane-container::-webkit-scrollbar,
+#stdin-input::-webkit-scrollbar,
+#stdout-output::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.pane-container::-webkit-scrollbar-track,
+#stdin-input::-webkit-scrollbar-track,
+#stdout-output::-webkit-scrollbar-track {
+    background: **var(--content-bg);
+}
+
+.pane-container::-webkit-scrollbar-thumb,
+#stdin-input::-webkit-scrollbar-thumb,
+#stdout-output::-webkit-scrollbar-thumb {
+  background-color: rgba(200, 200, 200, 0.4);
+  border-radius: 5px;
+  border: 2px solid *var(--content-bg); /* creates padding effect */
+}
+
+/* When hovered or active */
+.pane-container::-webkit-scrollbar-thumb:hover,
+#stdin-input::-webkit-scrollbar-thumb:hover,
+#stdout-output::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(220, 220, 220, 0.8);
+}
+
+/* --- Firefox (modern versions) --- */
+@supports (scrollbar-color: auto) {
+  .pane-container,
+  #stdin-input,
+  #stdout-output {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180,180,180,0.6) var(--content-bg);
+  }
+}
+
+/* SimpleBar dark thumb */
+.pane-container .simplebar-scrollbar::before {
+    background: rgba(220,220,220,0.7);
+}
