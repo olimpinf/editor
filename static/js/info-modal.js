@@ -4,42 +4,29 @@
   if (window.__infoModalInit) return;
   window.__infoModalInit = true;
 
+  /**
+   * Finds the modal element in the DOM and ensures it's hidden by default.
+   * @returns {HTMLElement|null} The modal element or null if not found.
+   */
   function ensureModal() {
-    let modal = document.getElementById("info-modal");
+    const modal = document.getElementById("info-modal");
     if (modal) {
-      if (!modal.hasAttribute("aria-hidden")) modal.setAttribute("aria-hidden", "true");
-      return modal;
+      // Ensure the modal is hidden on script initialization.
+      if (!modal.hasAttribute("aria-hidden")) {
+        modal.setAttribute("aria-hidden", "true");
+      }
     }
-    // Create minimal markup if not in HTML
-    modal = document.createElement("div");
-    modal.id = "info-modal";
-    modal.className = "obi-modal";
-    modal.setAttribute("role", "dialog");
-    modal.setAttribute("aria-modal", "true");
-    modal.setAttribute("aria-labelledby", "info-title");
-    modal.setAttribute("aria-hidden", "true");
-    modal.innerHTML = `
-      <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
-      <div class="obi-modal__dialog" role="document" tabindex="-1">
-        <div class="obi-modal__header">
-          <h2 id="info-title">Como usar o EditorOBI</h2>
-          <button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
-        </div>
-        <div id="info-content" class="obi-modal__body">
-          <p>Adicione seu texto de ajuda aqui…</p>
-        </div>
-        <div class="obi-modal__footer">
-          <button id="info-ok-btn" class="obi-modal__action">OK</button>
-        </div>
-      </div>
-      <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
-    `;
-    document.body.appendChild(modal);
     return modal;
   }
 
   function setup() {
-    const modal   = ensureModal();
+    const modal = ensureModal();
+    // If the modal HTML doesn't exist in editor.html, stop initialization.
+    if (!modal) {
+      console.warn("Modal element with ID 'info-modal' not found. Modal functionality will be disabled.");
+      return;
+    }
+
     const dialog  = modal.querySelector(".obi-modal__dialog");
     const backdrop= modal.querySelector(".obi-modal__backdrop");
     const btnClose= modal.querySelector("#info-close-btn");
@@ -109,3 +96,4 @@
     setup();
   }
 })();
+
