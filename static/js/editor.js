@@ -998,24 +998,55 @@ async function pollTestStatus(testId) {
         try {
             const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
-
+	    console.log("TEXT", status_text);
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
-		if (execution_stderr === "") {
+		if (status_text === "Execution completed successfully") {
 		    program_output += "Execução terminou sem erros.\nSaída produzida:\n";
 		    program_output += "---------\n";
 		    program_output = formatOutput(program_output, "DodgerBlue");
 		    program_output += formatOutput(output + "\n");
 		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
                     displayProgramOutput(program_output);
-		    setStatusLabel(`${ status_text }`, { spinning: false });
+		    setStatusLabel("Execução terrminou sem erros", { spinning: false });
+		}
+		else if (status_text === "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
+		    program_output += "Execução interrompida por tempo excedido.\nSaída produzida:\n";
+		    program_output += "---------\n";
+		    program_output = formatOutput(program_output, "DodgerBlue");
+		    program_output += formatOutput(output + "\n");
+		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+                    displayProgramOutput(program_output);
+		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		}
+		else if (status_text === "Memory limit exceeded") {
+		    program_output += "Execução interrompida por memória excedida.\nSaída produzida:\n";
+		    program_output += "---------\n";
+		    program_output = formatOutput(program_output, "DodgerBlue");
+		    program_output += formatOutput(output + "\n");
+		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+                    displayProgramOutput(program_output);
+		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		}
+		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
+		    program_output = "Execução interrompida por erro durante a execução. Mensagens de erro:\n";
+		    program_output += "---------\n";
+		    program_output += formatOutput(program_output, "DodgerBlue");
+		    program_output += formatOutput(execution_stderr, "red");
+		    program_output += formatOutput("---------\n", "DodgerBlue");
+		    program_output += formatOutput("\nSaída produzida:\n", "DodgerBlue");
+		    program_output += formatOutput("---------\n", "DodgerBlue");
+		    program_output += formatOutput(output + "\n");
+		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+                    displayProgramOutput(program_output);
+		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else {
-		    program_output += "Execução terminou com erros:\n";
+		    program_output += "Execução terminou com erro.:\n";
 		    program_output += "---------\n";
 		    program_output = formatOutput(program_output, "DodgerBlue");
 		    program_output += formatOutput(execution_stderr, "red");
