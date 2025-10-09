@@ -39,8 +39,8 @@
       lastFocusEl = document.activeElement;
       modal.setAttribute("aria-hidden", "false");
       document.body.style.overflow = "hidden";
-      // Focus the close button, or the dialog as a fallback
-      (btnClose || dialog).focus({ preventScroll: true });
+      // Focus the OK button, or the close button, or the dialog as a fallback
+      (btnOk || btnClose || dialog).focus({ preventScroll: true });
     }
 
     function closeModal() {
