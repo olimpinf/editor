@@ -71,7 +71,7 @@ if __name__ == "__main__":
 	}
     };
 
-    window.currentTask = 'Tarefa 1'; // Default starting task
+    window.currentTask = 'task1'; // Default starting task
     
     // Initialize editor
     window.editor = monaco.editor.create(document.getElementById('editor-container'), {
