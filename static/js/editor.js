@@ -982,6 +982,30 @@ const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
  * Polls the CMS server for the status of a test execution until completion.
  * @param {string} testId The ID returned by cmsTest.
  */
+
+function displayStdout(head, str) {
+    let tmp = formatOutput(head, "DodgerBlue");
+    if (str == "") {
+	tmp += formatOutput(" O programa não gerou saída.\n", "DodgerBlue");
+    }
+    else {
+	tmp += formatOutput(" Saída produzida:\n---------\n", "DodgerBlue");
+	tmp += formatOutput(str + "\n");
+	tmp += formatOutput("---------\n", "DodgerBlue");
+    }
+    displayProgramOutput(tmp);
+}
+
+function displayStderr(head,str) {
+    let tmp = formatOutput(head, "DodgerBlue");
+    if (str != "") {
+	tmp += formatOutput(" Mensagens de erro:\n---------\n", "DodgerBlue");
+	tmp += formatOutput(str + "\n", "red");
+	tmp += formatOutput("---------\n", "DodgerBlue");
+    }
+    displayProgramOutput(tmp);
+}
+
 async function pollTestStatus(testId) {
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
@@ -1006,11 +1030,8 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
 		if (status_text == "Execution completed successfully") {
-		    program_output = "Execução terminou sem erros.\nSaída produzida:\n";
-		    program_output += "---------\n";
-		    program_output = formatOutput(program_output, "DodgerBlue");
-		    program_output += formatOutput(output + "\n");
-		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStdout("Execução terminou sem erros.", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou sem erros", { spinning: false });
 		}
@@ -1114,7 +1135,7 @@ function formatOutput(str, textColor="") {
     }
     
     const htmlContent = str.replace(/\n/g, '<br/>');
-    const styledHtml = `<div style="color: ${textColor || 'inherit'};">${htmlContent}</div>`;
+    const styledHtml = `<span style="color: ${textColor || 'inherit'};">${htmlContent}</span>`;
 
     return styledHtml;
 }
