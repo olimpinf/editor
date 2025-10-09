@@ -844,11 +844,16 @@ function getTaskLabel(taskId) {
 }
 
 function setStatusLabel(text, { spinning = false } = {}) {
+  // Keep per-task status and update the DOM for the active task
+  if (window.App && window.App.Status) {
+    window.App.Status.set(window.currentTask, text, { spinning });
+  } else {
     const labelEl = document.getElementById('status-label');
     const spinEl  = document.getElementById('status-spinner');
     if (!labelEl || !spinEl) return;
-    labelEl.innerHTML = text;
+    labelEl.textContent = text;
     spinEl.hidden = !spinning;
+  }
 }
 
 function cooldownLeft() {
@@ -1218,6 +1223,11 @@ function loadTaskState(taskID) {
   const theme = state.theme === 'light' ? 'light' : 'dark';
   applyGlobalTheme(theme);
 
+  window.currentTask = taskID;
+  // Refresh the footer to this task's last known status
+  if (window.App && window.App.Status) {
+    window.App.Status.renderFor(taskID);
+  }
 
     _suppressSnapshot = false; // re-enable
   //scheduleSaveSnapshot();    // take one clean snapshot for this task
