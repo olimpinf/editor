@@ -22,7 +22,7 @@
       <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
       <div class="obi-modal__dialog" role="document" tabindex="-1">
         <div class="obi-modal__header">
-          <h2 id="info-title">Informações</h2>
+          <h2 id="info-title">Como usar o EditorOBI</h2>
           <button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
         </div>
         <div id="info-content" class="obi-modal__body">
