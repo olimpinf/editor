@@ -29,7 +29,7 @@ if __name__ == "__main__":
     // Central object to store all task states
     window.taskStates = {
 	// Initial State for Tasks
-	task1: {
+	tarefa1: {
 	    title: 'Tarefa 1',
             code: window.templates.cpp,
             language: 'cpp',
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             output: '',
             theme: 'dark'
 	},
-	task2: {
+	tarefa2: {
 	    title: 'Tarefa 2',
             code: window.templates.cpp,
             language: 'cpp',
@@ -45,7 +45,7 @@ if __name__ == "__main__":
             output: '',
             theme: 'dark'
 	},
-	task3: {
+	tarefa3: {
 	    title: 'Tarefa 3',
             code: window.templates.cpp,
             language: 'cpp',
@@ -53,7 +53,7 @@ if __name__ == "__main__":
             output: '',
             theme: 'dark'
 	},
-	task4: {
+	tarefa4: {
 	    title: 'Tarefa 4',
             code: window.templates.cpp,
             language: 'cpp',
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             output: '',
             theme: 'dark'
 	},
-	task5: {
+	tarefa5: {
 	    title: 'Tarefa 5',
             code: window.templates.cpp,
             language: 'cpp',
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 	}
     };
 
-    window.currentTask = 'task1'; // Default starting task
+    window.currentTask = 'tarefa1'; // Default starting task
     
     // Initialize editor
     window.editor = monaco.editor.create(document.getElementById('editor-container'), {
@@ -274,7 +274,8 @@ if __name__ == "__main__":
 	displayProgramOutput(formatOutput(initMessage, color="DeepSkyBlue"));
 	try {
             // Submit the code and get the test ID
-            const submissionResult = await cmsTest(code, input, language, languageExtension);
+	    console.log("sending to ",runningTaskId);
+            const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
             const testId = submissionResult.data.id;
             
             console.log("Submission successful. Starting polling for ID:", testId);
@@ -844,16 +845,24 @@ function getTaskLabel(taskId) {
 }
 
 function setStatusLabel(text, { spinning = false } = {}) {
-  // Keep per-task status and update the DOM for the active task
-  if (window.App && window.App.Status) {
-    window.App.Status.set(window.currentTask, text, { spinning });
-  } else {
-    const labelEl = document.getElementById('status-label');
-    const spinEl  = document.getElementById('status-spinner');
-    if (!labelEl || !spinEl) return;
-    labelEl.textContent = text;
-    spinEl.hidden = !spinning;
-  }
+    // Keep per-task status and update the DOM for the active task
+    if (runningTaskId == getCurrentTaskId()) {
+	// update the panel and storage
+	console.log("update the panel");
+	const labelEl = document.getElementById('status-label');
+	const spinEl  = document.getElementById('status-spinner');
+	if (!labelEl || !spinEl) return;
+	labelEl.textContent = text;
+	spinEl.hidden = !spinning;
+    }
+    else {
+	// uptate the task storage
+	console.log("update the storage");
+    }
+    if (window.App && window.App.Status) {
+	window.App.Status.set(runningTaskId, text, { spinning });
+    }
+    
 }
 
 function cooldownLeft() {
@@ -987,7 +996,7 @@ async function pollTestStatus(testId) {
 	const EVALUATED = 4;
 
         try {
-            const result = await cmsTestStatus(testId);
+            const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 
             if (status == EVALUATED) {
@@ -1198,13 +1207,13 @@ function loadTaskState(taskID) {
 }
 
 
-// ---- First-load boot for task1 ----
+// ---- First-load boot for tarefa11 ----
 window.__initialTaskBootDone = false;
 
 function initFirstTaskIfNeeded() {
   if (window.__initialTaskBootDone) return;
 
-  const tid = 'task1';
+  const tid = 'tarefa1';
   const key = storageKey(tid);
 
   // Try snapshot
@@ -1213,7 +1222,7 @@ function initFirstTaskIfNeeded() {
     const raw = localStorage.getItem(key);
     if (raw) snap = JSON.parse(raw);
   } catch (e) {
-    console.warn('Failed to read task1 snapshot:', e);
+    console.warn('Failed to read tarefa1 snapshot:', e);
   }
 
   // Fallback to your default
@@ -1229,7 +1238,7 @@ function initFirstTaskIfNeeded() {
   // If there was no snapshot, seed it now
   if (!snap) {
     try { localStorage.setItem(key, JSON.stringify(def)); }
-    catch (e) { console.warn('Seeding task1 snapshot failed:', e); }
+    catch (e) { console.warn('Seeding tarefa1 snapshot failed:', e); }
   }
 
   // Merge snapshot (if any) onto default and update the in-memory state

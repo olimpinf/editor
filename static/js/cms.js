@@ -66,17 +66,17 @@ async function taskList() {
  */
 async function cmsSubmit(codeContent, language, languageExtension) {
     // --- Configuration ---
-     const SUBMIT_API_URL = "/api/sacolas/submit";
+     const SUBMIT_API_URL = "/api/tarefa1/submit";
     
     
-    // The name of the file field in the multipart form (e.g., "sacolas.cpp")
-    const fileNameField = "sacolas.%l";
-    const fileName = "sacolas" + languageExtension; 
+    // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
+    const fileNameField = "tarefa1.%l";
+    const fileName = "tarefa1" + languageExtension; 
 
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     
-    // Example: formData.append("sacolas.cpp", Blob, "sacolas.cpp")
+    // Example: formData.append("tarefa1.cpp", Blob, "tarefa1.cpp")
     formData.append(fileNameField, codeBlob, fileName);
     
     formData.append("language", language);
@@ -130,20 +130,20 @@ async function cmsSubmit(codeContent, language, languageExtension) {
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-async function cmsTest(codeContent, inputContent, language, languageExtension) {
+async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
     // --- Configuration ---
-     const TEST_API_URL = "/api/sacolas/test";
+     const TEST_API_URL = "/api/" + runningTaskId + "/test";
     
-    // The name of the file field in the multipart form (e.g., "sacolas.cpp")
-    const fileNameField = "sacolas.%l";
-    const fileName = "sacolas." + languageExtension; 
+    // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
+    const fileNameField = runningTaskId + ".%l";
+    const fileName = runningTaskId + "." + languageExtension; 
 
     
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
     
-    // Example: formData.append("sacolas.cpp", Blob, "sacolas.cpp")
+    // Example: formData.append("tarefa1.cpp", Blob, "tarefa1.cpp")
     formData.append(fileNameField, codeBlob, fileName);
     formData.append("input", inputBlob, "input.txt");
     
@@ -196,8 +196,8 @@ async function cmsTest(codeContent, inputContent, language, languageExtension) {
 /**
  * Get status of a test submission
  */
-async function cmsTestStatus(id) {
-    const url = "/api/sacolas/test/" + id
+async function cmsTestStatus(theTaskId, id) {
+    const url = "/api/" + theTaskId + "/test/" + id
 
     console.log("in test_status");
     try {
