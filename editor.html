@@ -14,18 +14,21 @@
   <div class="bar">
     <span class="title">EditorOBI</span>
     <div class="controls">
-      <!-- Font size (global) -->
+      <!-- Run button -->
+      <button id="run-btn" title="Run">
+        <img src="static/img/icon-play.svg" height="17pt" alt="Run">
+      </button>
+      <!-- Font size -->
       <button id="font-btn" data-scope="global" title="Font size">
         <img src="static/img/icon-font-size.svg" height="17pt" alt="Font size">
       </button>
 
-      <!-- Dark/Light (global) -->
-      <!-- in the top toolbar -->
+      <!-- Dark/Light -->
       <button class="style-toggle-btn" id="global-style-toggle" title="Dark/Light">
 	<img src="static/img/icon-theme.svg" height="17pt" alt="Dark/Light">
       </button>
 
-      <!-- Task selector (global) -->
+      <!-- Task selector -->
       <div class="custom-select" id="task-select-wrapper">
         <select id="task-select">
           <option value="task1">Tarefa 1</option>
@@ -36,7 +39,7 @@
         </select>
       </div>
 
-      <!-- Language selector (global) -->
+      <!-- Language selector -->
       <div class="custom-select" id="language-select-wrapper">
         <select id="language-select">
           <option value="cpp">C++</option>
@@ -54,10 +57,6 @@
       <div class="bar">
 	<span>Código</span>
 	<div class="controls">
-	  <!-- Run button -->
-	  <button id="run-btn" title="Run">
-            <img src="static/img/icon-play.svg" height="17pt" alt="Run">
-	  </button>
 	  <!-- Download button -->
 	  <button id="download-btn" title="Download">
             <img src="static/img/icon-download.svg" height="17pt" alt="Download">
