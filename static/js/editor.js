@@ -361,7 +361,7 @@ if __name__ == "__main__":
 	    applyFontSize(sizes[idx]);
 	});
     })();
-
+    
 });
 
 var outputBuffer = "";

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>EditorOBI</title>
-<link href="static/css/editor.css" rel="stylesheet">
+<link href="static/css/editor.css?v=2025-10-09a" rel="stylesheet">
 </head>
 <body>
 
@@ -15,17 +15,17 @@
     <span class="title">EditorOBI</span>
     <div class="controls">
       <!-- Run button -->
-      <button id="run-btn" title="Run">
-        <img src="static/img/icon-play.svg" height="17pt" alt="Run">
+      <button id="run-btn" title="Executar">
+        <img src="static/img/icon-play.svg" height="17pt" alt="Executar">
       </button>
       <!-- Font size -->
-      <button id="font-btn" data-scope="global" title="Font size">
-        <img src="static/img/icon-font-size.svg" height="17pt" alt="Font size">
+      <button id="font-btn" data-scope="global" title="Tamanho fonte">
+        <img src="static/img/icon-font-size.svg" height="17pt" alt="Tamanho fonte">
       </button>
 
       <!-- Dark/Light -->
-      <button class="style-toggle-btn" id="global-style-toggle" title="Dark/Light">
-	<img src="static/img/icon-theme.svg" height="17pt" alt="Dark/Light">
+      <button class="style-toggle-btn" id="global-style-toggle" title="Tema">
+	<img src="static/img/icon-theme.svg" height="17pt" alt="Tema">
       </button>
       
       <!-- Task selector -->
@@ -137,7 +137,6 @@
       </div>
     </div>
   </div>
-</div>
 
 <!-- Info Modal -->
 <div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title" aria-hidden="true">
@@ -158,7 +157,7 @@
   <!-- focus sentry to help trap focus -->
   <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
 </div>
-
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <script src="static/js/cms.js"></script>
@@ -167,6 +166,7 @@
 <script src="static/js/accessible-select.js"></script>
 <script src="static/js/status.js"></script>
 <script src="static/js/editor.js"></script>
+<script src="static/js/info-modal.js"></script>
 <script src="static/js/init-accessible-select.js"></script>
 </body>
 </html>

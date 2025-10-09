@@ -486,3 +486,84 @@ body.pane-expanded .pane:not(.expanded) {
 .pane-container .simplebar-scrollbar::before {
     background: rgba(220,220,220,0.7);
 }
+
+/* ===== Info Modal (lightweight, accessible) ===== */
+.obi-modal[aria-hidden="true"] { display:none; }
+.obi-modal[aria-hidden="false"] { display:block; }
+.obi-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  font: inherit;
+}
+.obi-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.obi-modal__dialog {
+  position: relative;
+  max-width: 720px;
+  width: calc(100% - 2rem);
+  margin: 6vh auto 0 auto;
+  background: var(--modal-bg, #1e1e1e);
+  color: var(--modal-fg, #f2f2f2);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  outline: none;
+}
+.obi-modal__header, .obi-modal__footer {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.obi-modal__footer { border-top: 1px solid rgba(255,255,255,0.08); border-bottom: none; }
+.obi-modal__body { padding: 16px; max-height: 60vh; overflow:auto; }
+.obi-modal__close {
+  font-size: 18px; line-height: 1; border: none; background: transparent; color: inherit; cursor: pointer;
+}
+.obi-modal__action {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18);
+  background: transparent; color: inherit; cursor: pointer;
+}
+/* Light mode support if you toggle themes */
+[data-theme="light"] .obi-modal__dialog {
+  --modal-bg: #fff; --modal-fg: #111;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+/* === Info Modal base === */
+.obi-modal[aria-hidden="true"] { display: none; }
+
+.obi-modal[aria-hidden="false"] {
+  display: block;
+  position: fixed;   /* creates its own stacking context */
+  inset: 0;          /* full-viewport */
+  z-index: 2147483647; /* above everything */
+}
+
+.obi-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+}
+
+.obi-modal__dialog {
+  position: relative;
+  margin: 6vh auto 0;
+  max-width: 720px;
+  width: calc(100% - 2rem);
+  background: #1e1e1e;
+  color: #f2f2f2;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* Theme-friendly */
+[data-theme="light"] .obi-modal__dialog {
+  background: #fff;
+  color: #111;
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+
