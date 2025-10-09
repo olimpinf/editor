@@ -1090,40 +1090,6 @@ function getLocalizedTime(locale = 'pt-BR') {
     return formattedTime
 }
 
-// === Per-task snapshot persistence ===
-const STORAGE_PREFIX = "obi:taskstate:v1:";
-
-function storageKey(taskId) {
-  return `${STORAGE_PREFIX}${taskId}`;
-}
-function saveSnapshot(taskId, snap) {
-  try { localStorage.setItem(storageKey(taskId), JSON.stringify(snap)); }
-  catch (e) { console.warn("saveSnapshot failed", e); }
-}
-
-function loadSnapshot(taskId) {
-  try {
-      const key = storageKey(taskId);
-    const raw = localStorage.getItem(key);
-
-    if (raw) {
-	// Normal case: restore previous snapshot
-      return JSON.parse(raw);
-    } else if (window.taskStates?.[taskId]) {
-      // Initialize from your default window.taskStates
-      const init = { ...window.taskStates[taskId] };
-      localStorage.setItem(key, JSON.stringify(init));
-      return init;
-    } else {
-      console.warn("loadSnapshot: no state found for", taskId);
-      return null;
-    }
-  } catch (e) {
-    console.warn("loadSnapshot failed", e);
-    return null;
-  }
-}
-
 function readCurrentPanes() {
   return {
     code: window.editor?.getValue?.() || "",
@@ -1152,8 +1118,7 @@ function scheduleSaveSnapshot() {
   _saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(storageKey(window.currentTask), JSON.stringify(readCurrentPanes()));
-      // After a successful save, check and (maybe) warn:
-      checkStorageQuotaAndWarn();
+      window.App?.PruneStorage?.pruneOldest();
     } catch (e) {
       // QuotaExceededError or other storage errors
       console.warn("saveSnapshot failed:", e);
@@ -1184,7 +1149,6 @@ let _suppressSnapshot = false;
 function loadTaskState(taskID) {
   const state = window.taskStates[taskID];
 
-    console.log("storage usage",logStorageUsage());
   window.currentTask = taskID;
 
   _suppressSnapshot = true; // stop debounced saves during programmatic updates
@@ -1233,66 +1197,6 @@ function loadTaskState(taskID) {
   //scheduleSaveSnapshot();    // take one clean snapshot for this task
 }
 
-// ===== Storage quota monitor =====
-const QUOTA_BYTES    = 5 * 1024 * 1024;            // ~5MB default per-origin (approx)
-const WARN_FRACTION  = 0.80;                       // warn at 80%
-const WARN_KEY       = "obi:quotaWarnedThisSession";
-
-// Byte length (UTF-8) of a string
-function byteLen(str) {
-  try { return new TextEncoder().encode(String(str)).length; }
-  catch { return String(str).length * 2; } // rough fallback
-}
-
-// Approximate localStorage usage in bytes
-function localStorageUsageBytes() {
-  let total = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    const v = localStorage.getItem(k);
-    total += byteLen(k) + byteLen(v);
-  }
-  return total;
-}
-
-// Check and (optionally) alert if close to or over quota
-function checkStorageQuotaAndWarn({forceAlert = false} = {}) {
-  const used = localStorageUsageBytes();
-  const pct  = used / QUOTA_BYTES;
-  const warned = sessionStorage.getItem(WARN_KEY) === "1";
-
-  if ((pct >= WARN_FRACTION || forceAlert) && !warned) {
-    const mbUsed = (used / (1024 * 1024)).toFixed(2);
-    const mbTotal = (QUOTA_BYTES / (1024 * 1024)).toFixed(1);
-    alert(
-`Your browser storage is almost full (${mbUsed} MB of ~${mbTotal} MB).
-Please clear space to keep your code safe.
-
-You can clear old task snapshots from this editor (recommended) or clear some browser storage for this site.`
-    );
-    sessionStorage.setItem(WARN_KEY, "1");
-  }
-  return { usedBytes: used, quotaBytes: QUOTA_BYTES, percent: pct };
-}
-
-// Remove only this editor’s snapshots (non-destructive for other app data)
-function clearEditorSnapshots() {
-  const toRemove = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(STORAGE_PREFIX)) toRemove.push(k);
-  }
-  toRemove.forEach(k => localStorage.removeItem(k));
-  // Allow new warnings after cleanup
-  sessionStorage.removeItem(WARN_KEY);
-  alert(`Cleared ${toRemove.length} saved task snapshot(s).`);
-}
-
-// Optional: quick helper to show usage in console
-function logStorageUsage() {
-  const { usedBytes, quotaBytes, percent } = checkStorageQuotaAndWarn();
-  console.log(`localStorage usage: ${usedBytes} / ${quotaBytes} bytes (${Math.round(percent*100)}%)`);
-}
 
 // ---- First-load boot for task1 ----
 window.__initialTaskBootDone = false;
@@ -1340,9 +1244,6 @@ function initFirstTaskIfNeeded() {
 
   // Take a clean snapshot and optionally warn about quota
   scheduleSaveSnapshot();
-  if (typeof checkStorageQuotaAndWarn === 'function') {
-    checkStorageQuotaAndWarn();
-  }
 
   window.__initialTaskBootDone = true;
 }
