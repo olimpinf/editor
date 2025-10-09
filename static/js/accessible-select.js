@@ -1,3 +1,4 @@
+
 (function (window, document) {
   "use strict";
   window.App = window.App || {};
@@ -44,6 +45,7 @@
       if (opt) return select(opt);
       if (!expanded) open(); else if (e.target === root || e.target === label) close();
     });
+
     const onListKeyDown = (e) => {
       const key = e.key;
       const idx = options.findIndex(o => o.classList.contains("is-active"));
@@ -59,6 +61,7 @@
       else if (key === "End") { setActive(options[options.length - 1]); e.preventDefault(); }
       else if (key === "Escape") { close(); e.preventDefault(); }
     };
+
     const onRootKeyDown = (e) => {
       if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp") { open(); e.preventDefault(); }
     };
