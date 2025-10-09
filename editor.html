@@ -27,7 +27,7 @@
       <button class="style-toggle-btn" id="global-style-toggle" title="Dark/Light">
 	<img src="static/img/icon-theme.svg" height="17pt" alt="Dark/Light">
       </button>
-
+      
       <!-- Task selector -->
       <div class="custom-select" id="task-select-wrapper">
         <select id="task-select">
@@ -47,6 +47,11 @@
           <option value="python">Python</option>
         </select>
       </div>
+      <!-- Info button -->
+      <button id="info-btn" title="Informações">
+        <img src="static/img/icon-info.svg" height="17pt" alt="Info" onerror="this.replaceWith(document.createTextNode('Info'));">
+      </button>
+
     </div>
   </div>
 </div>
@@ -133,6 +138,27 @@
     </div>
   </div>
 </div>
+
+<!-- Info Modal -->
+<div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title" aria-hidden="true">
+  <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+  <div class="obi-modal__dialog" role="document">
+    <div class="obi-modal__header">
+      <h2 id="info-title">Informações</h2>
+      <button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
+    </div>
+    <div id="info-content" class="obi-modal__body">
+      <!-- Coloque as instruções do editor aqui -->
+      <p>Adicione seu texto de ajuda aqui…</p>
+    </div>
+    <div class="obi-modal__footer">
+      <button id="info-ok-btn" class="obi-modal__action">OK</button>
+    </div>
+  </div>
+  <!-- focus sentry to help trap focus -->
+  <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+</div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <script src="static/js/cms.js"></script>
