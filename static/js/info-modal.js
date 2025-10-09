@@ -47,12 +47,15 @@
     let lastFocusEl = null;
 
     function isOpen() { return modal.getAttribute("aria-hidden") === "false"; }
+
     function openModal() {
       lastFocusEl = document.activeElement;
       modal.setAttribute("aria-hidden", "false");
       document.body.style.overflow = "hidden";
+      // Focus the close button, or the dialog as a fallback
       (btnClose || dialog).focus({ preventScroll: true });
     }
+
     function closeModal() {
       modal.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
@@ -61,7 +64,7 @@
       }
     }
 
-    // ✅ Event delegation for the open button (works even if button is injected later)
+    // Event delegation for the open button
     document.addEventListener("click", (e) => {
       const trigger = e.target.closest && e.target.closest("#info-btn");
       if (trigger) {
@@ -91,7 +94,7 @@
       }
     });
 
-    // Public helpers
+    // Public API
     window.showInfoModal = function (html) {
       const slot = document.getElementById("info-content");
       if (slot && typeof html === "string") slot.innerHTML = html;
