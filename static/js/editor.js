@@ -230,30 +230,67 @@ if __name__ == "__main__":
 	downloadContent('saida.txt', txtContent);
     });
 
-    document.getElementById('language-select').addEventListener('change', function(e) {
-	const lang = e.target.value;
+    // ============================================================
+    // LANGUAGE CHANGE HANDLERS (manual vs programmatic)
+    // ============================================================
+    // Manual user selection: always switch language and load template
+    (function wireManualLanguageChange(){
+	const select = document.getElementById('language-select');
+	if (!select || select.__wiredManual) return;
+	select.__wiredManual = true;
 
-	console.log("in change language");
-	// Check if the change was programmatic (task switch)
-	if (window.__suppressTemplateOnce) {
- 	    console.log("why here when manual select the language?");
-            window.__suppressTemplateOnce = false;
-            // The language model MUST STILL BE UPDATED
-	    switchLanguage(lang); // <--- CALL IT HERE
-            return; // Skip template replacement
+	select.addEventListener('change', (e) => {
+	    const lang = e.target.value;
+
+	    // Check if current code is non-empty or custom before replacing
+	    const currentCode = (window.editor?.getValue() || "").trim();
+	    const isTemplate = Object.values(window.templates || {}).some(
+		t => t.trim() === currentCode
+	    );
+
+	    if (currentCode && !isTemplate) {
+		const proceed = confirm(
+		    "Ao alterar a linguagem seu código atual será perdido. Continuar?"
+		);
+		if (!proceed) {
+		    // Revert select UI back to previous language
+		    window.syncLanguageSelectorUI?.();
+		    return;
+		}
+	    }
+
+	    switchLanguage(lang);
+
+	    // Replace editor content with starter template for selected language
+	    const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
+	    if (window.editor?.setValue) window.editor.setValue(tmpl);
+
+	    // Sync UI and persist state
+	    window.syncLanguageSelectorUI?.();
+	    window.scheduleSaveSnapshot?.();
+	});	
+    })();
+
+    // Programmatic setter: call directly, no events or flags
+    window.setLanguageProgrammatic = function setLanguageProgrammatic(lang, { injectTemplate = false } = {}) {
+	const select = document.getElementById('language-select');
+	if (!select) return false;
+	const idx = Array.from(select.options).findIndex(o => o.value === lang);
+	if (idx < 0) return false;
+	// sync <select>
+	select.selectedIndex = idx;
+	// update Monaco mode immediately
+	switchLanguage(lang);
+	// optional template injection
+	if (injectTemplate) {
+            const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
+            window.editor?.setValue?.(tmpl);
 	}
-	
-	// Manual change: run template confirmation logic
-	const currentValue = window.editor.getValue().trim();
-	console.log("currentValue", currentValue);
-	if (currentValue !== "" && !Object.values(templates).map(v=>v.trim()).includes(currentValue)) {
-            if (!confirm("Switching language will replace your current code with a starter template. Continue?")) return;
-	}
-	
-	// Update language and load template
-	switchLanguage(lang); // <--- CALL IT HERE
-	window.editor.setValue(templates[lang] || "// Start coding here");
-    });
+	// Sync visible custom select face and save
+	window.syncLanguageSelectorUI?.();
+	window.scheduleSaveSnapshot?.();
+	return true;
+    };
     
     // Run button
     document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
@@ -723,14 +760,9 @@ function initializeFileUploader(btn) {
                 else if (ext === 'java') lang = 'java';
                 else if (ext === 'py') lang = 'python';
 
-                // Sync language select + model, but suppress template injection once
+                // Programmatic language change (from upload): do NOT inject template (keep uploaded code)
                 if (lang) {
-                    const selectEl = document.getElementById('language-select');
-                    if (selectEl) {
-                        window.__suppressTemplateOnce = true;                 // << guard ON (one-shot)
-                        selectEl.value = lang;
-                        selectEl.dispatchEvent(new Event('change', { bubbles: true })); // updates model + custom face
-                    }
+                    window.setLanguageProgrammatic?.(lang, { injectTemplate: false });
                 }
 
                 // Now safely set the uploaded text (template won’t overwrite it)
@@ -759,35 +791,11 @@ function initializeFileUploader(btn) {
     initializeFileUploader(inputBtn);
 })();
 
-
+// Deprecated wrapper kept for compatibility; route to programmatic API
 function setLanguage(lang, { skipTemplate = true } = {}) {
-    const selectEl = document.getElementById('language-select');
-    if (!selectEl) return false;
-
-    // Find the option: values are "cpp" | "java" | "python"
-    const idx = Array.from(selectEl.options).findIndex(o => o.value === lang);
-    if (idx < 0) return false;
-
-    if (skipTemplate) window.__suppressTemplateOnce = true;
-
-    const willChange = (selectEl.selectedIndex !== idx);
-    selectEl.selectedIndex = idx;
-
-    // Fire change so: Monaco mode, your listeners, and the custom "face" all update
-    // (change is synchronous, so handlers run before we return)
-    if (willChange) {
-	selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-	// If value was already selected, some codebases don't rebroadcast;
-	// refresh face + Monaco directly to be extra safe:
-	window.syncLanguageSelectorUI?.();
-	const model = window.editor?.getModel?.();
-	if (model && typeof monaco !== 'undefined') {
-	    monaco.editor.setModelLanguage(model, lang);
-	}
-    }
-
-    return true;
+    // skipTemplate=true  -> injectTemplate=false
+    // skipTemplate=false -> injectTemplate=true
+    return window.setLanguageProgrammatic?.(lang, { injectTemplate: !skipTemplate }) || false;
 }
 
 /**
@@ -1211,25 +1219,23 @@ let _suppressSnapshot = false;
 
 function loadTaskState(taskID) {
   const state = window.taskStates[taskID];
+  const snap = loadSnapshot(taskID);
 
   window.currentTask = taskID;
-
   _suppressSnapshot = true; // stop debounced saves during programmatic updates
-   const snap = loadSnapshot(taskID);
-
-  // (A) Language first (however you do it)
-  const lang = snap?.language
+  const lang = snap?.language;
   if (lang) {
-    // if you have setLanguage(...) wrapper, use it; else do your select/dispatch flow here
-    if (window.setLanguage) window.setLanguage(lang, { skipTemplate: true });
-    else {
+    // Programmatic: set Monaco + select, DO NOT inject template when restoring a task
+    if (window.setLanguageProgrammatic) {
+      window.setLanguageProgrammatic(lang, { injectTemplate: false });
+    } else {
       const sel = document.getElementById("language-select");
       if (sel) {
         const idx = Array.from(sel.options).findIndex(o => o.value === lang);
         if (idx !== -1) {
-          window.__suppressTemplateOnce = true;
           sel.selectedIndex = idx;
-          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          switchLanguage(lang);
+          window.syncLanguageSelectorUI?.();
         }
       }
     }
@@ -1429,3 +1435,12 @@ function setThemeForCurrentTask(mode) {
   scheduleSaveSnapshot?.();
 }
 
+// Maps your select values to Monaco language ids.
+const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
+
+function switchLanguage(lang) {
+  const model = window.editor?.getModel?.();
+  if (model && window.monaco?.editor) {
+    window.monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
+  }
+}
