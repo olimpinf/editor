@@ -232,9 +232,11 @@ if __name__ == "__main__":
 
     document.getElementById('language-select').addEventListener('change', function(e) {
 	const lang = e.target.value;
-	
+
+	console.log("in change language");
 	// Check if the change was programmatic (task switch)
 	if (window.__suppressTemplateOnce) {
+ 	    console.log("why here when manual select the language?");
             window.__suppressTemplateOnce = false;
             // The language model MUST STILL BE UPDATED
 	    switchLanguage(lang); // <--- CALL IT HERE
@@ -243,6 +245,7 @@ if __name__ == "__main__":
 	
 	// Manual change: run template confirmation logic
 	const currentValue = window.editor.getValue().trim();
+	console.log("currentValue", currentValue);
 	if (currentValue !== "" && !Object.values(templates).map(v=>v.trim()).includes(currentValue)) {
             if (!confirm("Switching language will replace your current code with a starter template. Continue?")) return;
 	}
@@ -843,7 +846,7 @@ let runInProgress   = false;
 let runningTaskId   = null;
 let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
-let colorInfoTextLight = "RoyalBlue";
+let colorInfoTextLight = "SteelBlue";
 let colorInfoTextDark = "Gold";
 let colorEmphasisTextLight = "Green";
 let colorEmphasisTextDark = "YellowGreen";
@@ -1023,7 +1026,7 @@ async function pollTestStatus(testId) {
     
     const label = getTaskLabel(runningTaskId);
     const theme = getTaskTheme(runningTaskId);
-    const colorInfoText = theme === 'light' ? 'colorInfoTextLight' : 'colorInfoTextDark';
+    const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     
     // Define the polling loop function
     const checkStatus = async () => {
