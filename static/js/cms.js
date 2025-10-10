@@ -20,7 +20,6 @@ function saveLoginData(value) {
     } else {
 	localStorage.removeItem("login_data");
     }
-    console.log("login_data =", login_data);
 }
 
 /**
@@ -30,7 +29,6 @@ function loadLoginData() {
     const stored = localStorage.getItem("login_data");
     if (stored) {
 	login_data = stored;
-	console.log("Restored login_data from localStorage:", login_data);
     }
 }
 
@@ -40,8 +38,6 @@ function loadLoginData() {
 async function taskList() {
     const url = "/api/task_list"
 
-    console.log("in taskList");
-    return;
     try {
         const resp = await fetch(url, {
              method: "GET" 
@@ -53,7 +49,6 @@ async function taskList() {
         }
 
         const data = await resp.json();
-	console.log(data);
 	
     } catch (err) {
          console.error("Error during task list retrieval:", err); 
@@ -81,8 +76,6 @@ async function cmsSubmit(codeContent, language, languageExtension) {
     
     formData.append("language", language);
 
-    console.log(`Sending submission...`);
-    
     try {
         const response = await fetch(SUBMIT_API_URL, {
             method: 'POST',
@@ -93,12 +86,9 @@ async function cmsSubmit(codeContent, language, languageExtension) {
         const status = response.status;
         const contentType = response.headers.get('content-type');
 
-        console.log(`Response Status Code: ${status}`);
-
         if (status === 302 || status === 303) {
             // Success: CMS returned a redirect (302/303) to the status page.
             const redirectLocation = response.headers.get('Location');
-            console.log(`Submission successful (received redirect)! Location: ${redirectLocation}`);
             return { success: true, redirect: redirectLocation };
             
         } else if (status >= 200 && status < 300) {
@@ -109,7 +99,6 @@ async function cmsSubmit(codeContent, language, languageExtension) {
             } else {
                 data = await response.text();
             }
-            console.log("Submission successful! Response body:", data);
             return { success: true, data: data };
             
         } else {
@@ -149,7 +138,6 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
     
     formData.append("language", language);
 
-    console.log(`Sending test...`);
     
     try {
         const response = await fetch(TEST_API_URL, {
@@ -161,12 +149,9 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
         const status = response.status;
         const contentType = response.headers.get('content-type');
 
-        console.log(`Response Status Code: ${status}`);
-
         if (status === 302 || status === 303) {
             // Success: CMS returned a redirect (302/303) to the status page.
             const redirectLocation = response.headers.get('Location');
-            console.log(`Submission successful (received redirect)! Location: ${redirectLocation}`);
             return { success: true, redirect: redirectLocation };
             
         } else if (status >= 200 && status < 300) {
@@ -177,7 +162,6 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
             } else {
                 data = await response.text();
             }
-            console.log("Submission successful! Response body:", data);
             return { success: true, data: data };
             
         } else {
@@ -199,7 +183,6 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
 async function cmsTestStatus(theTaskId, id) {
     const url = "/api/" + theTaskId + "/test/" + id
 
-    console.log("in test_status");
     try {
         const resp = await fetch(url, {
              method: "GET" 
@@ -212,7 +195,6 @@ async function cmsTestStatus(theTaskId, id) {
         }
 
         const data = await resp.json();
-	console.log(data)
 	return data;
 	
     } catch (err) {

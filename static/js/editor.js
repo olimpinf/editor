@@ -255,6 +255,13 @@ if __name__ == "__main__":
     // Run button
     document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
 	// Clear any previous running tests
+	if (runningTaskId != null) {
+      alert(
+ `Há uma execução em andamento.`
+      );
+	    return;
+	}
+	
 	if (window.currentTestInterval) {
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
@@ -278,12 +285,9 @@ if __name__ == "__main__":
 	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
 	try {
             // Submit the code and get the test ID
-	    console.log("sending to ",runningTaskId);
             const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
             const testId = submissionResult.data.id;
             
-            console.log("Submission successful. Starting polling for ID:", testId);
-
             // Start polling for the status
             await pollTestStatus(testId);
 
@@ -856,16 +860,11 @@ function setStatusLabel(text, { spinning = false } = {}) {
     // Keep per-task status and update the DOM for the active task
     if (runningTaskId == getCurrentTaskId()) {
 	// update the panel and storage
-	console.log("update the panel");
 	const labelEl = document.getElementById('status-label');
 	const spinEl  = document.getElementById('status-spinner');
 	if (!labelEl || !spinEl) return;
 	labelEl.textContent = text;
 	spinEl.hidden = !spinning;
-    }
-    else {
-	// uptate the task storage
-	console.log("update the storage");
     }
     if (window.App && window.App.Status) {
 	window.App.Status.set(runningTaskId, text, { spinning });
@@ -1003,7 +1002,6 @@ function displayStdout(head, str) {
 	tmp += formatOutput(str + "\n");
 	tmp += formatOutput("---------\n", color);
     }
-    console.log(tmp);
     displayProgramOutput(tmp);
 }
 
@@ -1037,7 +1035,6 @@ async function pollTestStatus(testId) {
         if (true) {
             const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
-	    console.log("TEXT", status_text);
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
