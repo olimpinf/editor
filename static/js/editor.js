@@ -271,7 +271,11 @@ if __name__ == "__main__":
 
 	setStatusLabel("Enviando...", { spinning: false });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
-	displayProgramOutput(formatOutput(initMessage, color="DeepSkyBlue"));
+
+	const theme = getTaskTheme(runningTaskId);
+	const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
+	
+	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
 	try {
             // Submit the code and get the test ID
 	    console.log("sending to ",runningTaskId);
@@ -286,7 +290,7 @@ if __name__ == "__main__":
 	} catch (error) {
             console.error("CMS Test Submission Failed:", error);
 	    setStatusLabel("Submissão falhou", { spinning: false });
-            displayProgramOutput("Submissão falhou.", color="red");
+            displayProgramOutput(formatOutput("Submissão falhou.", color="red"));
 	}
 	scheduleSaveSnapshot();	
     });
@@ -835,6 +839,10 @@ let runInProgress   = false;
 let runningTaskId   = null;
 let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
+let colorInfoTextLight = "RoyalBlue";
+let colorInfoTextDark = "Gold";
+let colorEmphasisTextLight = "Green";
+let colorEmphasisTextDark = "YellowGreen";
 
 function getCurrentTaskId() {
     return window.currentTask || null;
@@ -984,24 +992,29 @@ const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
  */
 
 function displayStdout(head, str) {
-    let tmp = formatOutput(head, "DodgerBlue");
+    const theme = getTaskTheme(runningTaskId);
+    const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
+    let tmp = formatOutput(head, color);
     if (str == "") {
-	tmp += formatOutput(" O programa não gerou saída.\n", "DodgerBlue");
+	tmp += formatOutput("O programa não gerou saída.\n", color);
     }
     else {
-	tmp += formatOutput(" Saída produzida:\n---------\n", "DodgerBlue");
+	tmp += formatOutput("Saída produzida:\n---------\n", color);
 	tmp += formatOutput(str + "\n");
-	tmp += formatOutput("---------\n", "DodgerBlue");
+	tmp += formatOutput("---------\n", color);
     }
+    console.log(tmp);
     displayProgramOutput(tmp);
 }
 
-function displayStderr(head,str) {
-    let tmp = formatOutput(head, "DodgerBlue");
+function displayStderr(head, str) {
+    const theme = getTaskTheme(runningTaskId);
+    const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
+    let tmp = formatOutput(head, color);
     if (str != "") {
-	tmp += formatOutput(" Mensagens de erro:\n---------\n", "DodgerBlue");
+	tmp += formatOutput("Mensagens de erro:\n---------\n", color);
 	tmp += formatOutput(str + "\n", "red");
-	tmp += formatOutput("---------\n", "DodgerBlue");
+	tmp += formatOutput("---------\n", color);
     }
     displayProgramOutput(tmp);
 }
@@ -1011,6 +1024,8 @@ async function pollTestStatus(testId) {
     const outputContainer = document.getElementById('stdout-output');
     
     const label = getTaskLabel(runningTaskId);
+    const theme = getTaskTheme(runningTaskId);
+    const colorInfoText = theme === 'light' ? 'colorInfoTextLight' : 'colorInfoTextDark';
     
     // Define the polling loop function
     const checkStatus = async () => {
@@ -1019,7 +1034,7 @@ async function pollTestStatus(testId) {
 	const EVALUATING = 3;
 	const EVALUATED = 4;
 
-        try {
+        if (true) {
             const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 	    console.log("TEXT", status_text);
@@ -1030,49 +1045,36 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
 		if (status_text == "Execution completed successfully") {
-		    displayStdout("Execução terminou sem erros.", output);
-		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStdout("Execução terminou sem erros. ", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou sem erros", { spinning: false });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
-		    program_output = "Execução interrompida por tempo excedido.\nSaída produzida:\n";
-		    program_output += "---------\n";
-		    program_output = formatOutput(program_output, "DodgerBlue");
-		    program_output += formatOutput(output + "\n");
-		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStdout("Execução interrompida por limite de tempo excedido. ", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else if (status_text == "Memory limit exceeded") {
-		    program_output = "Execução interrompida por memória excedida.\nSaída produzida:\n";
-		    program_output += "---------\n";
-		    program_output = formatOutput(program_output, "DodgerBlue");
-		    program_output += formatOutput(output + "\n");
-		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStdout("Execução interrompida por limite de memória excedido. ", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
-		    program_output = formatOutput("Execução interrompida por erro durante a execução. Mensagens de erro:\n", "DodgerBlue");
-		    program_output += formatOutput("---------\n", "DodgerBlue");
-		    program_output += formatOutput(execution_stderr, "red");
-		    program_output += formatOutput("---------\n", "DodgerBlue");
-		    program_output += formatOutput("\nSaída produzida:\n", "DodgerBlue");
-		    program_output += formatOutput("---------\n", "DodgerBlue");
-		    program_output += formatOutput(output + "\n");
-		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
+		    displayStdout("", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else {
-		    program_output = "Execução terminou com erro.:\n";
-		    program_output += "---------\n";
-		    program_output = formatOutput(program_output, "DodgerBlue");
-		    program_output += formatOutput(execution_stderr, "red");
-		    program_output += formatOutput("---------\n" + `Tempo: ${execution_time} | Memória: ${memory}\n`, "DodgerBlue");
+		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
+		    displayStdout("", output);
+		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel(`${ status_text }`, { spinning: false });
+		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		} 
 		scheduleSaveSnapshot();
 		runningTaskId = null;
@@ -1083,12 +1085,12 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "\nErro de compilação:\n";
 		program_output += "---------\n";
-		program_output = formatOutput(program_output, "DodgerBlue");
+		program_output = formatOutput(program_output, colorInfoText);
 		program_output += formatOutput(compilation_stdout, "red");
 		program_output += formatOutput(compilation_stderr, "red");
                 displayProgramOutput(program_output);
 		program_output = "---------\n";
-		program_output = formatOutput(program_output, "DodgerBlue");
+		program_output = formatOutput(program_output, colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
 		scheduleSaveSnapshot();
@@ -1101,22 +1103,23 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
 		setStatusLabel(`Erro - <strong>${label}</strong>`, { spinning: true });		
-		var program_output = "\nErro indefinido\n";
+		program_output = "\nErro indefinido\n";
 		program_output = formatOutput(program_output, "red");
-                displayProgramOutput(programOutput);
+                displayProgramOutput(program_output);
 		scheduleSaveSnapshot();
 		runningTaskId = null;
             }
 
-        } catch (error) {
-            clearInterval(window.currentTestInterval);
-            delete window.currentTestInterval;
-	    var program_output = "\nErro de processamento\n";
-	    program_output = formatOutput(program_output, "red");
-            displayProgramOutput(programOutput);
-	    scheduleSaveSnapshot();
-	    runningTaskId = null;
         }
+	// catch (error) {
+        //     clearInterval(window.currentTestInterval);
+        //     delete window.currentTestInterval;
+	//     var program_output = "\nErro de processamento\n";
+	//     program_output = formatOutput(program_output, "red");
+        //     displayProgramOutput(program_output);
+	//     scheduleSaveSnapshot();
+	//     runningTaskId = null;
+        // }
     };
 
     // Start the interval and save its ID so we can stop it later
@@ -1242,10 +1245,9 @@ function loadTaskState(taskID) {
   if (out) out.innerHTML = snap?.output || "";
     if (_outputBuffers[taskID])
 	_outputBuffers[taskID] = snap?.output || "";
-
+   
   // Theme: apply for all panes + Monaco
-  const theme = state.theme === 'light' ? 'light' : 'dark';
-  applyGlobalTheme(theme);
+  applyGlobalTheme(state.theme);
 
   window.currentTask = taskID;
   // Refresh the footer to this task's last known status
@@ -1379,11 +1381,35 @@ function applyGlobalTheme(mode) {
   if (window.monaco?.editor && window.editor) {
     window.monaco.editor.setTheme(light ? 'vs' : 'vs-dark');
   }
+
+    
+    if (light) {
+	replaceColor(rbot, colorInfoTextDark, colorInfoTextLight);
+	replaceColor(rbot, colorEmphasisTextDark, colorEmphasisTextLight);
+    }
+    else {
+	replaceColor(rbot, colorInfoTextLight, colorInfoTextDark);
+	replaceColor(rbot, colorEmphasisTextLight, colorEmphasisTextDark);
+    }
+
+    
 }
 
 function getCurrentTheme() {
   // Prefer the current task state if present
   const taskId = window.currentTask;
+  const state = taskId && window.taskStates ? window.taskStates[taskId] : null;
+  if (state?.theme === 'light' || state?.theme === 'dark') {
+    return state.theme;
+  }
+  // Fallback: infer from right-top pane
+  const rtop = document.querySelector('#pane-rtop .pane-container');
+  const isLight = !!rtop && rtop.classList.contains('light-mode');
+  return isLight ? 'light' : 'dark';
+}
+
+function getTaskTheme(taskId) {
+  // Prefer the current task state if present
   const state = taskId && window.taskStates ? window.taskStates[taskId] : null;
   if (state?.theme === 'light' || state?.theme === 'dark') {
     return state.theme;
