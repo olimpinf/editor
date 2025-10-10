@@ -297,7 +297,7 @@ if __name__ == "__main__":
 	// Clear any previous running tests
 	if (runningTaskId != null) {
       alert(
- `Há uma execução em andamento.`
+	  `Há uma execução em andamento, aguarde.`
       );
 	    return;
 	}
@@ -316,7 +316,7 @@ if __name__ == "__main__":
 	const language = cmsLanguage[selectedLanguage];
 	const languageExtension = cmsExtension[selectedLanguage];
 
-	setStatusLabel("Enviando...", { spinning: false });
+	setStatusLabel("Enviando...", { spinning: true });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 
 	const theme = getTaskTheme(runningTaskId);
@@ -854,7 +854,7 @@ let runInProgress   = false;
 let runningTaskId   = null;
 let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
-let colorInfoTextLight = "SteelBlue";
+let colorInfoTextLight = "Blue";
 let colorInfoTextDark = "Gold";
 let colorEmphasisTextLight = "Green";
 let colorEmphasisTextDark = "YellowGreen";
@@ -1097,7 +1097,7 @@ async function pollTestStatus(testId) {
 		program_output += formatOutput(compilation_stdout, "red");
 		program_output += formatOutput(compilation_stderr, "red");
                 displayProgramOutput(program_output);
-		program_output = "---------\n";
+		program_output = "\n---------\n";
 		program_output = formatOutput(program_output, colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false });
@@ -1110,10 +1110,11 @@ async function pollTestStatus(testId) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
-		setStatusLabel(`Erro - <strong>${label}</strong>`, { spinning: true });		
-		program_output = "\nErro indefinido\n";
-		program_output = formatOutput(program_output, "red");
+		displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
+		displayStdout("", output);
+		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
+		setStatusLabel("Execução terrminou com erro", { spinning: false });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
             }
