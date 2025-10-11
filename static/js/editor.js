@@ -138,8 +138,8 @@ if __name__ == "__main__":
 	
 	// 2. Load the state of the NEW task
 	loadTaskState(newTaskID);
+        try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
     });
-
 
     // Extracted Language Logic Function
     function switchLanguage(lang) {
@@ -576,6 +576,23 @@ var outputBuffer = "";
     // Close on outside click
     document.addEventListener('click', closeDropdown);
 })();
+
+
+window.syncTaskSelectorUI = function syncTaskSelectorUI() {
+  const wrap   = document.getElementById('task-select-wrapper');
+  const select = document.getElementById('task-select');
+  if (!wrap || !select) return;
+
+  const face  = wrap.querySelector('.select-selected');
+  const items = wrap.querySelectorAll('.select-items div');
+
+  const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+
+  if (face) face.textContent = select.options[idx]?.text || '';
+  if (items && items.length) {
+    items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+  }
+};
 
 // Keep the custom language select UI in sync with the native <select>
 window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
@@ -1250,9 +1267,10 @@ function loadTaskState(taskID) {
   // (D) Output
   const out = document.getElementById("stdout-output");
   if (out) out.innerHTML = snap?.output || "";
-    if (_outputBuffers[taskID])
-	_outputBuffers[taskID] = snap?.output || "";
-   
+
+    // Seed the in-memory buffer so the first append truly appends
+    _outputBuffers[taskID] = snap?.output || "";
+    
   // Theme: apply for all panes + Monaco
   applyGlobalTheme(state.theme);
 
@@ -1273,7 +1291,21 @@ window.__initialTaskBootDone = false;
 function initFirstTaskIfNeeded() {
   if (window.__initialTaskBootDone) return;
 
-  const tid = 'tarefa1';
+  // Pick last task if present; else current select value; else fallback
+  let tid = 'tarefa1';
+  try {
+      const last = localStorage.getItem('obi:lastTask');
+      console.log("last from initFirstTaskNeeded", last);
+    if (last) {
+      tid = last;
+    } else {
+      const sel = document.getElementById('task-select');
+      if (sel && sel.value) tid = sel.value;
+      console.log("sel.value from initFirstTaskNeeded", last);
+    }
+  } catch (_) {}
+    
+
   const key = storageKey(tid);
 
   // Try snapshot
@@ -1282,12 +1314,12 @@ function initFirstTaskIfNeeded() {
     const raw = localStorage.getItem(key);
     if (raw) snap = JSON.parse(raw);
   } catch (e) {
-    console.warn('Failed to read tarefa1 snapshot:', e);
+    console.warn('Failed to read snapshot:', e);
   }
 
-  // Fallback to your default
-  const def = window.taskStates?.[tid] || {
-    title: 'Tarefa 1',
+  // Generic default if taskStates[tid] is missing or not ready yet
+  const genericDef = {
+    title: tid,
     code: window.templates?.cpp || '',
     language: 'cpp',
     input: '',
@@ -1295,25 +1327,35 @@ function initFirstTaskIfNeeded() {
     theme: 'dark'
   };
 
+  // Prefer a task-specific default if available, else generic
+  const defFromTaskStates = window.taskStates && window.taskStates[tid] ? { ...window.taskStates[tid] } : null;
+  const def = defFromTaskStates || genericDef;
+
   // If there was no snapshot, seed it now
   if (!snap) {
     try { localStorage.setItem(key, JSON.stringify(def)); }
-    catch (e) { console.warn('Seeding tarefa1 snapshot failed:', e); }
+    catch (e) { console.warn('Seeding snapshot failed:', e); }
   }
 
-  // Merge snapshot (if any) onto default and update the in-memory state
-  const merged = { ...def, ...(snap || {}) };
-  if (!window.taskStates) window.taskStates = {};
-  window.taskStates[tid] = merged;
+  // Make the dropdown show the chosen task id
+  const taskSelectEl = document.getElementById('task-select');
+    if (taskSelectEl) {
+	console.log("taskSelectEl",taskSelectEl);
+    const idx = Array.from(taskSelectEl.options).findIndex(o => o.value === tid);
+        console.log("idx",idx);
+
+	if (idx !== -1) taskSelectEl.selectedIndex = idx;
+	console.log("taskSelectEl.selectedIndex",taskSelectEl.selectedIndex);
+	window.syncTaskSelectorUI?.();   // <- update the custom face and active item
+
+  }
 
   // Load the task into the UI without firing snapshot saves mid-load
   _suppressSnapshot = true;
   loadTaskState(tid);
   _suppressSnapshot = false;
 
-  // Take a clean snapshot and optionally warn about quota
   scheduleSaveSnapshot();
-
   window.__initialTaskBootDone = true;
 }
 
