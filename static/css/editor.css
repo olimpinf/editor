@@ -25,10 +25,12 @@ html,body{
 /* Main 2-column layout: toolbar | (left|right) | footer */
 .container {
   display: grid;
-  grid-template-columns: 5fr 3fr;        /* keep your 5/8 : 3/8 split */
-  grid-template-rows: auto 1fr 1fr auto; /* NEW: toolbar, two content rows, footer */
+  grid-template-columns: 5fr 3fr;        /* 2-column desktop */
+  grid-template-rows: auto 1fr 1fr auto; /* toolbar, two content rows, footer */
   gap: var(--gap);
-  height: 100vh;
+  /* iOS Safari: avoid address-bar shrink bug */
+  height: 100dvh;                         /* modern */
+  min-height: 100vh;                      /* fallback */
   padding: var(--gap);
   box-sizing: border-box;
   background: #ddd;
@@ -40,6 +42,8 @@ html,body{
 .main-toolbar {
   grid-column: 1 / -1;
   grid-row: 1;
+  position: relative;
+  z-index: 5;
 }
 
 .main-toolbar .bar {
@@ -226,25 +230,24 @@ body.pane-expanded .pane:not(.expanded) {
 /* optional smooth transition */
 .pane, .bar, .content { transition: all 180ms ease; }
 
-/* small responsive tweak */
 @media (max-width: 800px){
   .container {
     grid-template-columns: 1fr;               /* single column */
-    grid-template-rows: auto auto auto;       /* left, right, footer */
+    grid-template-rows: auto auto auto auto;  /* toolbar, left, right, footer */
   }
   .left {
     grid-column: 1;
-    grid-row: 1;                               /* first block */
+    grid-row: 2;                               /* below toolbar */
   }
   .right {
     grid-column: 1;
-    grid-row: 2;                               /* second block */
+    grid-row: 3;                               /* second block */
     display: grid;
     grid-auto-rows: 1fr;
   }
   #pane-footer {
     grid-column: 1 / -1;                       /* still full width */
-    grid-row: 3;
+    grid-row: 4;
   }
 }
 
