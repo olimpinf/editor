@@ -1058,7 +1058,7 @@ async function pollTestStatus(testId) {
     const outputContainer = document.getElementById('stdout-output');
     
     const label = getTaskLabel(runningTaskId);
-    const theme = getTaskTheme(runningTaskId);
+    const theme = getGlobalTheme();
     const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     
     // Define the polling loop function
