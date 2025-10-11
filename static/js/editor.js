@@ -182,7 +182,12 @@ if __name__ == "__main__":
 	});
 
 	applyEditorTheme();
+	window.scheduleSaveSnapshot?.();
     })();
+
+    window.addEventListener("load", () => {
+	setTimeout(() => window.editor?.focus(), 150);
+    });
 
     // Download buttons
     function downloadContent(filename, content) {
@@ -319,7 +324,7 @@ if __name__ == "__main__":
 	setStatusLabel("Enviando...", { spinning: true });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 
-	const theme = getTaskTheme(runningTaskId);
+	const theme = getGlobalTheme;
 	const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
 	
 	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
@@ -412,6 +417,8 @@ if __name__ == "__main__":
     })();
     
 });
+
+
 
 var outputBuffer = "";
 
@@ -711,9 +718,9 @@ window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
 	const btn = e.target.closest('#global-style-toggle');
 	if (!btn) return;
 
-	const now = getCurrentTheme();             // 'light' or 'dark'
+	const now = getGlobalTheme();             // 'light' or 'dark'
 	const next = now === 'light' ? 'dark' : 'light';
-	setThemeForCurrentTask(next);
+	setGlobalTheme(next);
     });
     
 })();
@@ -1019,7 +1026,7 @@ const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
  */
 
 function displayStdout(head, str) {
-    const theme = getTaskTheme(runningTaskId);
+    const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
     if (str == "") {
@@ -1034,7 +1041,7 @@ function displayStdout(head, str) {
 }
 
 function displayStderr(head, str) {
-    const theme = getTaskTheme(runningTaskId);
+    const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
     if (str != "") {
@@ -1183,9 +1190,8 @@ function readCurrentPanes() {
   return {
     code: window.editor?.getValue?.() || "",
     input: document.getElementById("stdin-input")?.value || "",
-    // If your output is HTML, you can store innerHTML; if it’s plain text, prefer textContent.
     output: document.getElementById("stdout-output")?.innerHTML || "",
-    language: document.getElementById("language-select")?.value || ""
+    language: document.getElementById("language-select")?.value || "",
   };
 }
 
@@ -1236,52 +1242,49 @@ if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 let _suppressSnapshot = false;
 
 function loadTaskState(taskID) {
-  const state = window.taskStates[taskID];
-  const snap = loadSnapshot(taskID);
+    const state = window.taskStates[taskID];
+    const snap = loadSnapshot(taskID);
 
-  window.currentTask = taskID;
-  _suppressSnapshot = true; // stop debounced saves during programmatic updates
-  const lang = snap?.language;
-  if (lang) {
-    // Programmatic: set Monaco + select, DO NOT inject template when restoring a task
-    if (window.setLanguageProgrammatic) {
-      window.setLanguageProgrammatic(lang, { injectTemplate: false });
-    } else {
-      const sel = document.getElementById("language-select");
-      if (sel) {
-        const idx = Array.from(sel.options).findIndex(o => o.value === lang);
-        if (idx !== -1) {
-          sel.selectedIndex = idx;
-          switchLanguage(lang);
-          window.syncLanguageSelectorUI?.();
-        }
-      }
+    window.currentTask = taskID;
+    _suppressSnapshot = true; // stop debounced saves during programmatic updates
+    const lang = snap?.language;
+    if (lang) {
+	// Programmatic: set Monaco + select, DO NOT inject template when restoring a task
+	if (window.setLanguageProgrammatic) {
+	    window.setLanguageProgrammatic(lang, { injectTemplate: false });
+	} else {
+	    const sel = document.getElementById("language-select");
+	    if (sel) {
+		const idx = Array.from(sel.options).findIndex(o => o.value === lang);
+		if (idx !== -1) {
+		    sel.selectedIndex = idx;
+		    switchLanguage(lang);
+		    window.syncLanguageSelectorUI?.();
+		}
+	    }
+	}
     }
-  }
 
-  // (B) Code
-  window.editor?.setValue?.(snap?.code || "");
-  // (C) Input
-  const stdin = document.getElementById("stdin-input");
-  if (stdin) stdin.value = snap?.input || "";
-  // (D) Output
-  const out = document.getElementById("stdout-output");
-  if (out) out.innerHTML = snap?.output || "";
+    // (B) Code
+    window.editor?.setValue?.(snap?.code || "");
+    // (C) Input
+    const stdin = document.getElementById("stdin-input");
+    if (stdin) stdin.value = snap?.input || "";
+    // (D) Output
+    const out = document.getElementById("stdout-output");
+    if (out) out.innerHTML = snap?.output || "";
 
     // Seed the in-memory buffer so the first append truly appends
     _outputBuffers[taskID] = snap?.output || "";
     
-  // Theme: apply for all panes + Monaco
-  applyGlobalTheme(state.theme);
-
-  window.currentTask = taskID;
-  // Refresh the footer to this task's last known status
-  if (window.App && window.App.Status) {
-    window.App.Status.renderFor(taskID);
-  }
+    window.currentTask = taskID;
+    // Refresh the footer to this task's last known status
+    if (window.App && window.App.Status) {
+	window.App.Status.renderFor(taskID);
+    }
 
     _suppressSnapshot = false; // re-enable
-  //scheduleSaveSnapshot();    // take one clean snapshot for this task
+    //scheduleSaveSnapshot();    // take one clean snapshot for this task
 }
 
 
@@ -1322,7 +1325,7 @@ function initFirstTaskIfNeeded() {
     language: 'cpp',
     input: '',
     output: '',
-    theme: 'dark'
+    theme: 'light'
   };
 
   // Prefer a task-specific default if available, else generic
@@ -1344,6 +1347,8 @@ function initFirstTaskIfNeeded() {
 
   }
 
+    initGlobalTheme();
+    
   // Load the task into the UI without firing snapshot saves mid-load
   _suppressSnapshot = true;
   loadTaskState(tid);
@@ -1416,67 +1421,6 @@ function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
   persistTaskOutput(taskId, next);
 }
 
-function applyGlobalTheme(mode) {
-  // mode: 'light' or 'dark'
-  const light = (mode === 'light');
-
-  // Right panes: add/remove .light-mode on their content containers
-  const rtop = document.querySelector('#pane-rtop .pane-container');
-  const rbot = document.querySelector('#pane-rbot .pane-container');
-  rtop?.classList.toggle('light-mode', light);
-  rbot?.classList.toggle('light-mode', light);
-
-  // Monaco editor theme (left pane)
-  if (window.monaco?.editor && window.editor) {
-    window.monaco.editor.setTheme(light ? 'vs' : 'vs-dark');
-  }
-
-    
-    if (light) {
-	replaceColor(rbot, colorInfoTextDark, colorInfoTextLight);
-	replaceColor(rbot, colorEmphasisTextDark, colorEmphasisTextLight);
-    }
-    else {
-	replaceColor(rbot, colorInfoTextLight, colorInfoTextDark);
-	replaceColor(rbot, colorEmphasisTextLight, colorEmphasisTextDark);
-    }
-
-    
-}
-
-function getCurrentTheme() {
-  // Prefer the current task state if present
-  const taskId = window.currentTask;
-  const state = taskId && window.taskStates ? window.taskStates[taskId] : null;
-  if (state?.theme === 'light' || state?.theme === 'dark') {
-    return state.theme;
-  }
-  // Fallback: infer from right-top pane
-  const rtop = document.querySelector('#pane-rtop .pane-container');
-  const isLight = !!rtop && rtop.classList.contains('light-mode');
-  return isLight ? 'light' : 'dark';
-}
-
-function getTaskTheme(taskId) {
-  // Prefer the current task state if present
-  const state = taskId && window.taskStates ? window.taskStates[taskId] : null;
-  if (state?.theme === 'light' || state?.theme === 'dark') {
-    return state.theme;
-  }
-  // Fallback: infer from right-top pane
-  const rtop = document.querySelector('#pane-rtop .pane-container');
-  const isLight = !!rtop && rtop.classList.contains('light-mode');
-  return isLight ? 'light' : 'dark';
-}
-
-function setThemeForCurrentTask(mode) {
-  // Persist in memory & snapshot
-  if (window.currentTask && window.taskStates?.[window.currentTask]) {
-    window.taskStates[window.currentTask].theme = mode;
-  }
-  applyGlobalTheme(mode);
-  scheduleSaveSnapshot?.();
-}
 
 // Maps your select values to Monaco language ids.
 const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
