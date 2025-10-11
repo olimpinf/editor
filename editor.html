@@ -28,6 +28,7 @@
       <button class="style-toggle-btn" id="global-style-toggle" title="Tema">
 	<img src="static/img/icon-theme.svg" height="17pt" alt="Tema">
       </button>
+      <span style="margin-left:10px"></span>
       
       <!-- Task selector -->
       <div class="custom-select" id="task-select-wrapper">
@@ -48,6 +49,7 @@
           <option value="python">Python</option>
         </select>
       </div>
+      <span style="margin-left:10px"></span>
       <!-- Info button -->
       <button id="info-btn" title="Informações">
         <img src="static/img/icon-info.svg" height="18pt" alt="Info" onerror="this.replaceWith(document.createTextNode('Info'));">
@@ -75,7 +77,8 @@
 	  <button id="clear-btn" title="Clear">
             <img src="static/img/icon-thrash.svg" height="17pt" alt="Clear code">
 	  </button>
-	  <button aria-label="Expand" class="btn-expand" data-target="left-pane">⛶</button>
+	  <button title="Tela cheia código" aria-label="Tela cheia código" class="btn-expand" data-target="left-pane">
+            <img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia código">
 	</div>
       </div>
       <div id="editor-container" style="height: calc(100% - 30px);"></div>
@@ -88,18 +91,19 @@
         <span>Entrada</span>
         <div class="controls">
 	  <!-- Download button -->
-	  <button id="download-input-btn" title="Download Input">
-            <img src="static/img/icon-download.svg" height="17pt" alt="Download">
+	  <button id="download-input-btn" title="Descarregar entrada" aria-label="Descarregar entrada">
+            <img src="static/img/icon-download.svg" height="17pt" alt="Descarregar entrada">
 	  </button>
 	  <!-- Upload button -->
-	  <button id="upload-input-btn" title="Upload Input">
-            <img src="static/img/icon-upload.svg" height="17pt" alt="Upload">
+	  <button id="upload-input-btn" title="Carregar entrada" aria-label="Carregar entrada">
+            <img src="static/img/icon-upload.svg" height="17pt" alt="Carregar entrada">
 	  </button>
 	  <!-- Clear button -->
-	  <button id="clear-input-btn" title="Clear">
-            <img src="static/img/icon-thrash.svg" height="17pt" alt="Clear input">
+	  <button id="clear-input-btn" title="Limpar entrada" aria-label="Limpar entrada">
+            <img src="static/img/icon-thrash.svg" height="17pt" alt="Limpar entrada">
 	  </button>
-          <button aria-label="Expand" class="btn-expand" data-target="pane-rtop">⛶</button>
+	  <button title="Tela cheia entrada" aria-label="Tela cheia entrada" class="btn-expand" data-target="pane-rtop">
+            <img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia entrada">
         </div>
       </div>
         <!-- Editable input area -->
@@ -113,14 +117,15 @@
         <span>Saída</span>
         <div class="controls">
 	  <!-- Download button -->
-	  <button id="download-output-btn" title="Download Input">
-            <img src="static/img/icon-download.svg" height="17pt" alt="Download">
+	  <button id="download-output-btn" title="Descarregar saída" aria-label="Descarregar saída">
+            <img src="static/img/icon-download.svg" height="17pt" alt="Descarregar saída">
 	  </button>
 	  <!-- Clear button -->
-	  <button id="clear-output-btn" title="Clear">
-            <img src="static/img/icon-thrash.svg" height="17pt" alt="Clear output">
+	  <button id="clear-output-btn" title="Limpar saída">
+            <img src="static/img/icon-thrash.svg" height="17pt" alt="Limpar saída" title="Limpar saída">
 	  </button>
-          <button aria-label="Expand" class="btn-expand" data-target="pane-rbot">⛶</button>
+	  <button id="clear-output-btn" title="Tela cheia saída" aria-label="Tela cheia saída" class="btn-expand" data-target="pane-rbot">
+            <img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia saída">
         </div>
       </div>
       <div id="stdout-output" class="pane-container">
