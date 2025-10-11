@@ -35,7 +35,7 @@ if __name__ == "__main__":
             language: 'cpp',
             input: '',
             output: '',
-            theme: 'dark'
+            theme: 'light'
 	},
 	tarefa2: {
 	    title: 'Tarefa 2',
@@ -43,7 +43,7 @@ if __name__ == "__main__":
             language: 'cpp',
             input: '',
             output: '',
-            theme: 'dark'
+            theme: 'light'
 	},
 	tarefa3: {
 	    title: 'Tarefa 3',
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             language: 'cpp',
             input: '',
             output: '',
-            theme: 'dark'
+            theme: 'light'
 	},
 	tarefa4: {
 	    title: 'Tarefa 4',
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             language: 'cpp',
             input: '',
             output: '',
-            theme: 'dark'
+            theme: 'light'
 	},
 	tarefa5: {
 	    title: 'Tarefa 5',
@@ -67,7 +67,7 @@ if __name__ == "__main__":
             language: 'cpp',
             input: '',
             output: '',
-            theme: 'dark'
+            theme: 'light'
 	}
     };
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     window.editor = monaco.editor.create(document.getElementById('editor-container'), {
 	value: templates.cpp,   // default
 	language: 'cpp',
-	theme: 'vs-dark',
+	theme: 'vs-light',
 	automaticLayout: true,
 	fontSize: 14,
 	minimap: { enabled: false },
@@ -1295,13 +1295,11 @@ function initFirstTaskIfNeeded() {
   let tid = 'tarefa1';
   try {
       const last = localStorage.getItem('obi:lastTask');
-      console.log("last from initFirstTaskNeeded", last);
     if (last) {
       tid = last;
     } else {
       const sel = document.getElementById('task-select');
       if (sel && sel.value) tid = sel.value;
-      console.log("sel.value from initFirstTaskNeeded", last);
     }
   } catch (_) {}
     
@@ -1340,12 +1338,8 @@ function initFirstTaskIfNeeded() {
   // Make the dropdown show the chosen task id
   const taskSelectEl = document.getElementById('task-select');
     if (taskSelectEl) {
-	console.log("taskSelectEl",taskSelectEl);
     const idx = Array.from(taskSelectEl.options).findIndex(o => o.value === tid);
-        console.log("idx",idx);
-
 	if (idx !== -1) taskSelectEl.selectedIndex = idx;
-	console.log("taskSelectEl.selectedIndex",taskSelectEl.selectedIndex);
 	window.syncTaskSelectorUI?.();   // <- update the custom face and active item
 
   }
@@ -1357,6 +1351,12 @@ function initFirstTaskIfNeeded() {
 
   scheduleSaveSnapshot();
   window.__initialTaskBootDone = true;
+// Focus the Monaco editor after boot
+if (window.editor?.focus) {
+  setTimeout(() => {
+    window.editor.focus();
+  }, 100); // small delay to let layout settle
+}
 }
 
 // --- Per-task output buffers ---
