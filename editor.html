@@ -187,7 +187,11 @@
   <!-- focus sentry to help trap focus -->
   <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
 </div>
-
+<script>
+  window.AppConfig = {
+    examGate: { enabled: false } 
+  };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <script src="static/js/utils.js"></script>
 <script src="static/js/cms.js"></script>
