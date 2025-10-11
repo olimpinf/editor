@@ -359,23 +359,35 @@ if __name__ == "__main__":
     });    
 
     // Clear Input button
-    document.getElementById('clear-input-btn').addEventListener('click', () => {
-	const inputElement = document.getElementById('stdin-input');
+    document.getElementById('clear-input-btn')?.addEventListener('click', () => {
+	const taskId = getCurrentTaskId?.() || window.currentTask;
 
-	if (inputElement) {
-            inputElement.value = "";
-	}        
-	scheduleSaveSnapshot();	
-        //saveCurrentTaskState();
-    });    
+	const inputEl = document.getElementById('stdin-input');
+	if (inputEl) inputEl.value = '';
+
+	if (taskId) {
+	    if (window.taskStates?.[taskId]) {
+		window.taskStates[taskId].input = '';
+	    }
+	}
+
+	scheduleSaveSnapshot?.();
+    });
 
     // Clear Output button
-    document.getElementById('clear-output-btn').addEventListener('click', () => {
-	const outputElement = document.getElementById('stdout-output');    
-	outputElement.innerHTML = '';
-	outputBuffer = '';
+    document.getElementById('clear-output-btn')?.addEventListener('click', () => {
+	const taskId = getCurrentTaskId?.() || window.currentTask;
+
+	const out = document.getElementById('stdout-output');
+	if (out) out.innerHTML = '';
+
+	if (taskId) {
+	    _outputBuffers[taskId] = '';
+	}
+
 	scheduleSaveSnapshot();
     });
+
 
     // Font size button
     (function setupFontCycler() {
