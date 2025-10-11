@@ -301,18 +301,23 @@ if __name__ == "__main__":
     document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
 	// Clear any previous running tests
 	if (runningTaskId != null) {
-      alert(
-	  `Há uma execução em andamento, aguarde.`
-      );
+	    alert(
+		`Há uma execução em andamento, aguarde.`
+	    );
 	    return;
 	}
-	
-	if (window.currentTestInterval) {
-            clearInterval(window.currentTestInterval);
-            delete window.currentTestInterval;
-            console.log("Stopped previous test execution.");
+	else {
+	    const left = cooldownLeft();
+	    if (left > 0) {
+		alert(`Aguarde ${left}s para executar novamente.`);
+		return;
+	    }
 	}
+	// Start cooldown
+	lastRunStartMs = Date.now();
+	startCooldownTicker();
 	runningTaskId = getCurrentTaskId()
+
 	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
 	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
 	const code = window.editor.getValue();
@@ -587,19 +592,19 @@ var outputBuffer = "";
 
 
 window.syncTaskSelectorUI = function syncTaskSelectorUI() {
-  const wrap   = document.getElementById('task-select-wrapper');
-  const select = document.getElementById('task-select');
-  if (!wrap || !select) return;
+    const wrap   = document.getElementById('task-select-wrapper');
+    const select = document.getElementById('task-select');
+    if (!wrap || !select) return;
 
-  const face  = wrap.querySelector('.select-selected');
-  const items = wrap.querySelectorAll('.select-items div');
+    const face  = wrap.querySelector('.select-selected');
+    const items = wrap.querySelectorAll('.select-items div');
 
-  const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+    const idx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
 
-  if (face) face.textContent = select.options[idx]?.text || '';
-  if (items && items.length) {
-    items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
-  }
+    if (face) face.textContent = select.options[idx]?.text || '';
+    if (items && items.length) {
+	items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+    }
 };
 
 // Keep the custom language select UI in sync with the native <select>
@@ -873,7 +878,7 @@ function getSanitizedTaskName() {
 }
 
 // ===== Run / Status bar (cooldown starts at RUN CLICK) =====
-const MIN_INTERVAL_MS = 10_000; // adjust per exam
+const MIN_INTERVAL_MS = 30_000;
 
 let runInProgress   = false;
 let runningTaskId   = null;
@@ -1068,7 +1073,7 @@ async function pollTestStatus(testId) {
 	const EVALUATING = 3;
 	const EVALUATED = 4;
 
-        if (true) {
+        try {
             const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
             if (status == EVALUATED) {
@@ -1145,15 +1150,14 @@ async function pollTestStatus(testId) {
             }
 
         }
-	// catch (error) {
-        //     clearInterval(window.currentTestInterval);
-        //     delete window.currentTestInterval;
-	//     var program_output = "\nErro de processamento\n";
-	//     program_output = formatOutput(program_output, "red");
-        //     displayProgramOutput(program_output);
-	//     scheduleSaveSnapshot();
-	//     runningTaskId = null;
-        // }
+	catch (error) {
+            clearInterval(window.currentTestInterval);
+            delete window.currentTestInterval;
+	    displayStderr("Erro de processamento. ", "");
+	    setStatusLabel("Execução terrminou com erro", { spinning: false });
+	    scheduleSaveSnapshot();
+	    runningTaskId = null;
+        }
     };
 
     // Start the interval and save its ID so we can stop it later
@@ -1163,7 +1167,7 @@ async function pollTestStatus(testId) {
 }
 
 function displayProgramOutput(programOutputText) {
-  setOutputForTask(runningTaskId, programOutputText, { append: true });
+    setOutputForTask(runningTaskId, programOutputText, { append: true });
 }
 
 function formatOutput(str, textColor="") {
@@ -1176,7 +1180,7 @@ function formatOutput(str, textColor="") {
 
     return styledHtml;
 }
-    
+
 function getLocalizedTime(locale = 'pt-BR') {
     const now = new Date();
     
@@ -1188,12 +1192,12 @@ function getLocalizedTime(locale = 'pt-BR') {
 }
 
 function readCurrentPanes() {
-  return {
-    code: window.editor?.getValue?.() || "",
-    input: document.getElementById("stdin-input")?.value || "",
-    output: document.getElementById("stdout-output")?.innerHTML || "",
-    language: document.getElementById("language-select")?.value || "",
-  };
+    return {
+	code: window.editor?.getValue?.() || "",
+	input: document.getElementById("stdin-input")?.value || "",
+	output: document.getElementById("stdout-output")?.innerHTML || "",
+	language: document.getElementById("language-select")?.value || "",
+    };
 }
 
 // Debounced saver
@@ -1208,31 +1212,31 @@ let _saveTimer = null;
 // }
 
 function scheduleSaveSnapshot() {
-  if (_suppressSnapshot) return;
-  if (!window.currentTask) return;
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(storageKey(window.currentTask), JSON.stringify(readCurrentPanes()));
-      window.App?.PruneStorage?.pruneOldest();
-    } catch (e) {
-      // QuotaExceededError or other storage errors
-      console.warn("saveSnapshot failed:", e);
-      alert(
-`Your browser storage for this site is full.
+    if (_suppressSnapshot) return;
+    if (!window.currentTask) return;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+	try {
+	    localStorage.setItem(storageKey(window.currentTask), JSON.stringify(readCurrentPanes()));
+	    window.App?.PruneStorage?.pruneOldest();
+	} catch (e) {
+	    // QuotaExceededError or other storage errors
+	    console.warn("saveSnapshot failed:", e);
+	    alert(
+		`Your browser storage for this site is full.
 Please clear space, then try again.
 
 Tip: Use the editor's "Clear saved tasks" to remove old snapshots.`
-      );
-    }
-  }, 400);
+	    );
+	}
+    }, 400);
 }
 
 
 
 // Editor changes
 if (window.editor?.onDidChangeModelContent) {
-  window.editor.onDidChangeModelContent(() => scheduleSaveSnapshot());
+    window.editor.onDidChangeModelContent(() => scheduleSaveSnapshot());
 }
 
 // Stdin textarea changes
@@ -1293,76 +1297,76 @@ function loadTaskState(taskID) {
 window.__initialTaskBootDone = false;
 
 function initFirstTaskIfNeeded() {
-  if (window.__initialTaskBootDone) return;
+    if (window.__initialTaskBootDone) return;
 
-  // Pick last task if present; else current select value; else fallback
-  let tid = 'tarefa1';
-  try {
-      const last = localStorage.getItem('obi:lastTask');
-    if (last) {
-      tid = last;
-    } else {
-      const sel = document.getElementById('task-select');
-      if (sel && sel.value) tid = sel.value;
-    }
-  } catch (_) {}
+    // Pick last task if present; else current select value; else fallback
+    let tid = 'tarefa1';
+    try {
+	const last = localStorage.getItem('obi:lastTask');
+	if (last) {
+	    tid = last;
+	} else {
+	    const sel = document.getElementById('task-select');
+	    if (sel && sel.value) tid = sel.value;
+	}
+    } catch (_) {}
     
 
-  const key = storageKey(tid);
+    const key = storageKey(tid);
 
-  // Try snapshot
-  let snap = null;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) snap = JSON.parse(raw);
-  } catch (e) {
-    console.warn('Failed to read snapshot:', e);
-  }
+    // Try snapshot
+    let snap = null;
+    try {
+	const raw = localStorage.getItem(key);
+	if (raw) snap = JSON.parse(raw);
+    } catch (e) {
+	console.warn('Failed to read snapshot:', e);
+    }
 
-  // Generic default if taskStates[tid] is missing or not ready yet
-  const genericDef = {
-    title: tid,
-    code: window.templates?.cpp || '',
-    language: 'cpp',
-    input: '',
-    output: '',
-    theme: 'light'
-  };
+    // Generic default if taskStates[tid] is missing or not ready yet
+    const genericDef = {
+	title: tid,
+	code: window.templates?.cpp || '',
+	language: 'cpp',
+	input: '',
+	output: '',
+	theme: 'light'
+    };
 
-  // Prefer a task-specific default if available, else generic
-  const defFromTaskStates = window.taskStates && window.taskStates[tid] ? { ...window.taskStates[tid] } : null;
-  const def = defFromTaskStates || genericDef;
+    // Prefer a task-specific default if available, else generic
+    const defFromTaskStates = window.taskStates && window.taskStates[tid] ? { ...window.taskStates[tid] } : null;
+    const def = defFromTaskStates || genericDef;
 
-  // If there was no snapshot, seed it now
-  if (!snap) {
-    try { localStorage.setItem(key, JSON.stringify(def)); }
-    catch (e) { console.warn('Seeding snapshot failed:', e); }
-  }
+    // If there was no snapshot, seed it now
+    if (!snap) {
+	try { localStorage.setItem(key, JSON.stringify(def)); }
+	catch (e) { console.warn('Seeding snapshot failed:', e); }
+    }
 
-  // Make the dropdown show the chosen task id
-  const taskSelectEl = document.getElementById('task-select');
+    // Make the dropdown show the chosen task id
+    const taskSelectEl = document.getElementById('task-select');
     if (taskSelectEl) {
-    const idx = Array.from(taskSelectEl.options).findIndex(o => o.value === tid);
+	const idx = Array.from(taskSelectEl.options).findIndex(o => o.value === tid);
 	if (idx !== -1) taskSelectEl.selectedIndex = idx;
 	window.syncTaskSelectorUI?.();   // <- update the custom face and active item
 
-  }
+    }
 
     initGlobalTheme();
     
-  // Load the task into the UI without firing snapshot saves mid-load
-  _suppressSnapshot = true;
-  loadTaskState(tid);
-  _suppressSnapshot = false;
+    // Load the task into the UI without firing snapshot saves mid-load
+    _suppressSnapshot = true;
+    loadTaskState(tid);
+    _suppressSnapshot = false;
 
-  scheduleSaveSnapshot();
-  window.__initialTaskBootDone = true;
-// Focus the Monaco editor after boot
-if (window.editor?.focus) {
-  setTimeout(() => {
-    window.editor.focus();
-  }, 100); // small delay to let layout settle
-}
+    scheduleSaveSnapshot();
+    window.__initialTaskBootDone = true;
+    // Focus the Monaco editor after boot
+    if (window.editor?.focus) {
+	setTimeout(() => {
+	    window.editor.focus();
+	}, 100); // small delay to let layout settle
+    }
 }
 
 // --- Per-task output buffers ---
@@ -1370,56 +1374,56 @@ const _outputBuffers = Object.create(null); // { taskId: htmlString }
 
 // Get/seed a snapshot for any task
 function ensureSnapshot(taskId) {
-  const key = storageKey(taskId);
-  let snap = null;
-  try {
-    const raw = localStorage.getItem(key);
-    snap = raw ? JSON.parse(raw) : null;
-  } catch {}
-  if (!snap) {
-    // seed from defaults if available
-    snap = (window.taskStates && window.taskStates[taskId])
-      ? { ...window.taskStates[taskId] }
-      : { title: taskId, code: "", input: "", output: "", language: "" };
-    try { localStorage.setItem(key, JSON.stringify(snap)); } catch {}
-  }
-  return snap;
+    const key = storageKey(taskId);
+    let snap = null;
+    try {
+	const raw = localStorage.getItem(key);
+	snap = raw ? JSON.parse(raw) : null;
+    } catch {}
+    if (!snap) {
+	// seed from defaults if available
+	snap = (window.taskStates && window.taskStates[taskId])
+	    ? { ...window.taskStates[taskId] }
+	: { title: taskId, code: "", input: "", output: "", language: "" };
+	try { localStorage.setItem(key, JSON.stringify(snap)); } catch {}
+    }
+    return snap;
 }
 
 // Save only the output for a given task snapshot
 function persistTaskOutput(taskId, htmlOutput) {
-  const key = storageKey(taskId);
-  const snap = ensureSnapshot(taskId);
-  snap.output = htmlOutput;
-  try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {
-    console.warn("persistTaskOutput failed:", e);
-  }
-  // keep in-memory state in sync if present
-  if (window.taskStates?.[taskId]) {
-    window.taskStates[taskId].output = htmlOutput;
-  }
+    const key = storageKey(taskId);
+    const snap = ensureSnapshot(taskId);
+    snap.output = htmlOutput;
+    try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {
+	console.warn("persistTaskOutput failed:", e);
+    }
+    // keep in-memory state in sync if present
+    if (window.taskStates?.[taskId]) {
+	window.taskStates[taskId].output = htmlOutput;
+    }
 }
 
 // Unified setter (append or replace) that targets a specific task
 function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
-  if (!taskId) return;
+    if (!taskId) return;
 
     const prev = _outputBuffers[taskId] || "";
 
-  const next = append ? prev + htmlChunk : htmlChunk;
-  _outputBuffers[taskId] = next;
+    const next = append ? prev + htmlChunk : htmlChunk;
+    _outputBuffers[taskId] = next;
 
-  // If the user is viewing this task, also update the DOM
-  if (window.currentTask === taskId) {
-    const out = document.getElementById('stdout-output');
-      if (out) {
-	  out.innerHTML = next;
-	  out.scrollTo({ top: out.scrollHeight, behavior: "smooth" });
-      }
-  }
+    // If the user is viewing this task, also update the DOM
+    if (window.currentTask === taskId) {
+	const out = document.getElementById('stdout-output');
+	if (out) {
+	    out.innerHTML = next;
+	    out.scrollTo({ top: out.scrollHeight, behavior: "smooth" });
+	}
+    }
 
-  // Persist snapshot for THAT task (not the current one)
-  persistTaskOutput(taskId, next);
+    // Persist snapshot for THAT task (not the current one)
+    persistTaskOutput(taskId, next);
 }
 
 
@@ -1427,8 +1431,8 @@ function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
 const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
 function switchLanguage(lang) {
-  const model = window.editor?.getModel?.();
-  if (model && window.monaco?.editor) {
-    window.monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
-  }
+    const model = window.editor?.getModel?.();
+    if (model && window.monaco?.editor) {
+	window.monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
+    }
 }
