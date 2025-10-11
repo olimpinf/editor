@@ -38,3 +38,29 @@ function replaceColor(element, oldColor, newColor) {
     element.innerHTML = newHtml;
   }
 }
+
+/**
+ * Remove all HTML tags from a string, replacing <br> or <br/> with newline characters.
+ * @param {string} content - The HTML string.
+ * @returns {string} The plain text string with <br> converted to "\n".
+ */
+function removeHtmlTags(content) {
+  if (typeof content !== 'string') return '';
+
+  // Normalize <br> tags to a placeholder newline
+  let text = content.replace(/<br\s*\/?>/gi, '\n');
+
+  // Remove all remaining HTML tags
+  text = text.replace(/<\/?[^>]+(>|$)/g, '');
+
+  // Decode basic HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  return text.trim();
+}

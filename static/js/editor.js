@@ -227,11 +227,7 @@ if __name__ == "__main__":
 	// Get text content from the <pre> tag inside the output container
 	const outputContainer = document.getElementById('stdout-output');
 	const htmlContent = outputContainer?.innerHTML ?? "";
-	const openingTagRegex = /<div.*?>/gi;    
-	const closingTagRegex = /<\/div>/gi;
-	let cleanedContent = htmlContent.replace(openingTagRegex, '');
-        cleanedContent = cleanedContent.replace(closingTagRegex, '');
-	const txtContent = cleanedContent.replace(/<br\s*\/?>/gi, '\n');
+	const txtContent = removeHtmlTags(htmlContent);
 	downloadContent('saida.txt', txtContent);
     });
 
