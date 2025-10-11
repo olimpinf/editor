@@ -18,7 +18,7 @@
 html,body{
     height:100%;
     margin:0;
-    font-family: Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Helvetica Neue", Arial, sans-serif;
     /* background: #eef2f6; */
 }
 
@@ -378,14 +378,14 @@ body.pane-expanded .pane:not(.expanded) {
     outline: none;
     background: var(--content-bg);
     color: var(--content-fg);
-    font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font: 14px/1.4 "Noto Sans", monospace;
 }
 
 #stdout-output {
     background: var(--content-bg);
     color: var(--content-fg);
     padding-top: 0px;
-    font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font: 14px/1.4 "Noto Sans", monospace;
 }
 #stdout-output p, #stdout-output pre {
     color: var(--content-fg);
@@ -528,16 +528,15 @@ body.pane-expanded .pane:not(.expanded) {
 .obi-modal__action:hover {
   opacity: 0.9;
 }
-
-.courier-prime-regular {
-  font-family: "Courier Prime", monospace;
-  font-weight: 400;
+    
+.monospaced-regular {
+  font-family: "Courier New", monospace;
+  font-weight: 500;
   font-style: normal;
 }
 
-.courier-prime-bold {
-  font-family: "Courier Prime", monospace;
+.monospaced-bold {
+  font-family: "Courier New", monospace;
   font-weight: 700;
   font-style: normal;
 }
-    
