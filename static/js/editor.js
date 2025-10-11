@@ -378,9 +378,9 @@ if __name__ == "__main__":
 	if (!btn) return;
 
 	// cycle order: medium (default) → small → large → medium ...
-	const sizes = ["medium", "small", "large"];
-	const fontMap = { small: 10, medium: 12, large: 14 };
-	let idx = 0;
+	const sizes = ["small", "medium", "large", "extralarge"];
+	const fontMap = { small: 10, medium: 12, large: 14, extralarge: 16};
+	let idx = 1;
 
 	// restore saved size if any
 	const saved = localStorage.getItem("editorFontSize");
@@ -412,6 +412,7 @@ if __name__ == "__main__":
 	// cycle on button click
 	btn.addEventListener("click", () => {
 	    idx = (idx + 1) % sizes.length;
+	    console.log("size idx", idx );
 	    applyFontSize(sizes[idx]);
 	});
     })();
