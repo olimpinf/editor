@@ -1,4 +1,3 @@
-let runInProgress   = false;
 let runningTaskId   = null;
 let runningLanguage = null;
 let lastRunStartMs  = 0;     // <— from click time
@@ -1013,6 +1012,7 @@ const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
  */
 
 function displayStdout(head, str) {
+    console.log("displayStdout");
     const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
@@ -1021,22 +1021,23 @@ function displayStdout(head, str) {
     }
     else {
 	tmp += formatOutput("Saída produzida:\n---------\n", color);
-	tmp += formatOutput(str + "\n");
+	tmp += "<pre>" + str + "</pre>";
 	tmp += formatOutput("---------\n", color);
     }
     displayProgramOutput(tmp);
 }
 
 function displayStderr(head, str) {
+    console.log("displayStderr");
     const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
     if (str != "") {
 	tmp += formatOutput("Mensagens de erro:\n---------\n", color);
-	tmp += formatOutput(str + "\n", "red");
+	tmp += '<pre class="error">' +str + "</pre>";
 	tmp += formatOutput("---------\n", color);
+	displayProgramOutput(tmp);
     }
-    displayProgramOutput(tmp);
 }
 
 async function pollTestStatus(testId) {
@@ -1100,11 +1101,6 @@ async function pollTestStatus(testId) {
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		} 
-		scheduleSaveSnapshot();
-		setStatusLabel(status_text, { spinning: false, tabId: runningTaskId });
-		setRunningTab(null);                      // remove spinner
-		runInProgress = false;
-		runningTaskId = null;
 		markRunComplete();
 
 	    } else if (status == COMPILATION_FAILED) {
@@ -1112,18 +1108,13 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = "\nErro de compilação:\n";
-		program_output += "---------\n";
-		program_output = formatOutput(program_output, colorInfoText);
-		program_output += formatOutput(theCompilation_stdout, "red");
-		program_output += formatOutput(theCompilation_stderr, "red");
-                displayProgramOutput(program_output);
-		program_output = "\n---------\n";
-		program_output = formatOutput(program_output, colorInfoText);
+		var program_output = formatOutput("\nErro de compilação:\n", colorInfoText);
+		program_output += formatOutput("---------\n", colorInfoText);
+		program_output += '<pre class="error">' + theCompilation_stdout + "</pre>" , "red";
+		program_output += '<pre class="error">'  + theCompilation_stderr + "</pre>", "red";
+		program_output += formatOutput("---------\n", colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTaskId });
-		scheduleSaveSnapshot();
-		runningTaskId = null;
 		markRunComplete();
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
@@ -1137,8 +1128,6 @@ async function pollTestStatus(testId) {
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
-		scheduleSaveSnapshot();
-		runningTaskId = null;
 		markRunComplete();
             }
 
@@ -1149,8 +1138,6 @@ async function pollTestStatus(testId) {
             delete window.currentTestInterval;
 	    displayStderr("Erro de processamento. ", "");
 	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
-	    scheduleSaveSnapshot();
-	    runningTaskId = null;
 	    markRunComplete();
         }
     };
@@ -1449,8 +1436,11 @@ function markRunStart() {
 }
 
 function markRunComplete() {
-  localStorage.removeItem(LS_STATUS);
-  // keep LS_LAST so cooldown check can still apply if you want
+    localStorage.removeItem(LS_STATUS);
+    scheduleSaveSnapshot();
+    setRunningTab(null);                      // remove spinner
+    runningTaskId = null;		    
+    // keep LS_LAST so cooldown check can still apply if you want
 }
 
 function cooldownLeft() {
@@ -1470,7 +1460,7 @@ function startCooldownTicker() {
     // avoid duplicates
     stopCooldownTicker();
     cooldownTimerId = setInterval(() => {
-	if (!runInProgress && cooldownLeft() === 0) {
+	if (cooldownLeft() === 0) {
 	    stopCooldownTicker();
 	}
     }, 1000);

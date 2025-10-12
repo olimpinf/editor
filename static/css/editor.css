@@ -27,6 +27,10 @@ html,body{
     /* background: #eef2f6; */
 }
 
+pre.error {
+  color: red;
+}
+
 /* Desktop grid: toolbar, tabs, two content rows, footer */
 .container {
   display: grid;
@@ -430,9 +434,10 @@ body.pane-expanded .pane:not(.expanded) {
     padding-top: 0px;
     font: 14px/1.4 "Noto Sans", monospace;
 }
-#stdout-output p, #stdout-output pre {
+#stdout-output p {
     color: var(--content-fg);
 }
+
 .pane-container::-webkit-scrollbar,
 #stdin-input::-webkit-scrollbar,
 #stdout-output::-webkit-scrollbar {
