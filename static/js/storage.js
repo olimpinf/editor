@@ -15,17 +15,14 @@
 // === Per-task snapshot persistence ===
 const STORAGE_PREFIX = "obi:taskstate:v1:";
 
-function storageKey(taskId) {
-  return `${STORAGE_PREFIX}${taskId}`;
-}
 function saveSnapshot(taskId, snap) {
-  try { localStorage.setItem(storageKey(taskId), JSON.stringify(snap)); }
+  try { localStorage.setItem(window.currentTask, JSON.stringify(snap)); }
   catch (e) { console.warn("saveSnapshot failed", e); }
 }
 
 function loadSnapshot(taskId) {
   try {
-      const key = storageKey(taskId);
+      const key = window.currentTask;
     const raw = localStorage.getItem(key);
 
     if (raw) {
@@ -119,3 +116,102 @@ function loadSnapshot(taskId) {
   window.App.PruneStorage = { usageBytes, pruneOldest };
 })(window);
 
+
+// ====  Tabs  ====
+// === Dynamic Tabs (storage keys) ===
+const TABS_INDEX_KEY = "obi:tabs:index:v1";   // array of tabIds, in order
+const LAST_TAB_KEY   = "obi:lastTabId";       // active tab id
+const SNAP_PREFIX    = "obi:tab:v1:";         // per-tab snapshot key prefix
+
+function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
+
+function readTabsIndex() {
+  const bbb = localStorage.getItem(TABS_INDEX_KEY);
+    const ddd = bbb ? JSON.parse(bbb) : null;
+  try {
+    const raw = localStorage.getItem(TABS_INDEX_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function writeTabsIndex(list) {
+  try { localStorage.setItem(TABS_INDEX_KEY, JSON.stringify(list)); } catch {}
+}
+
+function saveTabSnapshot(tabId, snap) {
+  try { localStorage.setItem(tabStorageKey(tabId), JSON.stringify(snap)); } catch {}
+}
+function loadTabSnapshot(tabId) {
+  try {
+    const raw = localStorage.getItem(tabStorageKey(tabId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+// Global: remember active tab
+function setLastTab(tabId) { try { localStorage.setItem(LAST_TAB_KEY, tabId); } catch {} }
+function getLastTab() { try { return localStorage.getItem(LAST_TAB_KEY) || null; } catch { return null; } }
+
+function makeTabIdFromTitle(title) {
+  // unique-ish id: sanitized title + timestamp
+  const base = String(title || "tab")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24) || "tab";
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+function newTab(initialTitle = "") {
+  const title = initialTitle || prompt("Nome da nova aba:", "Tarefa");
+  if (!title) return;
+
+  const tabId = makeTabIdFromTitle(title);
+  const tabs = readTabsIndex();
+  tabs.push(tabId);
+  writeTabsIndex(tabs);
+
+  const lang = document.getElementById("language-select")?.value || "cpp";
+  const initSnap = {
+    id: tabId,
+    title,
+    language: lang,
+    code: window.templates?.[lang] || "",
+    input: "",
+    output: ""
+  };
+  saveTabSnapshot(tabId, initSnap);
+
+  renderTabs(tabId);       // selects new tab
+  loadTabIntoUI(tabId);    // sets editor/input/output
+}
+
+function renameTab(tabId) {
+  const snap = loadTabSnapshot(tabId);
+  if (!snap) return;
+  const next = prompt("Renomear aba:", snap.title || "");
+  if (!next || next === snap.title) return;
+  snap.title = next;
+  saveTabSnapshot(tabId, snap);
+  renderTabs(tabId);
+}
+
+function closeTab(tabId) {
+  const tabs = readTabsIndex();
+  const idx = tabs.indexOf(tabId);
+  if (idx < 0) return;
+  if (!confirm("Fechar esta aba? Seu conteúdo será removido deste navegador.")) return;
+
+  // Remove snapshot and id
+  try { localStorage.removeItem(tabStorageKey(tabId)); } catch {}
+  tabs.splice(idx, 1);
+  writeTabsIndex(tabs);
+
+  // Choose next active
+  const nextActive = tabs[idx] || tabs[idx - 1] || tabs[0] || null;
+  renderTabs(nextActive);
+  if (nextActive) loadTabIntoUI(nextActive);
+  else { // no tabs → create one
+    newTab("Tarefa");
+  }
+}

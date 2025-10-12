@@ -1,3 +1,16 @@
+const MIN_INTERVAL_MS = 30_000;
+
+let runInProgress   = false;
+let runningTaskId   = null;
+let lastRunStartMs  = 0;     // <— from click time
+let cooldownTimerId = null;
+let colorInfoTextLight = "Blue";
+let colorInfoTextDark = "Gold";
+let colorEmphasisTextLight = "Green";
+let colorEmphasisTextDark = "YellowGreen";
+
+initGlobalTheme();
+
 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
 require(['vs/editor/editor.main'], function () {
     // starter templates
@@ -26,65 +39,29 @@ if __name__ == "__main__":
     main()`
     };
 
-    // Central object to store all task states
-    window.taskStates = {
-	// Initial State for Tasks
-	tarefa1: {
-	    title: 'Tarefa 1',
-            code: window.templates.cpp,
-            language: 'cpp',
-            input: '',
-            output: '',
-            theme: 'light'
-	},
-	tarefa2: {
-	    title: 'Tarefa 2',
-            code: window.templates.cpp,
-            language: 'cpp',
-            input: '',
-            output: '',
-            theme: 'light'
-	},
-	tarefa3: {
-	    title: 'Tarefa 3',
-            code: window.templates.cpp,
-            language: 'cpp',
-            input: '',
-            output: '',
-            theme: 'light'
-	},
-	tarefa4: {
-	    title: 'Tarefa 4',
-            code: window.templates.cpp,
-            language: 'cpp',
-            input: '',
-            output: '',
-            theme: 'light'
-	},
-	tarefa5: {
-	    title: 'Tarefa 5',
-            code: window.templates.cpp,
-            language: 'cpp',
-            input: '',
-            output: '',
-            theme: 'light'
-	}
-    };
+    // === Tabs (dynamic tasks) ===
+    const TABS_INDEX_KEY = "obi:tabs:index:v1";     // stores array of tabIds in order
+    const LAST_TAB_KEY   = "obi:lastTabId";         // currently active tab id
+    const SNAP_PREFIX    = "obi:tab:v1:";           // per-tab snapshot key prefix
+    
+    function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
+    
+    // Snapshot shape per tab
+    // { id, title, language, code, input, output }
 
-    window.currentTask = 'tarefa1'; // Default starting task
     
     // Initialize editor
     window.editor = monaco.editor.create(document.getElementById('editor-container'), {
 	value: templates.cpp,   // default
 	language: 'cpp',
-	theme: 'vs-light',
+	theme: 'vs',
 	automaticLayout: true,
 	fontSize: 14,
 	minimap: { enabled: false },
 	padding: { top: 10 }  
     });
-
-    initFirstTaskIfNeeded();
+    applyGlobalTheme(getGlobalTheme());
+    initFirstTabIfNeeded();
 
 // ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 (function ExamGate() {
@@ -156,7 +133,6 @@ if __name__ == "__main__":
     document.getElementById("exam-gate-overlay")?.classList.add("hidden");
   }
 
-  // --- Interactivity lock/unlock ---
   function setAppInteractivity(enabled) {
     // 1) Monaco
     if (window.editor?.updateOptions) {
@@ -328,6 +304,15 @@ if __name__ == "__main__":
 
 	return true;
     }
+
+    document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
+        const now = getGlobalTheme(); 
+	    const next = now === 'light' ? 'dark' : 'light';
+	    setGlobalTheme(next);
+    });
+
+    // --- Handle Tab creation ---
+    document.getElementById("new-tab-btn")?.addEventListener("click", () => newTab(""));
     
     // --- Handle Task Switch ---
     document.getElementById('task-select')?.addEventListener('change', function(e) {
@@ -338,7 +323,7 @@ if __name__ == "__main__":
 	//scheduleSaveSnapshot();	
 	
 	// 2. Load the state of the NEW task
-	loadTaskState(newTaskID);
+	loadTabIntoUI(newTaskID);
         try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
     });
 
@@ -350,45 +335,43 @@ if __name__ == "__main__":
 
     }
 
+    // // === Editor-only theme toggle (scoped to LEFT pane) ===
+    // (function initEditorThemeToggle() {
+	// if (!window.editor || typeof monaco === 'undefined') return;
 
+	// // 1) Find the editor's toggle button *inside* the left pane only
+	// const leftPane = document.getElementById('left-pane');
+	// const editorToggleBtn = leftPane?.querySelector('.style-toggle-btn');
+	// if (!leftPane || !editorToggleBtn) return;
 
-    // === Editor-only theme toggle (scoped to LEFT pane) ===
-    (function initEditorThemeToggle() {
-	if (!window.editor || typeof monaco === 'undefined') return;
+	// // 2) Keep a local state so we don't depend on external classes
+	// //    Start from the current Monaco theme (assume initial 'vs-dark' in your setup)
+	// let editorDark = true;
 
-	// 1) Find the editor's toggle button *inside* the left pane only
-	const leftPane = document.getElementById('left-pane');
-	const editorToggleBtn = leftPane?.querySelector('.style-toggle-btn');
-	if (!leftPane || !editorToggleBtn) return;
+	// // 3) Apply to Monaco + (optional) reflect to the left pane for consistent visuals
+	// function applyEditorTheme() {
+	//     monaco.editor.setTheme(editorDark ? 'vs-dark' : 'vs');
+	//     leftPane.setAttribute('data-theme', editorDark ? 'dark' : 'light'); // optional
+	//     leftPane.classList.toggle('theme-dark', editorDark);                // optional
+	//     leftPane.classList.toggle('theme-light', !editorDark);              // optional
+	//     const rtopContainer = document.querySelector('#pane-rtop .pane-container');
+	//     const rbotContainer = document.querySelector('#pane-rbot .pane-container');
+	//     rtopContainer?.classList.toggle('light-mode', !editorDark);
+	//     rbotContainer?.classList.toggle('light-mode', !editorDark);
+	// }
 
-	// 2) Keep a local state so we don't depend on external classes
-	//    Start from the current Monaco theme (assume initial 'vs-dark' in your setup)
-	let editorDark = true;
+	// editorToggleBtn.addEventListener('click', (e) => {
+	//     editorDark = !editorDark;
+	//     applyEditorTheme();
+	// });
 
-	// 3) Apply to Monaco + (optional) reflect to the left pane for consistent visuals
-	function applyEditorTheme() {
-	    monaco.editor.setTheme(editorDark ? 'vs-dark' : 'vs');
-	    leftPane.setAttribute('data-theme', editorDark ? 'dark' : 'light'); // optional
-	    leftPane.classList.toggle('theme-dark', editorDark);                // optional
-	    leftPane.classList.toggle('theme-light', !editorDark);              // optional
-	    const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-	    const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-	    rtopContainer?.classList.toggle('light-mode', !editorDark);
-	    rbotContainer?.classList.toggle('light-mode', !editorDark);
-	}
+	// applyEditorTheme();
+	// window.scheduleSaveSnapshot?.();
+    // })();
 
-	editorToggleBtn.addEventListener('click', (e) => {
-	    editorDark = !editorDark;
-	    applyEditorTheme();
-	});
-
-	applyEditorTheme();
-	window.scheduleSaveSnapshot?.();
-    })();
-
-    window.addEventListener("load", () => {
-	setTimeout(() => window.editor?.focus(), 150);
-    });
+    // window.addEventListener("load", () => {
+	// setTimeout(() => window.editor?.focus(), 150);
+    // });
 
     // Download buttons
     function downloadContent(filename, content) {
@@ -626,7 +609,6 @@ if __name__ == "__main__":
 	// cycle on button click
 	btn.addEventListener("click", () => {
 	    idx = (idx + 1) % sizes.length;
-	    console.log("size idx", idx );
 	    applyFontSize(sizes[idx]);
 	});
     })();
@@ -929,14 +911,6 @@ window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
     // Close on outside click
     document.addEventListener('click', closeDropdown);
 
-    document.addEventListener('click', (e) => {
-	const btn = e.target.closest('#global-style-toggle');
-	if (!btn) return;
-
-	const now = getGlobalTheme();             // 'light' or 'dark'
-	const next = now === 'light' ? 'dark' : 'light';
-	setGlobalTheme(next);
-    });
     
 })();
 
@@ -1065,38 +1039,17 @@ function escapeHtml(unsafeText) {
     });
 }
 
-
-
-function getSanitizedTaskName() {
-    const taskSelect = document.getElementById('task-select');
-    if (!taskSelect) {
-        return 'program'; // Fallback name
-    }
-    
-    // Get the visible text of the currently selected option
-    const rawName = taskSelect.options[taskSelect.selectedIndex]?.text ?? 'program';
-    
-    // Sanitize: replace common separators (spaces, colons, parentheses) with underscores, 
-    // and remove any remaining invalid characters.
-    let sanitizedName = rawName.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
-    
-    // Avoid starting/ending with an underscore and convert to lowercase for consistency
-    sanitizedName = sanitizedName.toLowerCase().replace(/^_|_$/g, '');
-    
-    return sanitizedName || 'program'; // Final fallback
+function getSanitizedTabName() {
+  const tabId = window.currentTask;
+  const snap = tabId && loadTabSnapshot(tabId);
+  const raw = snap?.title || tabId || "programa";
+  let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
+  sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
+  return sanitized || 'programa';
 }
 
 // ===== Run / Status bar (cooldown starts at RUN CLICK) =====
-const MIN_INTERVAL_MS = 30_000;
 
-let runInProgress   = false;
-let runningTaskId   = null;
-let lastRunStartMs  = 0;     // <— from click time
-let cooldownTimerId = null;
-let colorInfoTextLight = "Blue";
-let colorInfoTextDark = "Gold";
-let colorEmphasisTextLight = "Green";
-let colorEmphasisTextDark = "YellowGreen";
 
 function getCurrentTaskId() {
     return window.currentTask || null;
@@ -1228,7 +1181,7 @@ async function handleRunClick() {
 //     paintStatus();
 // })();
 
-// Call this at the end of loadTaskState(taskID)
+// Call this at the end of loadTabIntoUI(taskID)
 window.onTaskViewChanged = function () {
     paintStatus();
 };
@@ -1401,47 +1354,36 @@ function getLocalizedTime(locale = 'pt-BR') {
 }
 
 function readCurrentPanes() {
-    return {
-	code: window.editor?.getValue?.() || "",
-	input: document.getElementById("stdin-input")?.value || "",
-	output: document.getElementById("stdout-output")?.innerHTML || "",
-	language: document.getElementById("language-select")?.value || "",
-    };
+  return {
+    code: window.editor?.getValue?.() || "",
+    input: document.getElementById("stdin-input")?.value || "",
+    output: document.getElementById("stdout-output")?.innerHTML || "",
+    language: document.getElementById("language-select")?.value || ""
+  };
 }
+
+function scheduleSaveSnapshot() {
+  if (_suppressSnapshot) return;
+  const tabId = window.currentTask;
+  if (!tabId) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try {
+      const old = loadTabSnapshot(tabId) || { id: tabId, title: tabId };
+      const snap = { ...old, ...readCurrentPanes() };
+      saveTabSnapshot(tabId, snap);
+      //checkStorageQuotaAndWarn?.();
+    } catch (e) {
+      console.warn("saveSnapshot failed:", e);
+      alert("Armazenamento local está cheio. Limpe espaço e tente de novo.");
+    }
+  }, 400);
+}
+
+
 
 // Debounced saver
 let _saveTimer = null;
-// function scheduleSaveSnapshot() {
-//     if (_suppressSnapshot) return;
-//     if (!window.currentTask) return;
-//     clearTimeout(_saveTimer);
-//     _saveTimer = setTimeout(() => {
-//     saveSnapshot(window.currentTask, readCurrentPanes());
-//   }, 400);
-// }
-
-function scheduleSaveSnapshot() {
-    if (_suppressSnapshot) return;
-    if (!window.currentTask) return;
-    clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(() => {
-	try {
-	    localStorage.setItem(storageKey(window.currentTask), JSON.stringify(readCurrentPanes()));
-	    window.App?.PruneStorage?.pruneOldest();
-	} catch (e) {
-	    // QuotaExceededError or other storage errors
-	    console.warn("saveSnapshot failed:", e);
-	    alert(
-		`Your browser storage for this site is full.
-Please clear space, then try again.
-
-Tip: Use the editor's "Clear saved tasks" to remove old snapshots.`
-	    );
-	}
-    }, 400);
-}
-
-
 
 // Editor changes
 if (window.editor?.onDidChangeModelContent) {
@@ -1455,135 +1397,90 @@ if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 
 let _suppressSnapshot = false;
 
-function loadTaskState(taskID) {
-    const state = window.taskStates[taskID];
-    const snap = loadSnapshot(taskID);
+function loadTabIntoUI(tabId) {
+  const snap = loadTabSnapshot(tabId);
+  if (!snap) return;
 
-    window.currentTask = taskID;
-    _suppressSnapshot = true; // stop debounced saves during programmatic updates
-    const lang = snap?.language;
-    if (lang) {
-	// Programmatic: set Monaco + select, DO NOT inject template when restoring a task
-	if (window.setLanguageProgrammatic) {
-	    window.setLanguageProgrammatic(lang, { injectTemplate: false });
-	} else {
-	    const sel = document.getElementById("language-select");
-	    if (sel) {
-		const idx = Array.from(sel.options).findIndex(o => o.value === lang);
-		if (idx !== -1) {
-		    sel.selectedIndex = idx;
-		    switchLanguage(lang);
-		    window.syncLanguageSelectorUI?.();
-		}
-	    }
-	}
+  window.currentTask = tabId; // for reuse of existing code paths
+
+  // language (programmatic — DO NOT inject template)
+  const lang = snap.language || "cpp";
+  if (window.setLanguageProgrammatic) {
+    window.setLanguageProgrammatic(lang, { injectTemplate: false });
+  } else {
+    const sel = document.getElementById("language-select");
+    if (sel) {
+      const idx = Array.from(sel.options).findIndex(o => o.value === lang);
+      if (idx !== -1) {
+        sel.selectedIndex = idx;
+        // ensure Monaco mode switches but not template
+        monaco.editor.setModelLanguage(window.editor.getModel(), lang);
+        window.syncLanguageSelectorUI?.();
+      }
     }
+  }
 
-    // (B) Code
-    window.editor?.setValue?.(snap?.code || "");
-    // (C) Input
-    const stdin = document.getElementById("stdin-input");
-    if (stdin) stdin.value = snap?.input || "";
-    // (D) Output
-    const out = document.getElementById("stdout-output");
-    if (out) out.innerHTML = snap?.output || "";
+  // code
+  window.editor?.setValue?.(snap.code || "");
 
-    // Seed the in-memory buffer so the first append truly appends
-    _outputBuffers[taskID] = snap?.output || "";
-    
-    window.currentTask = taskID;
-    // Refresh the footer to this task's last known status
-    if (window.App && window.App.Status) {
-	window.App.Status.renderFor(taskID);
-    }
+  // input
+  const stdin = document.getElementById("stdin-input");
+  if (stdin) stdin.value = snap.input || "";
 
-    _suppressSnapshot = false; // re-enable
-    //scheduleSaveSnapshot();    // take one clean snapshot for this task
+  // output (and seed buffer)
+  const out = document.getElementById("stdout-output");
+  if (out) out.innerHTML = snap.output || "";
+  _outputBuffers[tabId] = snap.output || "";
+
+  applyGlobalTheme(getGlobalTheme())
+
+  // status footer (if you show tab name there)
+  document.getElementById("status-task")?.replaceChildren(document.createTextNode(snap.title || tabId));
+
+  // remember
+  setLastTab(tabId);
+
+  // focus editor
+  setTimeout(() => window.editor?.focus?.(), 80);
 }
 
 
 // ---- First-load boot for tarefa11 ----
 window.__initialTaskBootDone = false;
 
-function initFirstTaskIfNeeded() {
-    if (window.__initialTaskBootDone) return;
+async function initFirstTabIfNeeded() {
+  // 1) If there is an index, use it; else try to migrate tarefa* → tabs
+  let tabs = readTabsIndex();
 
-    // Pick last task if present; else current select value; else fallback
-    let tid = 'tarefa1';
-    try {
-	const last = localStorage.getItem('obi:lastTask');
-	if (last) {
-	    tid = last;
-	} else {
-	    const sel = document.getElementById('task-select');
-	    if (sel && sel.value) tid = sel.value;
-	}
-    } catch (_) {}
-    
-
-    const key = storageKey(tid);
-
-    // Try snapshot
-    let snap = null;
-    try {
-	const raw = localStorage.getItem(key);
-	if (raw) snap = JSON.parse(raw);
-    } catch (e) {
-	console.warn('Failed to read snapshot:', e);
+  if (!tabs.length) {
+ 
+      const tabId = makeTabIdFromTitle("Tarefa");
+      writeTabsIndex([tabId]);
+      saveTabSnapshot(tabId, {
+        id: tabId,
+        title: "Tarefa",
+        language: "cpp",
+        code: window.templates?.cpp || "",
+        input: "",
+        output: ""
+      });
+      tabs = [tabId];
     }
 
-    // Generic default if taskStates[tid] is missing or not ready yet
-    const genericDef = {
-	title: tid,
-	code: window.templates?.cpp || '',
-	language: 'cpp',
-	input: '',
-	output: '',
-	theme: 'light'
-    };
-
-    // Prefer a task-specific default if available, else generic
-    const defFromTaskStates = window.taskStates && window.taskStates[tid] ? { ...window.taskStates[tid] } : null;
-    const def = defFromTaskStates || genericDef;
-
-    // If there was no snapshot, seed it now
-    if (!snap) {
-	try { localStorage.setItem(key, JSON.stringify(def)); }
-	catch (e) { console.warn('Seeding snapshot failed:', e); }
-    }
-
-    // Make the dropdown show the chosen task id
-    const taskSelectEl = document.getElementById('task-select');
-    if (taskSelectEl) {
-	const idx = Array.from(taskSelectEl.options).findIndex(o => o.value === tid);
-	if (idx !== -1) taskSelectEl.selectedIndex = idx;
-	window.syncTaskSelectorUI?.();   // <- update the custom face and active item
-
-    }
-
-    initGlobalTheme();
-    
-    // Load the task into the UI without firing snapshot saves mid-load
-    _suppressSnapshot = true;
-    loadTaskState(tid);
-    _suppressSnapshot = false;
-
-    scheduleSaveSnapshot();
-    window.__initialTaskBootDone = true;
-    // Focus the Monaco editor after boot
-    if (window.editor?.focus) {
-	setTimeout(() => {
-	    window.editor.focus();
-	}, 100); // small delay to let layout settle
-    }
+  // 2) Render the tabs bar
+  const last = getLastTab();
+  const active = (last && tabs.includes(last)) ? last : tabs[0];
+  renderTabs(active);
+  loadTabIntoUI(active);
 }
+
 
 // --- Per-task output buffers ---
 const _outputBuffers = Object.create(null); // { taskId: htmlString }
 
 // Get/seed a snapshot for any task
 function ensureSnapshot(taskId) {
-    const key = storageKey(taskId);
+    const key = window.currentTask;
     let snap = null;
     try {
 	const raw = localStorage.getItem(key);
@@ -1601,7 +1498,7 @@ function ensureSnapshot(taskId) {
 
 // Save only the output for a given task snapshot
 function persistTaskOutput(taskId, htmlOutput) {
-    const key = storageKey(taskId);
+    const key = window.currentTask;
     const snap = ensureSnapshot(taskId);
     snap.output = htmlOutput;
     try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {
@@ -1644,4 +1541,40 @@ function switchLanguage(lang) {
     if (model && window.monaco?.editor) {
 	window.monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
     }
+}
+
+// Render tabs
+
+function renderTabs(activeId) {
+  const tabs = readTabsIndex();
+  const bar = document.getElementById('tabs-bar');
+  if (!bar) return;
+  bar.innerHTML = "";
+
+  tabs.forEach((tid) => {
+    const snap = loadTabSnapshot(tid) || { id: tid, title: tid };
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab";
+    btn.setAttribute("role", "tab");
+    btn.setAttribute("aria-selected", String(tid === activeId));
+    btn.dataset.tabId = tid;
+    btn.innerHTML = `
+      <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
+      <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
+    `;
+    btn.addEventListener("click", (e) => {
+      const close = e.target.closest(".tab-close");
+      if (close) {
+        e.stopPropagation();
+        closeTab(tid);
+        return;
+      }
+      setLastTab(tid);
+      renderTabs(tid);
+      loadTabIntoUI(tid);
+    });
+    btn.addEventListener("dblclick", () => renameTab(tid));
+    bar.appendChild(btn);
+  });
 }

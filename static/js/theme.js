@@ -2,8 +2,8 @@
 const THEME_KEY = "obi:globalTheme"; // 'light' | 'dark'
 
 function getGlobalTheme() {
-  try { return localStorage.getItem(THEME_KEY) || "dark"; }
-  catch { return "dark"; }
+  try { return localStorage.getItem(THEME_KEY) || "light"; } // default = light
+  catch { return "light"; }
 }
 
 function setGlobalTheme(mode /* 'light'|'dark' */) {
@@ -13,8 +13,10 @@ function setGlobalTheme(mode /* 'light'|'dark' */) {
 
 function initGlobalTheme() {
   const mode = getGlobalTheme();
+  // Apply immediately for panes and document
   applyGlobalTheme(mode);
 }
+
 
 function applyGlobalTheme(mode) {
   // mode: 'light' or 'dark'

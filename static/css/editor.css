@@ -5,6 +5,11 @@
     --main-bar-bg: #1a3c91; /*#2047c1;*/
     --bar-bg: RoyalBlue;
     --bar-color: #fff;
+    --tab-bar-bg: #ddd;
+    --tab-bg: RoyalBlue;
+    --tab-bg-hover: #999;
+    --tab-inactive-bg: #bbb;
+    --tab-color: #fff;
     --accent: #ff7a18;
     --muted: #e6e9ee;
 
@@ -22,29 +27,33 @@ html,body{
     /* background: #eef2f6; */
 }
 
-/* Main 2-column layout: toolbar | (left|right) | footer */
+/* Desktop grid: toolbar, tabs, two content rows, footer */
 .container {
   display: grid;
-  grid-template-columns: 5fr 3fr;        /* 2-column desktop */
-  grid-template-rows: auto 1fr 1fr auto; /* toolbar, two content rows, footer */
-  gap: var(--gap);
-  /* iOS Safari: avoid address-bar shrink bug */
-  height: 100dvh;                         /* modern */
-  min-height: 100vh;                      /* fallback */
+  grid-template-columns: 5fr 3fr;
+  grid-template-rows: auto /*toolbar*/
+                      auto /*tabs*/
+                      1fr  /*row 1 content*/
+                      1fr  /*row 2 content*/
+                      auto /*footer*/;
+  /* gap: var(--gap); */
+  row-gap: var(--gap);
+  column-gap: var(--gap);
+  height: 100dvh;
+  min-height: 100vh;
   padding: var(--gap);
   box-sizing: border-box;
   background: #ddd;
 }
-
-
 
 /* Toolbar spans full width on the first row */
 .main-toolbar {
   grid-column: 1 / -1;
   grid-row: 1;
   position: relative;
-  z-index: 5;
+  z-index: 3;
 }
+
 
 .main-toolbar .bar {
   display: grid;
@@ -77,10 +86,65 @@ html,body{
   justify-self: end;
 }
 
+/* Tabs bar directly under the toolbar */
+.tabs-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  gap: 1px;
+  margin: 0;
+  padding: 0 6px 0 6px;
+  background: var(--tab-bar-bg);
+  border-bottom: 3px solid var(--bar-bg);
+  margin-bottom: -8px;  /* pulls it upward to overlap the gap */
+
+}
+
+/* Individual tab buttons */
+.tabs-bar .tab {
+  appearance: none;
+  border: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  background: var(--tab-inactive-bg);              /* inactive lighter shade of blue */
+  color: #555;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: -2px;              /* visually join with toolbar border */
+}
+
+.tabs-bar .tab:hover {
+  background: var(--tab-bg-hover);
+  color: #fff;
+}
+
+/* Active tab visually connected with toolbar */
+.tabs-bar .tab[aria-selected="true"] {
+  background: var(--bar-bg);              /* same color as toolbar */
+  color: white;
+  font-weight: 500;
+  border-bottom: 2px solid var(--bar-bg); /* hides border to look connected */
+  z-index: 2;
+}
+
+/* Optional small close icon styling */
+.tabs-bar .tab .tab-close {
+  font-size: 12px;
+  margin-left: 8px;
+  opacity: 0.6;
+}
+.tabs-bar .tab .tab-close:hover {
+  opacity: 1;
+}
+
+
 /* Left and right cover the two middle rows */
 .left {
   grid-column: 1;
-  grid-row: 2 / span 2;   /* rows 2-3 */
+  grid-row: 3 / span 2;   /* rows 2-3 */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -89,7 +153,7 @@ html,body{
 
 .right {
   grid-column: 2;
-  grid-row: 2 / span 2;   /* rows 2-3 */
+  grid-row: 3 / span 2;   /* rows 2-3 */
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: var(--gap);
@@ -99,7 +163,7 @@ html,body{
 /* Footer spans both columns on the last row */
 #pane-footer {
   grid-column: 1 / -1;
-  grid-row: 4;
+  grid-row: 5;
   height: var(--status-bar-height);
   margin-top: 0; /* ensure no negative margin */
 }
@@ -121,7 +185,7 @@ html,body{
   flex-direction: column;
   
   /* Container visual styling (now on the parent) */
-  border: 1px solid #ccc; /* Single border around the whole pane */
+  border: 1px solid --var(--bar-bg); /* Single border around the whole pane */
   border-radius: 4px; /* Optional: Rounded corners */
   overflow: hidden; /* Important for containing the contents inside the border */
 }
@@ -230,41 +294,20 @@ body.pane-expanded .pane:not(.expanded) {
 /* optional smooth transition */
 .pane, .bar, .content { transition: all 180ms ease; }
 
+
+/* Mobile: toolbar, tabs, left, right, footer */
 @media (max-width: 800px){
   .container {
-    grid-template-columns: 1fr;               /* single column */
-    grid-template-rows: auto auto auto auto;  /* toolbar, left, right, footer */
+    grid-template-columns: 1fr;
+    grid-template-rows: auto /*toolbar*/
+                        auto /*tabs*/
+                        auto /*left*/
+                        auto /*right*/
+                        auto /*footer*/;
   }
-  .left {
-    grid-column: 1;
-    grid-row: 2;                               /* below toolbar */
-  }
-  .right {
-    grid-column: 1;
-    grid-row: 3;                               /* second block */
-    display: grid;
-    grid-auto-rows: 1fr;
-  }
-  #pane-footer {
-    grid-column: 1 / -1;                       /* still full width */
-    grid-row: 4;
-  }
-}
-
-/* Custom select (accessible: native select is still present) */
-.custom-select-task {
-  position: relative;
-  width: 100px; /* adjust to taste */
-  height: 28px;
-  margin-left: 10px;
-  font-size: 14px;
-}
-
-
-
-/* Hide the native UI but keep element focusable/screen-reader-usable */
-.custom-select-task select {
-    display: none;
+  .left       { grid-column: 1; grid-row: 3; }
+  .right      { grid-column: 1; grid-row: 4; }
+  #pane-footer{ grid-column: 1; grid-row: 5; }
 }
 
 
