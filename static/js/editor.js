@@ -997,22 +997,12 @@ function getCurrentTaskId() {
     return window.currentTask || null;
 }
 
-function setStatusLabel(text, { spinning = false } = {}) {
-    // Keep per-task status and update the DOM for the active task
-    console.log("in setStatusLabel", text);
-    console.log("runningTaskId", runningTaskId, getCurrentTaskId());
-    if (runningTaskId == getCurrentTaskId()) {
-	// update the panel and storage
-	const labelEl = document.getElementById('status-label');
-	const spinEl  = document.getElementById('status-spinner');
-	if (!labelEl || !spinEl) return;
-	labelEl.textContent = text;
-	spinEl.hidden = !spinning;
-    }
-    if (window.App && window.App.Status) {
-	window.App.Status.set(runningTaskId, text, { spinning });
-    }
-    
+// Send status to the per-tab store in status.js.
+// If tabId isn't passed, use the currently active tab.
+function setStatusLabel(text, { spinning = false, tabId } = {}) {
+  const id = tabId || window.currentTask || null;
+  if (!id) return;
+  window.App?.Status?.set(id, text || 'Inativo', { spinning });
 }
 
 function cooldownLeft() {
@@ -1084,7 +1074,7 @@ function displayStderr(head, str) {
 async function pollTestStatus(testId) {
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
-    
+
     const label = getTabTitle(runningTaskId);
     const theme = getGlobalTheme();
     const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
@@ -1114,33 +1104,33 @@ async function pollTestStatus(testId) {
 		    displayStdout("Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou sem erros", { spinning: false });
+		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
 		    displayStdout("Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Memory limit exceeded") {
 		    displayStdout("Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
 		    displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else {
 		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		} 
 		scheduleSaveSnapshot();
 		runningTaskId = null;
@@ -1158,12 +1148,12 @@ async function pollTestStatus(testId) {
 		program_output = "\n---------\n";
 		program_output = formatOutput(program_output, colorInfoText);
                 displayProgramOutput(program_output);
-		setStatusLabel(`${ status_text }`, { spinning: false });
+		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTaskId });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
-		setStatusLabel(`${ status_text }`, { spinning: true });
+		setStatusLabel(`${ status_text }`, { spinning: true, tabId: runningTaskId });
             } else { 
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1172,7 +1162,7 @@ async function pollTestStatus(testId) {
 		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
-		setStatusLabel("Execução terminou com erro", { spinning: false });
+		setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
             }
@@ -1183,7 +1173,7 @@ async function pollTestStatus(testId) {
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr("Erro de processamento. ", "");
-	    setStatusLabel("Execução terminou com erro", { spinning: false });
+	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 	    scheduleSaveSnapshot();
 	    runningTaskId = null;
         }
@@ -1196,7 +1186,7 @@ async function pollTestStatus(testId) {
 }
 
 function displayProgramOutput(programOutputText) {
-    setOutputForTask(runningTaskId, programOutputText, { append: true });
+    setOutputForTab(runningTaskId, programOutputText, { append: true });
 }
 
 function formatOutput(str, textColor="") {
@@ -1313,6 +1303,8 @@ function loadTabIntoUI(tabId) {
   // remember
   setLastTab(tabId);
 
+    window.App?.Status?.renderFor(tabId);
+    
   // focus editor
   setTimeout(() => window.editor?.focus?.(), 80);
 }
@@ -1351,40 +1343,40 @@ async function initFirstTabIfNeeded() {
 // --- Per-task output buffers ---
 const _outputBuffers = Object.create(null); // { taskId: htmlString }
 
-// Get/seed a snapshot for any task
-function ensureSnapshot(taskId) {
-    const key = window.currentTask;
-    let snap = null;
-    try {
-	const raw = localStorage.getItem(key);
-	snap = raw ? JSON.parse(raw) : null;
-    } catch {}
-    if (!snap) {
-	// seed from defaults if available
-	snap = (window.taskStates && window.taskStates[taskId])
-	    ? { ...window.taskStates[taskId] }
-	: { title: taskId, code: "", input: "", output: "", language: "" };
-	try { localStorage.setItem(key, JSON.stringify(snap)); } catch {}
-    }
-    return snap;
-}
 
 // Save only the output for a given task snapshot
-function persistTaskOutput(taskId, htmlOutput) {
-    const key = window.currentTask;
-    const snap = ensureSnapshot(taskId);
-    snap.output = htmlOutput;
-    try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {
-	console.warn("persistTaskOutput failed:", e);
-    }
-    // keep in-memory state in sync if present
-    if (window.taskStates?.[taskId]) {
-	window.taskStates[taskId].output = htmlOutput;
-    }
+function persistTabOutput(tabId, htmlOutput) {
+  if (!tabId) return;
+
+  // Always use your snapshot helpers (they handle the correct storage key)
+  let snap = loadTabSnapshot(tabId);
+
+  // If there’s no snapshot yet, seed a minimal one without clobbering defaults
+  if (!snap) {
+    snap = {
+      id: tabId,
+      title: (typeof getTabTitle === 'function' && getTabTitle(tabId)) || tabId,
+      language: document.getElementById('language-select')?.value || 'cpp',
+      code: '',   // leave code/input empty; we’re only ensuring the object exists
+      input: '',
+      output: ''
+    };
+  }
+
+  // Update only the output field
+  snap.output = htmlOutput;
+
+  try {
+    saveTabSnapshot(tabId, snap);
+  } catch (e) {
+    console.warn('persistTabOutput failed:', e);
+    // Optional: alert the user if storage is full
+    // alert('Falha ao salvar a saída (armazenamento local está cheio).');
+  }
 }
 
 // Unified setter (append or replace) that targets a specific task
-function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
+function setOutputForTab(taskId, htmlChunk, { append = true } = {}) {
     if (!taskId) return;
 
     const prev = _outputBuffers[taskId] || "";
@@ -1401,8 +1393,8 @@ function setOutputForTask(taskId, htmlChunk, { append = true } = {}) {
 	}
     }
 
-    // Persist snapshot for THAT task (not the current one)
-    persistTaskOutput(taskId, next);
+    // Persist snapshot for THAT tab (not the current one)
+    persistTabOutput(taskId, next);
 }
 
 

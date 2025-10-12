@@ -3,7 +3,7 @@
   window.App = window.App || {};
 
   // In-memory cache: taskId -> { text, spinning }
-  const STORE = new Map();
+  const map = new Map();
 
   // Persist to localStorage so status survives reloads
   const PREFIX = "obi:status:"; // key: obi:status:<taskId>
@@ -29,20 +29,20 @@
 
   function get(taskId) {
     // prefer memory, then storage, then default
-    return STORE.get(taskId) || loadFromStorage(taskId) || { text: "Inativo", spinning: false };
+    return map.get(taskId) || loadFromStorage(taskId) || { text: "Inativo", spinning: false };
   }
 
   function set(taskId, text, { spinning = false } = {}) {
     if (!taskId) return;
     const payload = { text, spinning };
-    STORE.set(taskId, payload);
+    map.set(taskId, payload);
     saveToStorage(taskId, payload);
     if (taskId === window.currentTask) renderFor(taskId);
   }
 
   function clear(taskId) {
     if (!taskId) return;
-    STORE.delete(taskId);
+    map.delete(taskId);
     removeFromStorage(taskId);
     if (runningTaskId === window.currentTask) renderFor(taskId);
   }
@@ -55,16 +55,15 @@
       if (k && k.startsWith(PREFIX)) toRemove.push(k);
     }
     toRemove.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
-    STORE.clear();
+    map.clear();
     renderCurrent();
   }
 
     function renderFor(taskId) {
-    const { text, spinning } = get(taskId);
+	const { text, spinning } = get(taskId);
     const labelEl = document.getElementById("status-label");
     const taskEl  = document.getElementById("status-task");
     const spinEl  = document.getElementById("status-spinner");
-
     const tabTitle = getTabTitle(taskId);
 
    if (taskEl) {

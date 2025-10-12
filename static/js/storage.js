@@ -184,7 +184,9 @@ function newTab(initialTitle = "") {
     saveTabSnapshot(tabId, initSnap);
 
   renderTabs(tabId);       // selects new tab
-  loadTabIntoUI(tabId);    // sets editor/input/output
+    loadTabIntoUI(tabId);    // sets editor/input/output
+
+
 }
 
 function renameTab(tabId) {

@@ -74,12 +74,11 @@ function getTabTitle(tabId) {
   if (!tabId) return null;
   const key = `${SNAP_PREFIX}${tabId}`; // same prefix as your tab storage
   try {
-    const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(key);
     if (!raw) return null;
     const snap = JSON.parse(raw);
     return snap?.title || null;
   } catch (e) {
-    console.warn("getTabTitle failed for", tabId, e);
     return null;
   }
 }
