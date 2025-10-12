@@ -278,24 +278,6 @@ if __name__ == "__main__":
 
     const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
-    function setLanguageUI(lang) {
-	const wrap   = document.getElementById('language-select-wrapper');
-	const select = document.getElementById('language-select');
-	if (!wrap || !select) return false;
-
-	const idx = Array.from(select.options).findIndex(o => o.value === lang);
-	if (idx < 0) return false;
-
-	select.selectedIndex = idx;
-
-	const face  = wrap.querySelector('.select-selected');
-	const items = wrap.querySelectorAll('.select-items div');
-	if (face) face.textContent = select.options[idx].text;
-	if (items) items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
-
-	return true;
-    }
-
     document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
         const now = getGlobalTheme(); 
 	    const next = now === 'light' ? 'dark' : 'light';
