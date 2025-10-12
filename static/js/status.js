@@ -27,15 +27,6 @@
     try { localStorage.removeItem(PREFIX + taskId); } catch (_) {}
   }
 
-  // Read the human label from editor.js state (fallback to id)
-  function getTaskLabel(taskId) {
-    try {
-      return (window.taskStates && window.taskStates[taskId] && window.taskStates[taskId].title) || taskId || "—";
-    } catch (_) {
-      return taskId || "—";
-    }
-  }
-
   function get(taskId) {
     // prefer memory, then storage, then default
     return STORE.get(taskId) || loadFromStorage(taskId) || { text: "Inativo", spinning: false };

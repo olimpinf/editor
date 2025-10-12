@@ -318,10 +318,6 @@ if __name__ == "__main__":
     // --- Handle Task Switch ---
     document.getElementById('task-select')?.addEventListener('change', function(e) {
 	const newTaskID = e.target.value;
-
-	// 1. Save the state of the OLD task
-	//saveCurrentTaskState();
-	//scheduleSaveSnapshot();	
 	
 	// 2. Load the state of the NEW task
 	loadTabIntoUI(newTaskID);
@@ -335,44 +331,6 @@ if __name__ == "__main__":
 	monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
 
     }
-
-    // // === Editor-only theme toggle (scoped to LEFT pane) ===
-    // (function initEditorThemeToggle() {
-	// if (!window.editor || typeof monaco === 'undefined') return;
-
-	// // 1) Find the editor's toggle button *inside* the left pane only
-	// const leftPane = document.getElementById('left-pane');
-	// const editorToggleBtn = leftPane?.querySelector('.style-toggle-btn');
-	// if (!leftPane || !editorToggleBtn) return;
-
-	// // 2) Keep a local state so we don't depend on external classes
-	// //    Start from the current Monaco theme (assume initial 'vs-dark' in your setup)
-	// let editorDark = true;
-
-	// // 3) Apply to Monaco + (optional) reflect to the left pane for consistent visuals
-	// function applyEditorTheme() {
-	//     monaco.editor.setTheme(editorDark ? 'vs-dark' : 'vs');
-	//     leftPane.setAttribute('data-theme', editorDark ? 'dark' : 'light'); // optional
-	//     leftPane.classList.toggle('theme-dark', editorDark);                // optional
-	//     leftPane.classList.toggle('theme-light', !editorDark);              // optional
-	//     const rtopContainer = document.querySelector('#pane-rtop .pane-container');
-	//     const rbotContainer = document.querySelector('#pane-rbot .pane-container');
-	//     rtopContainer?.classList.toggle('light-mode', !editorDark);
-	//     rbotContainer?.classList.toggle('light-mode', !editorDark);
-	// }
-
-	// editorToggleBtn.addEventListener('click', (e) => {
-	//     editorDark = !editorDark;
-	//     applyEditorTheme();
-	// });
-
-	// applyEditorTheme();
-	// window.scheduleSaveSnapshot?.();
-    // })();
-
-    // window.addEventListener("load", () => {
-	// setTimeout(() => window.editor?.focus(), 150);
-    // });
 
     // Download buttons
     function downloadContent(filename, content) {
@@ -507,7 +465,6 @@ if __name__ == "__main__":
 
 	runningTaskId = getCurrentTaskId()
 	runningLanguage = selectedLanguage;
-	console.log("runningLanguage",runningLanguage);
 	setStatusLabel("Enviando...", { spinning: true });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 
@@ -537,7 +494,6 @@ if __name__ == "__main__":
 	    window.editor.setValue("");
 	}
 	scheduleSaveSnapshot();	
-        //saveCurrentTaskState();
     });    
 
     // Clear Input button
@@ -546,13 +502,6 @@ if __name__ == "__main__":
 
 	const inputEl = document.getElementById('stdin-input');
 	if (inputEl) inputEl.value = '';
-
-	if (taskId) {
-	    if (window.taskStates?.[taskId]) {
-		window.taskStates[taskId].input = '';
-	    }
-	}
-
 	scheduleSaveSnapshot?.();
     });
 
@@ -955,7 +904,6 @@ function initializeFileUploader(btn) {
                     }
                     
                     inputEl.value = text;
-                    //saveCurrentTaskState(); 
 		    scheduleSaveSnapshot();	
                     return;
                 }
@@ -982,7 +930,6 @@ function initializeFileUploader(btn) {
 
                 // Now safely set the uploaded text (template won’t overwrite it)
                 window.editor.setValue(text || "" );
-                //saveCurrentTaskState();
 		scheduleSaveSnapshot();	
             };
 
@@ -1056,10 +1003,6 @@ function getSanitizedTabName() {
 function getCurrentTaskId() {
     return window.currentTask || null;
 }
-function getTaskLabel(taskId) {
-    if (!taskId) return '—';
-    return (window.taskStates?.[taskId]?.title) || taskId;
-}
 
 function setStatusLabel(text, { spinning = false } = {}) {
     // Keep per-task status and update the DOM for the active task
@@ -1103,44 +1046,12 @@ function startCooldownTicker() {
     }, 1000);
 }
 
-function paintStatus() {
-    const viewingTask = getCurrentTaskId();
-
-    if (runInProgress) {
-	const label = getTaskLabel(runningTaskId);
-	setStatusLabel(`Executando — <strong>${label}</strong>`, { spinning: true });
-	return;
-    }
-
-    // const left = cooldownLeft();
-    // if (left > 0) {
-    // 	setStatusLabel(`Espera: ${left}s — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-    // } else {
-    // 	//setStatusLabel(`Inativo — <strong>${getTaskLabel(viewingTask)}</strong>`, { spinning: false });
-    // 	setStatusLabel(`Inativo`, { spinning: false });
-    // }
-}
 
 function disableRunButton(disabled) {
     const btn = document.getElementById('run-btn');
     if (btn) btn.disabled = !!disabled;
 }
 
-
-// Wire once on load
-// (function initRunStatusBar() {
-//     const btn = document.getElementById('run-btn');
-//     if (btn && !btn.__wired) {
-// 	btn.addEventListener('click', handleRunClick);
-// 	btn.__wired = true;
-//     }
-//     paintStatus();
-// })();
-
-// Call this at the end of loadTabIntoUI(taskID)
-window.onTaskViewChanged = function () {
-    paintStatus();
-};
 
 const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
 
@@ -1198,7 +1109,7 @@ async function pollTestStatus(testId) {
 	    let theExecution_stderr = execution_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stderr = compilation_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stdout = compilation_stdout?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
-	    console.log(theOutput);
+
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1387,11 +1298,17 @@ function loadTabIntoUI(tabId) {
 
   // input
   const stdin = document.getElementById("stdin-input");
-  if (stdin) stdin.value = snap.input || "";
+    if (stdin) {
+	stdin.value = snap.input || "";
+	stdin.scrollTo({ top: stdin.scrollHeight, behavior: "smooth" });
+    }
 
   // output (and seed buffer)
   const out = document.getElementById("stdout-output");
-  if (out) out.innerHTML = snap.output || "";
+    if (out) {
+	out.innerHTML = snap.output || "";
+	out.scrollTo({ top: out.scrollHeight, behavior: "smooth" });
+    }
   _outputBuffers[tabId] = snap.output || "";
 
   applyGlobalTheme(getGlobalTheme())

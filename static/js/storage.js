@@ -172,7 +172,6 @@ function newTab(initialTitle = "") {
   tabs.push(tabId);
   writeTabsIndex(tabs);
 
-    console.log("newTab title = ", title);
   const lang = document.getElementById("language-select")?.value || "cpp";
   const initSnap = {
     id: tabId,
@@ -183,7 +182,6 @@ function newTab(initialTitle = "") {
     output: ""
   };
     saveTabSnapshot(tabId, initSnap);
-    console.log("newTab, getTaskLabel",getTaskLabel(tabId));
 
   renderTabs(tabId);       // selects new tab
   loadTabIntoUI(tabId);    // sets editor/input/output

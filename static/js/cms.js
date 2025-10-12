@@ -135,8 +135,6 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
 	fileName = "tarefa.java";
     }
 
-    console.log("in cmsTestSend");
-    console.log("codeContent",codeContent);
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
