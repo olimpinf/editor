@@ -481,7 +481,7 @@ if __name__ == "__main__":
             await pollTestStatus(testId);
 
 	} catch (error) {
-            console.error("CMS Test Submission Failed:", error);
+            console.warn("CMS Test Submission Failed:", error);
 	    setStatusLabel("Submissão falhou", { spinning: false });
             displayProgramOutput(formatOutput("Submissão falhou.", color="red"));
 	}
@@ -1042,7 +1042,6 @@ function startCooldownTicker() {
 	if (!runInProgress && cooldownLeft() === 0) {
 	    stopCooldownTicker();
 	}
-	paintStatus(); // repaint while ticking
     }, 1000);
 }
 
@@ -1185,7 +1184,7 @@ async function pollTestStatus(testId) {
 
         }
 	catch (error) {
-	    console.log("erro cms:", error);
+	    console.error("erro cms:", error);
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr("Erro de processamento. ", "");

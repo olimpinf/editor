@@ -129,7 +129,7 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
     let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
     let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension; 
     
-    if (languageExtension == ".java") {
+    if (languageExtension == "java") {
 	TEST_API_URL = "/api/tarefa/test";
 	fileNameField = "tarefa.%l";
 	fileName = "tarefa.java";
@@ -188,7 +188,7 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
  */
 async function cmsTestStatus(theTaskId, id) {
     let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id
-    if (runningLanguage == ".java") {
+    if (runningLanguage == "java") {
 	url = "/api/tarefa/test/" + id
     }
 
