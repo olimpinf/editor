@@ -205,6 +205,8 @@ function closeTab(tabId) {
   if (idx < 0) return;
     if (!confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.")) return;
 
+  if (tabId === runningTaskId) setRunningTab(null);
+    
   // Remove snapshot and id
   try { localStorage.removeItem(tabStorageKey(tabId)); } catch {}
   tabs.splice(idx, 1);

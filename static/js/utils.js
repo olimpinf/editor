@@ -94,3 +94,34 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// runningTaskId already exists in your code; we’ll just manipulate it.
+function setRunningTab(tabIdOrNull) {
+  const prev = runningTaskId || null;
+  runningTaskId = tabIdOrNull || null;
+  // Update the previous and the new tab buttons
+  updateTabSpinnerFor(prev);
+  updateTabSpinnerFor(runningTaskId);
+}
+
+function updateTabSpinnerFor(tabId) {
+  if (!tabId) return;
+  const btn = document.querySelector(`.tabs-bar .tab[data-tab-id="${CSS.escape(tabId)}"]`);
+  if (!btn) return;
+
+  let sp = btn.querySelector('.tab-spinner');
+
+  if (runningTaskId === tabId) {
+    // ensure spinner exists
+    if (!sp) {
+      sp = document.createElement('span');
+      sp.className = 'tab-spinner';
+      sp.setAttribute('aria-hidden', 'true');
+      const close = btn.querySelector('.tab-close');
+      if (close) btn.insertBefore(sp, close); else btn.appendChild(sp);
+    }
+  } else {
+    // ensure spinner is removed
+    if (sp) sp.remove();
+  }
+}
+

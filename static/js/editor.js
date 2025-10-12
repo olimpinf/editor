@@ -1,5 +1,3 @@
-const MIN_INTERVAL_MS = 30_000;
-
 let runInProgress   = false;
 let runningTaskId   = null;
 let runningLanguage = null;
@@ -446,7 +444,8 @@ if __name__ == "__main__":
 	    }
 	}
 	// Start cooldown
-	lastRunStartMs = Date.now();
+	markRunStart();
+	//lastRunStartMs = Date.now();
 	startCooldownTicker();
 	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
 	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
@@ -457,12 +456,12 @@ if __name__ == "__main__":
 	const languageExtension = cmsExtension[selectedLanguage];
 
 	runningTaskId = getCurrentTaskId()
+	setRunningTab(runningTaskId);             // show spinner on that tab
+	setStatusLabel('Enviando…', { spinning: false, tabId: runningTaskId });
 	runningLanguage = selectedLanguage;
-	setStatusLabel("Enviando...", { spinning: true });
-	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
-
-	const theme = getGlobalTheme;
+	const theme = getGlobalTheme();
 	const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
+	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 	
 	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
 	try {
@@ -511,7 +510,6 @@ if __name__ == "__main__":
 
 	scheduleSaveSnapshot();
     });
-
 
     // Font size button
     (function setupFontCycler() {
@@ -1005,36 +1003,6 @@ function setStatusLabel(text, { spinning = false, tabId } = {}) {
   window.App?.Status?.set(id, text || 'Inativo', { spinning });
 }
 
-function cooldownLeft() {
-    if (!lastRunStartMs) return 0;
-    const left = MIN_INTERVAL_MS - (Date.now() - lastRunStartMs);
-    return Math.max(0, Math.ceil(left / 1000));
-}
-function canStartRun() {
-    return !runInProgress && cooldownLeft() === 0;
-}
-
-function stopCooldownTicker() {
-    if (cooldownTimerId) {
-	clearInterval(cooldownTimerId);
-	cooldownTimerId = null;
-    }
-}
-function startCooldownTicker() {
-    // avoid duplicates
-    stopCooldownTicker();
-    cooldownTimerId = setInterval(() => {
-	if (!runInProgress && cooldownLeft() === 0) {
-	    stopCooldownTicker();
-	}
-    }, 1000);
-}
-
-
-function disableRunButton(disabled) {
-    const btn = document.getElementById('run-btn');
-    if (btn) btn.disabled = !!disabled;
-}
 
 
 const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
@@ -1133,7 +1101,12 @@ async function pollTestStatus(testId) {
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		} 
 		scheduleSaveSnapshot();
+		setStatusLabel(status_text, { spinning: false, tabId: runningTaskId });
+		setRunningTab(null);                      // remove spinner
+		runInProgress = false;
 		runningTaskId = null;
+		markRunComplete();
+
 	    } else if (status == COMPILATION_FAILED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1151,6 +1124,7 @@ async function pollTestStatus(testId) {
 		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTaskId });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
+		markRunComplete();
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
 		setStatusLabel(`${ status_text }`, { spinning: true, tabId: runningTaskId });
@@ -1165,6 +1139,7 @@ async function pollTestStatus(testId) {
 		setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
+		markRunComplete();
             }
 
         }
@@ -1176,6 +1151,7 @@ async function pollTestStatus(testId) {
 	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 	    scheduleSaveSnapshot();
 	    runningTaskId = null;
+	    markRunComplete();
         }
     };
 
@@ -1425,9 +1401,10 @@ function renderTabs(activeId) {
     btn.setAttribute("aria-selected", String(tid === activeId));
     btn.dataset.tabId = tid;
     btn.innerHTML = `
-      <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
-      <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
-    `;
+  <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
+  ${runningTaskId === tid ? `<span class="tab-spinner" aria-hidden="true"></span>` : ''}
+  <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
+`;
     btn.addEventListener("click", (e) => {
       const close = e.target.closest(".tab-close");
       if (close) {
@@ -1443,3 +1420,59 @@ function renderTabs(activeId) {
     bar.appendChild(btn);
   });
 }
+
+window.onbeforeunload = function (e) {
+// warn on closing
+  if (true) {
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+};
+
+// Cooldown
+const COOLDOWN_MS = 30_000;
+const LS_STATUS = 'run:status';       // "running" | null
+const LS_LAST   = 'run:lastStartMs';  // epoch ms
+
+// --- boot: if a run was in progress, restart a fresh 30s on reload
+(function bootCooldown() {
+  if (localStorage.getItem(LS_STATUS) === 'running') {
+    localStorage.setItem(LS_LAST, String(Date.now())); // full 30s after reload
+  }
+})();
+
+// --- helpers you can call from your code ---
+function markRunStart() {
+  localStorage.setItem(LS_STATUS, 'running');
+  localStorage.setItem(LS_LAST, String(Date.now()));
+}
+
+function markRunComplete() {
+  localStorage.removeItem(LS_STATUS);
+  // keep LS_LAST so cooldown check can still apply if you want
+}
+
+function cooldownLeft() {
+  const last = Number(localStorage.getItem(LS_LAST) || 0);
+  if (!last) return 0;
+  const msLeft = last + COOLDOWN_MS - Date.now();
+  return Math.max(0, Math.ceil(msLeft / 1000));
+}
+
+function stopCooldownTicker() {
+    if (cooldownTimerId) {
+	clearInterval(cooldownTimerId);
+	cooldownTimerId = null;
+    }
+}
+function startCooldownTicker() {
+    // avoid duplicates
+    stopCooldownTicker();
+    cooldownTimerId = setInterval(() => {
+	if (!runInProgress && cooldownLeft() === 0) {
+	    stopCooldownTicker();
+	}
+    }, 1000);
+}
+
