@@ -44,7 +44,7 @@
     if (!taskId) return;
     STORE.delete(taskId);
     removeFromStorage(taskId);
-    if (taskId === window.currentTask) renderFor(taskId);
+    if (runningTaskId === window.currentTask) renderFor(taskId);
   }
 
   function clearAll() {
@@ -59,7 +59,7 @@
     renderCurrent();
   }
 
-  function renderFor(taskId) {
+    function renderFor(taskId) {
     const { text, spinning } = get(taskId);
     const labelEl = document.getElementById("status-label");
     const taskEl  = document.getElementById("status-task");

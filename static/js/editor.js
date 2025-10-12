@@ -999,8 +999,8 @@ function getCurrentTaskId() {
 
 function setStatusLabel(text, { spinning = false } = {}) {
     // Keep per-task status and update the DOM for the active task
-    console.warn("in setStatusLabel", text);
-    console.warn("runningTaskId", runningTaskId, getCurrentTaskId());
+    console.log("in setStatusLabel", text);
+    console.log("runningTaskId", runningTaskId, getCurrentTaskId());
     if (runningTaskId == getCurrentTaskId()) {
 	// update the panel and storage
 	const labelEl = document.getElementById('status-label');
@@ -1114,33 +1114,33 @@ async function pollTestStatus(testId) {
 		    displayStdout("Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terrminou sem erros", { spinning: false });
+		    setStatusLabel("Execução terminou sem erros", { spinning: false });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
 		    displayStdout("Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false });
 		}
 		else if (status_text == "Memory limit exceeded") {
 		    displayStdout("Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
 		    displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false });
 		}
 		else {
 		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terrminou com erro", { spinning: false });
+		    setStatusLabel("Execução terminou com erro", { spinning: false });
 		} 
 		scheduleSaveSnapshot();
 		runningTaskId = null;
@@ -1172,7 +1172,7 @@ async function pollTestStatus(testId) {
 		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
-		setStatusLabel("Execução terrminou com erro", { spinning: false });
+		setStatusLabel("Execução terminou com erro", { spinning: false });
 		scheduleSaveSnapshot();
 		runningTaskId = null;
             }
@@ -1183,7 +1183,7 @@ async function pollTestStatus(testId) {
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr("Erro de processamento. ", "");
-	    setStatusLabel("Execução terrminou com erro", { spinning: false });
+	    setStatusLabel("Execução terminou com erro", { spinning: false });
 	    scheduleSaveSnapshot();
 	    runningTaskId = null;
         }
