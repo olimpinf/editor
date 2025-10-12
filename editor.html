@@ -204,8 +204,10 @@
     } catch (e) {}
   })();
 </script>
-	<!--script src="static/monaco/vs/loader.js"></script-->	
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="static/monaco/dev/vs/loader.js"></script>
+<script>
+  require.config({ paths: { vs: 'static/monaco/dev/vs' } });
+</script>
 	<script src="static/js/utils.js"></script>
 	<script src="static/js/cms.js"></script>
 	<script src="static/js/storage.js"></script>

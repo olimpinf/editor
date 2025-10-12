@@ -12,7 +12,6 @@ let colorEmphasisTextDark = "YellowGreen";
 
 initGlobalTheme();
 
-require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
 require(['vs/editor/editor.main'], function () {
     // starter templates
     window.templates = {
@@ -257,12 +256,6 @@ if __name__ == "__main__":
     });
   }
 })();
-
-
-
-
-
-
     
     // 1) Editor content changes
     if (window.editor?.onDidChangeModelContent) {
@@ -1006,6 +999,8 @@ function getCurrentTaskId() {
 
 function setStatusLabel(text, { spinning = false } = {}) {
     // Keep per-task status and update the DOM for the active task
+    console.warn("in setStatusLabel", text);
+    console.warn("runningTaskId", runningTaskId, getCurrentTaskId());
     if (runningTaskId == getCurrentTaskId()) {
 	// update the panel and storage
 	const labelEl = document.getElementById('status-label');
