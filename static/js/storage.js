@@ -141,6 +141,7 @@ function writeTabsIndex(list) {
 function saveTabSnapshot(tabId, snap) {
   try { localStorage.setItem(tabStorageKey(tabId), JSON.stringify(snap)); } catch {}
 }
+
 function loadTabSnapshot(tabId) {
   try {
     const raw = localStorage.getItem(tabStorageKey(tabId));
@@ -171,16 +172,18 @@ function newTab(initialTitle = "") {
   tabs.push(tabId);
   writeTabsIndex(tabs);
 
+    console.log("newTab title = ", title);
   const lang = document.getElementById("language-select")?.value || "cpp";
   const initSnap = {
     id: tabId,
-    title,
+    title: title,
     language: lang,
     code: window.templates?.[lang] || "",
     input: "",
     output: ""
   };
-  saveTabSnapshot(tabId, initSnap);
+    saveTabSnapshot(tabId, initSnap);
+    console.log("newTab, getTaskLabel",getTaskLabel(tabId));
 
   renderTabs(tabId);       // selects new tab
   loadTabIntoUI(tabId);    // sets editor/input/output
@@ -200,7 +203,7 @@ function closeTab(tabId) {
   const tabs = readTabsIndex();
   const idx = tabs.indexOf(tabId);
   if (idx < 0) return;
-  if (!confirm("Fechar esta aba? Seu conteúdo será removido deste navegador.")) return;
+    if (!confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.")) return;
 
   // Remove snapshot and id
   try { localStorage.removeItem(tabStorageKey(tabId)); } catch {}

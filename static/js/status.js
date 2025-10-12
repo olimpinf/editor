@@ -74,10 +74,10 @@
     const taskEl  = document.getElementById("status-task");
     const spinEl  = document.getElementById("status-spinner");
 
-      const taskLabel = getTaskLabel(taskId);
-      
+    const tabTitle = getTabTitle(taskId);
+
    if (taskEl) {
-      taskEl.textContent = `${taskLabel}`;
+      taskEl.textContent = `${tabTitle}`;
     }
    if (labelEl) {
       labelEl.textContent = `${text}`;

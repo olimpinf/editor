@@ -64,3 +64,34 @@ function removeHtmlTags(content) {
 
   return text.trim();
 }
+
+/**
+ * Get the title of a tab/task from localStorage
+ * @param {string} tabId - The internal ID of the tab (e.g. "tarefa1-abc123")
+ * @returns {string|null} The stored title, or null if not found
+ */
+function getTabTitle(tabId) {
+  if (!tabId) return null;
+  const key = `${SNAP_PREFIX}${tabId}`; // same prefix as your tab storage
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const snap = JSON.parse(raw);
+    return snap?.title || null;
+  } catch (e) {
+    console.warn("getTabTitle failed for", tabId, e);
+    return null;
+  }
+}
+
+function removeString(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || !a) return b;
+  const idx = b.indexOf(a);
+  if (idx === -1) return b;
+  return b.slice(0, idx) + b.slice(idx + a.length);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+

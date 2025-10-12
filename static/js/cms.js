@@ -2,7 +2,7 @@
  * Global variable for the login result
  */
 let login_data = null;
-
+const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 /**
  * Hardcoded CMS credentials (shared by all students)
  */
@@ -61,8 +61,12 @@ async function taskList() {
  */
 async function cmsSubmit(codeContent, language, languageExtension) {
     // --- Configuration ---
-     const SUBMIT_API_URL = "/api/tarefa1/submit";
-    
+    if (languageExtension == '.cpp' ) {
+     const SUBMIT_API_URL = "/api/tarefa/submit";
+    }
+    else {
+     const SUBMIT_API_URL = "/api/hashedName-d8724aa0b88f985f11/submit";
+    }
     
     // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
     const fileNameField = "tarefa1.%l";
@@ -121,18 +125,22 @@ async function cmsSubmit(codeContent, language, languageExtension) {
  */
 async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
     // --- Configuration ---
-     const TEST_API_URL = "/api/" + runningTaskId + "/test";
+    let TEST_API_URL = "/api/hashedName-d8724aa0b88f985f11/test";
+    let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
+    let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension; 
     
-    // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
-    const fileNameField = runningTaskId + ".%l";
-    const fileName = runningTaskId + "." + languageExtension; 
+    if (languageExtension == ".java") {
+	TEST_API_URL = "/api/tarefa/test";
+	fileNameField = "tarefa.%l";
+	fileName = "tarefa.java";
+    }
 
-    
+    console.log("in cmsTestSend");
+    console.log("codeContent",codeContent);
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
     
-    // Example: formData.append("tarefa1.cpp", Blob, "tarefa1.cpp")
     formData.append(fileNameField, codeBlob, fileName);
     formData.append("input", inputBlob, "input.txt");
     
@@ -181,7 +189,10 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
  * Get status of a test submission
  */
 async function cmsTestStatus(theTaskId, id) {
-    const url = "/api/" + theTaskId + "/test/" + id
+    let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id
+    if (runningLanguage == ".java") {
+	url = "/api/tarefa/test/" + id
+    }
 
     try {
         const resp = await fetch(url, {

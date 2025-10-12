@@ -2,6 +2,7 @@ const MIN_INTERVAL_MS = 30_000;
 
 let runInProgress   = false;
 let runningTaskId   = null;
+let runningLanguage = null;
 let lastRunStartMs  = 0;     // <— from click time
 let cooldownTimerId = null;
 let colorInfoTextLight = "Blue";
@@ -496,8 +497,6 @@ if __name__ == "__main__":
 	// Start cooldown
 	lastRunStartMs = Date.now();
 	startCooldownTicker();
-	runningTaskId = getCurrentTaskId()
-
 	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
 	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
 	const code = window.editor.getValue();
@@ -506,6 +505,9 @@ if __name__ == "__main__":
 	const language = cmsLanguage[selectedLanguage];
 	const languageExtension = cmsExtension[selectedLanguage];
 
+	runningTaskId = getCurrentTaskId()
+	runningLanguage = selectedLanguage;
+	console.log("runningLanguage",runningLanguage);
 	setStatusLabel("Enviando...", { spinning: true });
 	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
 
@@ -1124,52 +1126,6 @@ function disableRunButton(disabled) {
     if (btn) btn.disabled = !!disabled;
 }
 
-async function handleRunClick() {
-    // Block when not allowed; show why
-    if (!canStartRun()) {
-	paintStatus(); // will show Running or Cooldown
-	return;
-    }
-
-    // Start run: mark start time NOW and start cooldown ticker
-    lastRunStartMs = Date.now();
-    startCooldownTicker();
-
-    runInProgress = true;
-    runningTaskId = getCurrentTaskId();
-    //disableRunButton(true);
-    paintStatus(); // "Running — <task>"
-
-    try {
-	// Build payload
-	const payload = {
-	    taskId: runningTaskId,
-	    code: window.editor?.getValue?.() || '',
-	    language: document.getElementById('language-select')?.value || 'cpp',
-	    input: document.getElementById('stdin-input')?.value || ''
-	};
-
-	// TODO: replace with real backend request
-	await new Promise(res => setTimeout(res, 1500));
-
-	// Example output update
-	//const outEl = document.getElementById('stdout-output');
-	//if (outEl) outEl.innerHTML = `<pre>Execution finished for ${getTaskLabel(runningTaskId)}</pre>`;
-
-    } catch (err) {
-	console.error('Run error:', err);
-	// (We still keep the cooldown from click)
-    } finally {
-	runInProgress = false;
-	runningTaskId  = null;
-
-	// Re-enable Run if cooldown has already expired during the run
-	//disableRunButton(!canStartRun());
-
-	paintStatus(); // will show Cooldown or Idle
-	// ticker is already running; it will stop itself when cooldown hits 0 and nothing is running
-    }
-}
 
 // Wire once on load
 // (function initRunStatusBar() {
@@ -1224,7 +1180,7 @@ async function pollTestStatus(testId) {
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
     
-    const label = getTaskLabel(runningTaskId);
+    const label = getTabTitle(runningTaskId);
     const theme = getGlobalTheme();
     const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     
@@ -1238,6 +1194,11 @@ async function pollTestStatus(testId) {
         try {
             const result = await cmsTestStatus(runningTaskId, testId);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
+	    let theOutput = output?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
+	    let theExecution_stderr = execution_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
+	    let theCompilation_stderr = compilation_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
+	    let theCompilation_stdout = compilation_stdout?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
+	    console.log(theOutput);
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1245,33 +1206,33 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
 		if (status_text == "Execution completed successfully") {
-		    displayStdout("Execução terminou sem erros. ", output);
+		    displayStdout("Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou sem erros", { spinning: false });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
-		    displayStdout("Execução interrompida por limite de tempo excedido. ", output);
+		    displayStdout("Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else if (status_text == "Memory limit exceeded") {
-		    displayStdout("Execução interrompida por limite de memória excedido. ", output);
+		    displayStdout("Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
-		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
-		    displayStdout("", output);
+		    displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
 		}
 		else {
 		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
-		    displayStdout("", output);
+		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terrminou com erro", { spinning: false });
@@ -1286,8 +1247,8 @@ async function pollTestStatus(testId) {
 		var program_output = "\nErro de compilação:\n";
 		program_output += "---------\n";
 		program_output = formatOutput(program_output, colorInfoText);
-		program_output += formatOutput(compilation_stdout, "red");
-		program_output += formatOutput(compilation_stderr, "red");
+		program_output += formatOutput(theCompilation_stdout, "red");
+		program_output += formatOutput(theCompilation_stderr, "red");
                 displayProgramOutput(program_output);
 		program_output = "\n---------\n";
 		program_output = formatOutput(program_output, colorInfoText);
@@ -1302,8 +1263,8 @@ async function pollTestStatus(testId) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
-		displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
-		displayStdout("", output);
+		displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel("Execução terrminou com erro", { spinning: false });
@@ -1313,6 +1274,7 @@ async function pollTestStatus(testId) {
 
         }
 	catch (error) {
+	    console.log("erro cms:", error);
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr("Erro de processamento. ", "");
