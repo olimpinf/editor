@@ -23,7 +23,7 @@ int main() {
 
     return 0;
 }`,
-	java: `public class Main {
+	java: `public class tarefa {
     public static void main(String[] args) {
         // Start coding here
     }
@@ -438,11 +438,11 @@ if __name__ == "__main__":
 
 	runningTaskId = getCurrentTaskId()
 	setRunningTab(runningTaskId);             // show spinner on that tab
-	setStatusLabel('Enviando…', { spinning: false, tabId: runningTaskId });
+	setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
 	runningLanguage = selectedLanguage;
 	const theme = getGlobalTheme();
 	const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": submissão enviada\n";
+	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
 	
 	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
 	try {
@@ -455,8 +455,8 @@ if __name__ == "__main__":
 
 	} catch (error) {
             console.warn("CMS Test Submission Failed:", error);
-	    setStatusLabel("Submissão falhou", { spinning: false });
-            displayProgramOutput(formatOutput("Submissão falhou.", color="red"));
+	    setStatusLabel("Execução falhou", { spinning: false });
+            displayProgramOutput(formatOutput("Execução falhou.", color="red"));
 	}
 	scheduleSaveSnapshot();	
     });
