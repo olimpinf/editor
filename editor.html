@@ -7,7 +7,7 @@
 	<title>EditorOBI</title>
 	<link href="static/css/editor.css?v=2025-10-11" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
-		rel="stylesheet">
+	      rel="stylesheet">
 </head>
 
 <body>
@@ -203,23 +203,30 @@
       add('#pane-rbot .pane-container');
     } catch (e) {}
   })();
+
+
 </script>
 <script src="static/monaco/dev/vs/loader.js"></script>
 <script>
-  require.config({ paths: { vs: 'static/monaco/dev/vs' } });
+  // This is the single, consolidated configuration
+  require.config({
+    paths: {
+      'vs': 'static/monaco/dev/vs',
+      'vscode-ws-jsonrpc': 'static/js/vscode-ws-jsonrpc',
+      'monaco-language-client': 'static/js/monaco-language-client'
+    }
+  });
 </script>
-        <!-- ADD THIS SCRIPT FOR THE LANGUAGE CLIENT (FUTURE) -->
-        <!-- script src="static/js/language-client.js"></script -->
-
-	<script src="static/js/utils.js"></script>
-	<script src="static/js/cms.js"></script>
-	<script src="static/js/storage.js"></script>
-	<script src="static/js/theme.js"></script>
-	<script src="static/js/accessible-select.js"></script>
-	<script src="static/js/status.js"></script>
-	<script src="static/js/editor.js?v=2025-10-11"></script>
-	<script src="static/js/info-modal.js"></script>
-	<script src="static/js/init-accessible-select.js"></script>
+<script src="static/js/language-client.js"></script>
+<script src="static/js/utils.js"></script>
+<script src="static/js/cms.js"></script>
+<script src="static/js/storage.js"></script>
+<script src="static/js/theme.js"></script>
+<script src="static/js/accessible-select.js"></script>
+<script src="static/js/status.js"></script>
+<script src="static/js/editor.js?v=2025-10-11"></script>
+<script src="static/js/info-modal.js"></script>
+<script src="static/js/init-accessible-select.js"></script>
 </body>
 
 </html>

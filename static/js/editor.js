@@ -9,7 +9,10 @@ let colorEmphasisTextDark = "YellowGreen";
 
 initGlobalTheme();
 
+// Configure paths for all our modules, including the new local libraries.
+// The paths are relative to where the HTML file is served from.
 require(['vs/editor/editor.main'], function () {
+
     // starter templates
     window.templates = {
 	cpp: `#include <bits/stdc++.h>
@@ -57,6 +60,10 @@ if __name__ == "__main__":
 	minimap: { enabled: false },
 	padding: { top: 10 }  
     });
+    console.log("will call window.languageClientManager.connect");
+    if (window.languageClientManager) {
+	window.languageClientManager.connect('cpp');
+    }
     applyGlobalTheme(getGlobalTheme());
     initFirstTabIfNeeded();
 
@@ -301,7 +308,18 @@ if __name__ == "__main__":
 	const model = window.editor.getModel();
 	// This is the core function call to change the syntax highlighting
 	monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
+	if (window.languageClientManager) {
+	    window.languageClientManager.connect(lang);
+	}
+    }
 
+    function getSanitizedTabName() {
+	const tabId = window.currentTask;
+	const snap = tabId && loadTabSnapshot(tabId);
+	const raw = snap?.title || tabId || "programa";
+	let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
+	sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
+	return sanitized || 'programa';
     }
 
     // Download buttons
@@ -319,7 +337,7 @@ if __name__ == "__main__":
 
 
     document.getElementById('download-btn')?.addEventListener('click', () => {
-	const baseFilename = getSanitizedTaskName();
+	const baseFilename = getSanitizedTabName();
 	
 	const langSelect = document.getElementById('language-select');
 	const lang = langSelect ? langSelect.value : 'txt';
@@ -535,7 +553,74 @@ if __name__ == "__main__":
 	    applyFontSize(sizes[idx]);
 	});
     })();
-    
+
+
+
+        // --- Language Client Logic (formerly language-client.js) ---
+    // This is now placed inside the main callback to ensure all libraries are loaded first.
+    //
+    (function () {
+        const isSecure = window.location.protocol === 'https:';
+        const protocol = isSecure ? 'wss://' : 'ws://';
+        const WEBSOCKET_BASE_URL = `${protocol}${window.location.host}/ws`;
+        let activeLanguageClient = null;
+
+        function createUrl(language) {
+            return `${WEBSOCKET_BASE_URL}/${language}/`;
+        }
+
+        function connectLanguageServer(language) {
+            if (activeLanguageClient) {
+                activeLanguageClient.stop();
+                activeLanguageClient = null;
+            }
+            const supportedLanguages = ['cpp', 'java', 'python'];
+            if (!supportedLanguages.includes(language)) {
+                console.log(`Language '${language}' does not have a configured language server.`);
+                return;
+            }
+
+            console.log(`Attempting to connect to language server for: ${language} at ${createUrl(language)}`);
+            
+            const url = createUrl(language);
+            const webSocket = new WebSocket(url);
+            
+            // CORRECTED: This is the proper way to create the connection for this library version.
+            const connectionProvider = {
+                get: () => {
+                    return Promise.resolve(new monaco.languages.WebSocketMessageReader(webSocket), new monaco.languages.WebSocketMessageWriter(webSocket));
+                }
+            };
+            
+            const client = new monaco.languages.MonacoLanguageClient({
+                name: `${language.toUpperCase()} Language Client`,
+                clientOptions: {
+                    documentSelector: [language]
+                },
+                connectionProvider: connectionProvider
+            });
+
+            const disposable = client.start();
+            console.log(`${language.toUpperCase()} Language Client starting...`);
+
+            webSocket.onopen = () => console.log("WebSocket connection opened successfully.");
+            webSocket.onerror = (err) => console.error("WebSocket Error:", err);
+            webSocket.onclose = (event) => {
+                console.log(`WebSocket connection closed. Disposing client. Code: ${event.code}`);
+                disposable.dispose();
+            };
+
+            activeLanguageClient = {
+                language: language,
+                stop: () => disposable.dispose()
+            };
+        }
+
+        window.languageClientManager = {
+            connect: connectLanguageServer
+        };
+    })();
+
 });
 
 
@@ -960,14 +1045,6 @@ function escapeHtml(unsafeText) {
     });
 }
 
-function getSanitizedTabName() {
-  const tabId = window.currentTask;
-  const snap = tabId && loadTabSnapshot(tabId);
-  const raw = snap?.title || tabId || "programa";
-  let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
-  sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
-  return sanitized || 'programa';
-}
 
 // ===== Run / Status bar (cooldown starts at RUN CLICK) =====
 
