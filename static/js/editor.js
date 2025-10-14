@@ -9,9 +9,7 @@ let colorEmphasisTextDark = "YellowGreen";
 
 initGlobalTheme();
 
-// Configure paths for all our modules, including the new local libraries.
-// The paths are relative to where the HTML file is served from.
-require(['vs/editor/editor.main'], function () {
+require(['vs/editor/editor.main', 'monaco-language-client', 'vscode-ws-jsonrpc'], function (main, languageClient) {
 
     // starter templates
     window.templates = {
@@ -305,14 +303,18 @@ if __name__ == "__main__":
 
     // Extracted Language Logic Function
     function switchLanguage(lang) {
-	const model = window.editor.getModel();
-	// This is the core function call to change the syntax highlighting
-	monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
-	if (window.languageClientManager) {
-	    window.languageClientManager.connect(lang);
-	}
+        if (window.monaco && window.editor) {
+            monaco.editor.setModelLanguage(editor.getModel(), lang);
+            if (window.currentTask && window.taskStates[window.currentTask]) {
+                window.taskStates[window.currentTask].language = lang;
+            }
+            // ADDED: This call connects to the language server
+            if (window.languageClientManager) {
+                window.languageClientManager.connect(lang);
+            }
+        }
     }
-
+    
     function getSanitizedTabName() {
 	const tabId = window.currentTask;
 	const snap = tabId && loadTabSnapshot(tabId);
@@ -593,6 +595,69 @@ if __name__ == "__main__":
             };
             
             const client = new monaco.languages.MonacoLanguageClient({
+                name: `${language.toUpperCase()} Language Client`,
+                clientOptions: {
+                    documentSelector: [language]
+                },
+                connectionProvider: connectionProvider
+            });
+
+            const disposable = client.start();
+            console.log(`${language.toUpperCase()} Language Client starting...`);
+
+            webSocket.onopen = () => console.log("WebSocket connection opened successfully.");
+            webSocket.onerror = (err) => console.error("WebSocket Error:", err);
+            webSocket.onclose = (event) => {
+                console.log(`WebSocket connection closed. Disposing client. Code: ${event.code}`);
+                disposable.dispose();
+            };
+
+            activeLanguageClient = {
+                language: language,
+                stop: () => disposable.dispose()
+            };
+        }
+
+        window.languageClientManager = {
+            connect: connectLanguageServer
+        };
+    })();
+
+     (function () {
+        const isSecure = window.location.protocol === 'https:';
+        const protocol = isSecure ? 'wss://' : 'ws://';
+        const WEBSOCKET_BASE_URL = `${protocol}${window.location.host}/ws`;
+        let activeLanguageClient = null;
+
+        function createUrl(language) {
+            return `${WEBSOCKET_BASE_URL}/${language}/`;
+        }
+
+        function connectLanguageServer(language) {
+            if (activeLanguageClient) {
+                activeLanguageClient.stop();
+                activeLanguageClient = null;
+            }
+            const supportedLanguages = ['cpp', 'java', 'python'];
+            if (!supportedLanguages.includes(language)) {
+                console.log(`Language '${language}' does not have a configured language server.`);
+                return;
+            }
+
+            console.log(`Attempting to connect to language server for: ${language} at ${createUrl(language)}`);
+            
+            const url = createUrl(language);
+            const webSocket = new WebSocket(url);
+            
+            // CORRECTED: Use the 'languageClient' variable passed into the require callback.
+            const connectionProvider = {
+                get: () => {
+                    return Promise.resolve(new languageClient.WebSocketMessageReader(webSocket), new languageClient.WebSocketMessageWriter(webSocket));
+                }
+            };
+            
+            // Use the captured languageClient object here
+            const client = new languageClient.MonacoLanguageClient({
                 name: `${language.toUpperCase()} Language Client`,
                 clientOptions: {
                     documentSelector: [language]
