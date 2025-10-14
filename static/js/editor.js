@@ -1,19 +1,28 @@
-let runningTaskId   = null;
-let runningLanguage = null;
-let lastRunStartMs  = 0;     // <— from click time
-let cooldownTimerId = null;
-let colorInfoTextLight = "Blue";
-let colorInfoTextDark = "Gold";
-let colorEmphasisTextLight = "Green";
-let colorEmphasisTextDark = "YellowGreen";
+window.runningTaskId   = null;
+window.runningLanguage = null;
+window.lastRunStartMs  = 0;     // <— from click time
+window.cooldownTimerId = null;
+window.colorInfoTextLight = "Blue";
+window.colorInfoTextDark = "Gold";
+window.colorEmphasisTextLight = "Green";
+window.colorEmphasisTextDark = "YellowGreen";
 
 initGlobalTheme();
 
-require(['vs/editor/editor.main', 'monaco-language-client', 'vscode-ws-jsonrpc'], function (main, languageClient) {
+// 1. Import the language client function from our other module.
+import { launchLanguageClient } from './language-client.js';
 
-    // starter templates
-    window.templates = {
-	cpp: `#include <bits/stdc++.h>
+// 2. Wait for the entire page to load. This solves the race condition where
+//    `loader.js` hasn't created `window.require` yet.
+window.addEventListener('DOMContentLoaded', () => {
+
+    // 3. Now that we know loader.js is ready, use window.require to load Monaco.
+    window.require(['vs/editor/editor.main'], (monaco) => {
+
+
+	// starter templates
+	window.templates = {
+	    cpp: `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
@@ -24,63 +33,63 @@ int main() {
 
     return 0;
 }`,
-	java: `public class tarefa {
+	    java: `public class tarefa {
     public static void main(String[] args) {
         // Start coding here
     }
 }`,
-	python: `def main():
+	    python: `def main():
     # Start coding here
     pass
 
 if __name__ == "__main__":
     main()`
-    };
+	};
 
-    // === Tabs (dynamic tasks) ===
-    const TABS_INDEX_KEY = "obi:tabs:index:v1";     // stores array of tabIds in order
-    const LAST_TAB_KEY   = "obi:lastTabId";         // currently active tab id
-    const SNAP_PREFIX    = "obi:tab:v1:";           // per-tab snapshot key prefix
-    
-    function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
-    
-    // Snapshot shape per tab
-    // { id, title, language, code, input, output }
-
-    
-    // Initialize editor
-    window.editor = monaco.editor.create(document.getElementById('editor-container'), {
-	value: templates.cpp,   // default
-	language: 'cpp',
-	theme: 'vs',
-	automaticLayout: true,
-	fontSize: 14,
-	minimap: { enabled: false },
-	padding: { top: 10 }  
-    });
-    console.log("will call window.languageClientManager.connect");
-    if (window.languageClientManager) {
-	window.languageClientManager.connect('cpp');
-    }
-    applyGlobalTheme(getGlobalTheme());
-    initFirstTabIfNeeded();
-
-// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
-(function ExamGate() {
-  if (!window.AppConfig?.examGate?.enabled) return; 
+	// === Tabs (dynamic tasks) ===
+	const TABS_INDEX_KEY = "obi:tabs:index:v1";     // stores array of tabIds in order
+	const LAST_TAB_KEY   = "obi:lastTabId";         // currently active tab id
+	const SNAP_PREFIX    = "obi:tab:v1:";           // per-tab snapshot key prefix
 	
-  const ENDPOINT = "https://olimpiada.ic.unicamp.br/can_start";
-  const POLL_MS = 5000;     // poll every 5s (adjust if you like)
-  const TIMEOUT_MS = 4000;  // fetch timeout
-  let pollTimer = null;
-  let lastState = null;     // 'ready' | 'not_ready' | null
+	function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
+	
+	// Snapshot shape per tab
+	// { id, title, language, code, input, output }
 
-  // --- DOM helpers ---
-  function ensureModal() {
-    if (document.getElementById("exam-gate-overlay")) return;
-    const css = document.createElement("style");
-    css.id = "exam-gate-style";
-    css.textContent = `
+	
+	// Initialize editor
+	window.editor = monaco.editor.create(document.getElementById('editor-container'), {
+	    value: templates.cpp,   // default
+	    language: 'cpp',
+	    theme: 'vs',
+	    automaticLayout: true,
+	    fontSize: 14,
+	    minimap: { enabled: false },
+	    padding: { top: 10 }  
+	});
+	console.log("will call window.languageClientManager.connect");
+	if (window.languageClientManager) {
+	    window.languageClientManager.connect('cpp');
+	}
+	applyGlobalTheme(getGlobalTheme());
+	initFirstTabIfNeeded();
+
+	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
+	(function ExamGate() {
+	    if (!window.AppConfig?.examGate?.enabled) return; 
+	    
+	    const ENDPOINT = "https://olimpiada.ic.unicamp.br/can_start";
+	    const POLL_MS = 5000;     // poll every 5s (adjust if you like)
+	    const TIMEOUT_MS = 4000;  // fetch timeout
+	    let pollTimer = null;
+	    let lastState = null;     // 'ready' | 'not_ready' | null
+
+	    // --- DOM helpers ---
+	    function ensureModal() {
+		if (document.getElementById("exam-gate-overlay")) return;
+		const css = document.createElement("style");
+		css.id = "exam-gate-style";
+		css.textContent = `
 #exam-gate-overlay {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -108,587 +117,449 @@ if __name__ == "__main__":
 .hidden { display:none !important; }
 .locked-pointer { pointer-events: none !important; }
     `;
-    document.head.appendChild(css);
+		document.head.appendChild(css);
 
-    const overlay = document.createElement("div");
-    overlay.id = "exam-gate-overlay";
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-live", "polite");
-    overlay.classList.add("hidden");
+		const overlay = document.createElement("div");
+		overlay.id = "exam-gate-overlay";
+		overlay.setAttribute("role", "dialog");
+		overlay.setAttribute("aria-modal", "true");
+		overlay.setAttribute("aria-live", "polite");
+		overlay.classList.add("hidden");
 
-    overlay.innerHTML = `
+		overlay.innerHTML = `
       <div id="exam-gate-dialog">
         <h2>Exame não iniciado</h2>
         <p>Volte à aba do exame e clique no botão <em>Iniciar</em>. Esta página será liberada automaticamente quando o exame começar.</p>
         <div id="exam-gate-spinner" aria-hidden="true"></div>
       </div>
     `;
-    document.body.appendChild(overlay);
-  }
+		document.body.appendChild(overlay);
+	    }
 
-  function showModal() {
-    ensureModal();
-    document.getElementById("exam-gate-overlay")?.classList.remove("hidden");
-  }
-  function hideModal() {
-    document.getElementById("exam-gate-overlay")?.classList.add("hidden");
-  }
+	    function showModal() {
+		ensureModal();
+		document.getElementById("exam-gate-overlay")?.classList.remove("hidden");
+	    }
+	    function hideModal() {
+		document.getElementById("exam-gate-overlay")?.classList.add("hidden");
+	    }
 
-  function setAppInteractivity(enabled) {
-    // 1) Monaco
-    if (window.editor?.updateOptions) {
-      window.editor.updateOptions({ readOnly: !enabled });
-    }
+	    function setAppInteractivity(enabled) {
+		// 1) Monaco
+		if (window.editor?.updateOptions) {
+		    window.editor.updateOptions({ readOnly: !enabled });
+		}
 
-    // 2) Textareas & inputs
-    const stdin = document.getElementById("stdin-input");
-    if (stdin) stdin.disabled = !enabled;
+		// 2) Textareas & inputs
+		const stdin = document.getElementById("stdin-input");
+		if (stdin) stdin.disabled = !enabled;
 
-    // 3) Buttons & selects
-    const disableSel = [
-      "#run-btn", "#font-btn", "#global-style-toggle",
-      "#download-btn", "#upload-btn", "#clear-btn",
-      "#download-input-btn", "#upload-input-btn", "#clear-input-btn",
-      "#download-output-btn", "#clear-output-btn",
-      "#language-select", "#task-select",
-      ".btn-expand"
-    ];
-    disableSel.forEach(sel => {
-      document.querySelectorAll(sel).forEach(el => {
-        if (el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
-          el.disabled = !enabled;
-        } else {
-          el.setAttribute("tabindex", enabled ? "0" : "-1");
-          el.setAttribute("aria-disabled", String(!enabled));
-          if ("disabled" in el) el.disabled = !enabled;
-        }
-      });
-    });
+		// 3) Buttons & selects
+		const disableSel = [
+		    "#run-btn", "#font-btn", "#global-style-toggle",
+		    "#download-btn", "#upload-btn", "#clear-btn",
+		    "#download-input-btn", "#upload-input-btn", "#clear-input-btn",
+		    "#download-output-btn", "#clear-output-btn",
+		    "#language-select", "#task-select",
+		    ".btn-expand"
+		];
+		disableSel.forEach(sel => {
+		    document.querySelectorAll(sel).forEach(el => {
+			if (el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+			    el.disabled = !enabled;
+			} else {
+			    el.setAttribute("tabindex", enabled ? "0" : "-1");
+			    el.setAttribute("aria-disabled", String(!enabled));
+			    if ("disabled" in el) el.disabled = !enabled;
+			}
+		    });
+		});
 
-    // 4) Prevent accidental clicks through custom UI layers
-    const container = document.getElementById("container");
-    if (container) {
-      if (!enabled) container.classList.add("locked-pointer");
-      else container.classList.remove("locked-pointer");
-    }
-  }
-
-  // --- Fetch with timeout & CORS note ---
-  async function fetchWithTimeout(url, ms) {
-    const ctrl = new AbortController();
-    const id = setTimeout(() => ctrl.abort(), ms);
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "include", // adjust if you need cookies
-        headers: { "Accept": "application/json" },
-        signal: ctrl.signal
-      });
-      clearTimeout(id);
-      return res;
-    } catch (e) {
-      clearTimeout(id);
-      throw e;
-    }
-  }
-
-  function parseReady(json) {
-    // Accept {status:"ready"} or {ready:true} or "ready"
-    if (typeof json === "string") return json.toLowerCase() === "ready";
-    if (json && typeof json === "object") {
-      if ("status" in json) return String(json.status).toLowerCase() === "ready";
-      if ("ready" in json) return !!json.ready;
-    }
-    return false;
-  }
-
-  async function checkGateOnce() {
-    try {
-      const res = await fetchWithTimeout(ENDPOINT, TIMEOUT_MS);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const isReady = parseReady(data);
-
-      if (isReady) {
-        if (lastState !== "ready") {
-          lastState = "ready";
-          hideModal();
-          setAppInteractivity(true);
-        }
-      } else {
-        if (lastState !== "not_ready") {
-          lastState = "not_ready";
-          showModal();
-          setAppInteractivity(false);
-        }
-      }
-    } catch (err) {
-      // Network/CORS error: be conservative (lock UI) but keep polling
-      if (lastState !== "not_ready") {
-        lastState = "not_ready";
-        showModal();
-        setAppInteractivity(false);
-      }
-      // console.warn("Exam gate poll failed:", err);
-    }
-  }
-
-  function startPolling() {
-    // initial lock until first response
-    lastState = null;
-    showModal();
-    setAppInteractivity(false);
-
-    // kick off immediately, then poll
-    checkGateOnce();
-    clearInterval(pollTimer);
-    pollTimer = setInterval(checkGateOnce, POLL_MS);
-  }
-
-  // Start once DOM and Monaco are ready enough
-  if (document.readyState === "complete" || document.readyState === "interactive") {
-    ensureModal();
-    startPolling();
-  } else {
-    window.addEventListener("DOMContentLoaded", () => {
-      ensureModal();
-      startPolling();
-    });
-  }
-})();
-    
-    // 1) Editor content changes
-    if (window.editor?.onDidChangeModelContent) {
-	window.editor.onDidChangeModelContent(() => {
-	    scheduleSaveSnapshot();
-	});
-    }
-    
-    // 2) STDIN textarea changes
-    const stdin = document.getElementById("stdin-input");
-    if (stdin && !stdin.__wiredSnapshot) {
-	stdin.addEventListener("input", scheduleSaveSnapshot);
-	stdin.__wiredSnapshot = true;
-    }
-    
-    // 3) Language changes (if you want them persisted too)
-    const langSel = document.getElementById("language-select");
-    if (langSel && !langSel.__wiredSnapshot) {
-	langSel.addEventListener("change", scheduleSaveSnapshot);
-	langSel.__wiredSnapshot = true;
-    }
-
-
-    const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
-
-    document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
-        const now = getGlobalTheme(); 
-	    const next = now === 'light' ? 'dark' : 'light';
-	    setGlobalTheme(next);
-    });
-
-    // --- Handle Tab creation ---
-    document.getElementById("new-tab-btn")?.addEventListener("click", () => newTab(""));
-    
-    // --- Handle Task Switch ---
-    document.getElementById('task-select')?.addEventListener('change', function(e) {
-	const newTaskID = e.target.value;
-	
-	// 2. Load the state of the NEW task
-	loadTabIntoUI(newTaskID);
-        try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
-    });
-
-    // Extracted Language Logic Function
-    function switchLanguage(lang) {
-        if (window.monaco && window.editor) {
-            monaco.editor.setModelLanguage(editor.getModel(), lang);
-            if (window.currentTask && window.taskStates[window.currentTask]) {
-                window.taskStates[window.currentTask].language = lang;
-            }
-            // ADDED: This call connects to the language server
-            if (window.languageClientManager) {
-                window.languageClientManager.connect(lang);
-            }
-        }
-    }
-    
-    function getSanitizedTabName() {
-	const tabId = window.currentTask;
-	const snap = tabId && loadTabSnapshot(tabId);
-	const raw = snap?.title || tabId || "programa";
-	let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
-	sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
-	return sanitized || 'programa';
-    }
-
-    // Download buttons
-    function downloadContent(filename, content) {
-	const blob = new Blob([content], { type: 'text/plain' });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = filename;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
-    }
-
-
-    document.getElementById('download-btn')?.addEventListener('click', () => {
-	const baseFilename = getSanitizedTabName();
-	
-	const langSelect = document.getElementById('language-select');
-	const lang = langSelect ? langSelect.value : 'txt';
-	let ext = 'txt';
-	if (lang === 'cpp') ext = 'cpp';
-	else if (lang === 'java') ext = 'java';
-	else if (lang === 'python') ext = 'py';
-	
-	const filename = `${baseFilename}.${ext}`;
-	const content = window.editor.getValue(); 	
-	downloadContent(filename, content);
-    });
-
-    document.getElementById('download-input-btn')?.addEventListener('click', () => {
-	const content = document.getElementById('stdin-input')?.value ?? "";
-	downloadContent('entrada.txt', content);
-    });
-
-    document.getElementById('download-output-btn')?.addEventListener('click', () => {
-	// Get text content from the <pre> tag inside the output container
-	const outputContainer = document.getElementById('stdout-output');
-	const htmlContent = outputContainer?.innerHTML ?? "";
-	const txtContent = removeHtmlTags(htmlContent);
-	downloadContent('saida.txt', txtContent);
-    });
-
-    // ============================================================
-    // LANGUAGE CHANGE HANDLERS (manual vs programmatic)
-    // ============================================================
-    // Manual user selection: always switch language and load template
-    (function wireManualLanguageChange(){
-	const select = document.getElementById('language-select');
-	if (!select || select.__wiredManual) return;
-	select.__wiredManual = true;
-
-	select.addEventListener('change', (e) => {
-	    const lang = e.target.value;
-
-	    // Check if current code is non-empty or custom before replacing
-	    const currentCode = (window.editor?.getValue() || "").trim();
-	    const isTemplate = Object.values(window.templates || {}).some(
-		t => t.trim() === currentCode
-	    );
-
-	    if (currentCode && !isTemplate) {
-		const proceed = confirm(
-		    "Ao alterar a linguagem seu código atual será perdido. Continuar?"
-		);
-		if (!proceed) {
-		    // Revert select UI back to previous language
-		    window.syncLanguageSelectorUI?.();
-		    return;
+		// 4) Prevent accidental clicks through custom UI layers
+		const container = document.getElementById("container");
+		if (container) {
+		    if (!enabled) container.classList.add("locked-pointer");
+		    else container.classList.remove("locked-pointer");
 		}
 	    }
 
+	    // --- Fetch with timeout & CORS note ---
+	    async function fetchWithTimeout(url, ms) {
+		const ctrl = new AbortController();
+		const id = setTimeout(() => ctrl.abort(), ms);
+		try {
+		    const res = await fetch(url, {
+			method: "GET",
+			cache: "no-store",
+			credentials: "include", // adjust if you need cookies
+			headers: { "Accept": "application/json" },
+			signal: ctrl.signal
+		    });
+		    clearTimeout(id);
+		    return res;
+		} catch (e) {
+		    clearTimeout(id);
+		    throw e;
+		}
+	    }
+
+	    function parseReady(json) {
+		// Accept {status:"ready"} or {ready:true} or "ready"
+		if (typeof json === "string") return json.toLowerCase() === "ready";
+		if (json && typeof json === "object") {
+		    if ("status" in json) return String(json.status).toLowerCase() === "ready";
+		    if ("ready" in json) return !!json.ready;
+		}
+		return false;
+	    }
+
+	    async function checkGateOnce() {
+		try {
+		    const res = await fetchWithTimeout(ENDPOINT, TIMEOUT_MS);
+		    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		    const data = await res.json();
+		    const isReady = parseReady(data);
+
+		    if (isReady) {
+			if (lastState !== "ready") {
+			    lastState = "ready";
+			    hideModal();
+			    setAppInteractivity(true);
+			}
+		    } else {
+			if (lastState !== "not_ready") {
+			    lastState = "not_ready";
+			    showModal();
+			    setAppInteractivity(false);
+			}
+		    }
+		} catch (err) {
+		    // Network/CORS error: be conservative (lock UI) but keep polling
+		    if (lastState !== "not_ready") {
+			lastState = "not_ready";
+			showModal();
+			setAppInteractivity(false);
+		    }
+		    // console.warn("Exam gate poll failed:", err);
+		}
+	    }
+
+	    function startPolling() {
+		// initial lock until first response
+		lastState = null;
+		showModal();
+		setAppInteractivity(false);
+
+		// kick off immediately, then poll
+		checkGateOnce();
+		clearInterval(pollTimer);
+		pollTimer = setInterval(checkGateOnce, POLL_MS);
+	    }
+
+	    // Start once DOM and Monaco are ready enough
+	    if (document.readyState === "complete" || document.readyState === "interactive") {
+		ensureModal();
+		startPolling();
+	    } else {
+		window.addEventListener("DOMContentLoaded", () => {
+		    ensureModal();
+		    startPolling();
+		});
+	    }
+	})();
+	
+	// 1) Editor content changes
+	if (window.editor?.onDidChangeModelContent) {
+	    window.editor.onDidChangeModelContent(() => {
+		scheduleSaveSnapshot();
+	    });
+	}
+	
+	// 2) STDIN textarea changes
+	const stdin = document.getElementById("stdin-input");
+	if (stdin && !stdin.__wiredSnapshot) {
+	    stdin.addEventListener("input", scheduleSaveSnapshot);
+	    stdin.__wiredSnapshot = true;
+	}
+	
+	// 3) Language changes (if you want them persisted too)
+	const langSel = document.getElementById("language-select");
+	if (langSel && !langSel.__wiredSnapshot) {
+	    langSel.addEventListener("change", scheduleSaveSnapshot);
+	    langSel.__wiredSnapshot = true;
+	}
+
+
+	const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
+
+	document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
+            const now = getGlobalTheme(); 
+	    const next = now === 'light' ? 'dark' : 'light';
+	    setGlobalTheme(next);
+	});
+
+	// --- Handle Tab creation ---
+	document.getElementById("new-tab-btn")?.addEventListener("click", () => newTab(""));
+	
+	// --- Handle Task Switch ---
+	document.getElementById('task-select')?.addEventListener('change', function(e) {
+	    const newTaskID = e.target.value;
+	    
+	    // 2. Load the state of the NEW task
+	    loadTabIntoUI(newTaskID);
+            try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
+	});
+
+	function switchLanguage(lang) {
+            monaco.editor.setModelLanguage(window.editor.getModel(), lang);
+            // Launch the language client for the new language
+            launchLanguageClient(lang); 
+	}
+	
+	function getSanitizedTabName() {
+	    const tabId = window.currentTask;
+	    const snap = tabId && loadTabSnapshot(tabId);
+	    const raw = snap?.title || tabId || "programa";
+	    let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
+	    sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
+	    return sanitized || 'programa';
+	}
+
+	// Download buttons
+	function downloadContent(filename, content) {
+	    const blob = new Blob([content], { type: 'text/plain' });
+	    const url = URL.createObjectURL(blob);
+	    const a = document.createElement('a');
+	    a.href = url;
+	    a.download = filename;
+	    document.body.appendChild(a);
+	    a.click();
+	    document.body.removeChild(a);
+	    URL.revokeObjectURL(url);
+	}
+
+
+	document.getElementById('download-btn')?.addEventListener('click', () => {
+	    const baseFilename = getSanitizedTabName();
+	    
+	    const langSelect = document.getElementById('language-select');
+	    const lang = langSelect ? langSelect.value : 'txt';
+	    let ext = 'txt';
+	    if (lang === 'cpp') ext = 'cpp';
+	    else if (lang === 'java') ext = 'java';
+	    else if (lang === 'python') ext = 'py';
+	    
+	    const filename = `${baseFilename}.${ext}`;
+	    const content = window.editor.getValue(); 	
+	    downloadContent(filename, content);
+	});
+
+	document.getElementById('download-input-btn')?.addEventListener('click', () => {
+	    const content = document.getElementById('stdin-input')?.value ?? "";
+	    downloadContent('entrada.txt', content);
+	});
+
+	document.getElementById('download-output-btn')?.addEventListener('click', () => {
+	    // Get text content from the <pre> tag inside the output container
+	    const outputContainer = document.getElementById('stdout-output');
+	    const htmlContent = outputContainer?.innerHTML ?? "";
+	    const txtContent = removeHtmlTags(htmlContent);
+	    downloadContent('saida.txt', txtContent);
+	});
+
+	// ============================================================
+	// LANGUAGE CHANGE HANDLERS (manual vs programmatic)
+	// ============================================================
+	// Manual user selection: always switch language and load template
+	(function wireManualLanguageChange(){
+	    const select = document.getElementById('language-select');
+	    if (!select || select.__wiredManual) return;
+	    select.__wiredManual = true;
+
+	    select.addEventListener('change', (e) => {
+		const lang = e.target.value;
+
+		// Check if current code is non-empty or custom before replacing
+		const currentCode = (window.editor?.getValue() || "").trim();
+		const isTemplate = Object.values(window.templates || {}).some(
+		    t => t.trim() === currentCode
+		);
+
+		if (currentCode && !isTemplate) {
+		    const proceed = confirm(
+			"Ao alterar a linguagem seu código atual será perdido. Continuar?"
+		    );
+		    if (!proceed) {
+			// Revert select UI back to previous language
+			window.syncLanguageSelectorUI?.();
+			return;
+		    }
+		}
+
+		switchLanguage(lang);
+
+		// Replace editor content with starter template for selected language
+		const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
+		if (window.editor?.setValue) window.editor.setValue(tmpl);
+
+		// Sync UI and persist state
+		window.syncLanguageSelectorUI?.();
+		window.scheduleSaveSnapshot?.();
+	    });	
+	})();
+
+	// Programmatic setter: call directly, no events or flags
+	window.setLanguageProgrammatic = function setLanguageProgrammatic(lang, { injectTemplate = false } = {}) {
+	    const select = document.getElementById('language-select');
+	    if (!select) return false;
+	    const idx = Array.from(select.options).findIndex(o => o.value === lang);
+	    if (idx < 0) return false;
+	    // sync <select>
+	    select.selectedIndex = idx;
+	    // update Monaco mode immediately
 	    switchLanguage(lang);
-
-	    // Replace editor content with starter template for selected language
-	    const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
-	    if (window.editor?.setValue) window.editor.setValue(tmpl);
-
-	    // Sync UI and persist state
+	    // optional template injection
+	    if (injectTemplate) {
+		const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
+		window.editor?.setValue?.(tmpl);
+	    }
+	    // Sync visible custom select face and save
 	    window.syncLanguageSelectorUI?.();
 	    window.scheduleSaveSnapshot?.();
-	});	
-    })();
-
-    // Programmatic setter: call directly, no events or flags
-    window.setLanguageProgrammatic = function setLanguageProgrammatic(lang, { injectTemplate = false } = {}) {
-	const select = document.getElementById('language-select');
-	if (!select) return false;
-	const idx = Array.from(select.options).findIndex(o => o.value === lang);
-	if (idx < 0) return false;
-	// sync <select>
-	select.selectedIndex = idx;
-	// update Monaco mode immediately
-	switchLanguage(lang);
-	// optional template injection
-	if (injectTemplate) {
-            const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
-            window.editor?.setValue?.(tmpl);
-	}
-	// Sync visible custom select face and save
-	window.syncLanguageSelectorUI?.();
-	window.scheduleSaveSnapshot?.();
-	return true;
-    };
-    
-    // Run button
-    document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
-	// Clear any previous running tests
-	if (runningTaskId != null) {
-	    alert(
-		`Há uma execução em andamento, aguarde.`
-	    );
-	    return;
-	}
-	else {
-	    const left = cooldownLeft();
-	    if (left > 0) {
-		alert(`Aguarde ${left}s para executar novamente.`);
+	    return true;
+	};
+	
+	// Run button
+	document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
+	    // Clear any previous running tests
+	    if (runningTaskId != null) {
+		alert(
+		    `Há uma execução em andamento, aguarde.`
+		);
 		return;
 	    }
-	}
-	// Start cooldown
-	markRunStart();
-	//lastRunStartMs = Date.now();
-	startCooldownTicker();
-	const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
-	const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
-	const code = window.editor.getValue();
-	const input = document.getElementById('stdin-input')?.value ?? "";
-	const selectedLanguage = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
-	const language = cmsLanguage[selectedLanguage];
-	const languageExtension = cmsExtension[selectedLanguage];
+	    else {
+		const left = cooldownLeft();
+		if (left > 0) {
+		    alert(`Aguarde ${left}s para executar novamente.`);
+		    return;
+		}
+	    }
+	    // Start cooldown
+	    markRunStart();
+	    //lastRunStartMs = Date.now();
+	    startCooldownTicker();
+	    const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
+	    const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
+	    const code = window.editor.getValue();
+	    const input = document.getElementById('stdin-input')?.value ?? "";
+	    const selectedLanguage = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
+	    const language = cmsLanguage[selectedLanguage];
+	    const languageExtension = cmsExtension[selectedLanguage];
 
-	runningTaskId = getCurrentTaskId()
-	setRunningTab(runningTaskId);             // show spinner on that tab
-	setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
-	runningLanguage = selectedLanguage;
-	const theme = getGlobalTheme();
-	const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-	const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
-	
-	displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
-	try {
-            // Submit the code and get the test ID
-            const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
-            const testId = submissionResult.data.id;
-            
-            // Start polling for the status
-            await pollTestStatus(testId);
+	    runningTaskId = getCurrentTaskId()
+	    setRunningTab(runningTaskId);             // show spinner on that tab
+	    setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
+	    runningLanguage = selectedLanguage;
+	    const theme = getGlobalTheme();
+	    const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
+	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
+	    
+	    displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
+	    try {
+		// Submit the code and get the test ID
+		const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
+		const testId = submissionResult.data.id;
+		
+		// Start polling for the status
+		await pollTestStatus(testId);
 
-	} catch (error) {
-            console.warn("CMS Test Submission Failed:", error);
-	    setStatusLabel("Execução falhou", { spinning: false });
-            displayProgramOutput(formatOutput("Execução falhou.", color="red"));
-	}
-	scheduleSaveSnapshot();	
-    });
+	    } catch (error) {
+		console.warn("CMS Test Submission Failed:", error);
+		setStatusLabel("Execução falhou", { spinning: false });
+		displayProgramOutput(formatOutput("Execução falhou.", color="red"));
+	    }
+	    scheduleSaveSnapshot();	
+	});
 
-    // Clear button
-    document.getElementById('clear-btn').addEventListener('click', () => {
-	if (confirm("Tem certeza que deseja limpar a área de código??")) {
-	    window.editor.setValue("");
-	}
-	scheduleSaveSnapshot();	
-    });    
+	// Clear button
+	document.getElementById('clear-btn').addEventListener('click', () => {
+	    if (confirm("Tem certeza que deseja limpar a área de código??")) {
+		window.editor.setValue("");
+	    }
+	    scheduleSaveSnapshot();	
+	});    
 
-    // Clear Input button
-    document.getElementById('clear-input-btn')?.addEventListener('click', () => {
-	const taskId = getCurrentTaskId?.() || window.currentTask;
+	// Clear Input button
+	document.getElementById('clear-input-btn')?.addEventListener('click', () => {
+	    const taskId = getCurrentTaskId?.() || window.currentTask;
 
-	const inputEl = document.getElementById('stdin-input');
-	if (inputEl) inputEl.value = '';
-	scheduleSaveSnapshot?.();
-    });
+	    const inputEl = document.getElementById('stdin-input');
+	    if (inputEl) inputEl.value = '';
+	    scheduleSaveSnapshot?.();
+	});
 
-    // Clear Output button
-    document.getElementById('clear-output-btn')?.addEventListener('click', () => {
-	const taskId = getCurrentTaskId?.() || window.currentTask;
+	// Clear Output button
+	document.getElementById('clear-output-btn')?.addEventListener('click', () => {
+	    const taskId = getCurrentTaskId?.() || window.currentTask;
 
-	const out = document.getElementById('stdout-output');
-	if (out) out.innerHTML = '';
+	    const out = document.getElementById('stdout-output');
+	    if (out) out.innerHTML = '';
 
-	if (taskId) {
-	    _outputBuffers[taskId] = '';
-	}
-
-	scheduleSaveSnapshot();
-    });
-
-    // Font size button
-    (function setupFontCycler() {
-	const btn = document.getElementById("font-btn");
-	if (!btn) return;
-
-	// cycle order: medium (default) → small → large → medium ...
-	const sizes = ["small", "medium", "large", "extralarge"];
-	const fontMap = { small: 10, medium: 12, large: 14, extralarge: 16};
-	let idx = 1;
-
-	// restore saved size if any
-	const saved = localStorage.getItem("editorFontSize");
-	if (saved && sizes.includes(saved)) {
-	    idx = sizes.indexOf(saved);
-	}
-
-	function applyFontSize(size) {
-	    const pt = fontMap[size];
-
-	    // Update Monaco editor
-	    if (window.editor) {
-		window.editor.updateOptions({ fontSize: pt });
+	    if (taskId) {
+		_outputBuffers[taskId] = '';
 	    }
 
-	    // Update input & output panes
-	    const stdin = document.getElementById("stdin-input");
-	    const stdout = document.getElementById("stdout-output");
-	    if (stdin) stdin.style.fontSize = `${pt}px`;
-	    if (stdout) stdout.style.fontSize = `${pt}px`;
-
-	    // Persist and log
-	    localStorage.setItem("editorFontSize", size);
-	}
-
-	// apply initial size
-	applyFontSize(sizes[idx]);
-
-	// cycle on button click
-	btn.addEventListener("click", () => {
-	    idx = (idx + 1) % sizes.length;
-	    applyFontSize(sizes[idx]);
+	    scheduleSaveSnapshot();
 	});
-    })();
+
+	// Font size button
+	(function setupFontCycler() {
+	    const btn = document.getElementById("font-btn");
+	    if (!btn) return;
+
+	    // cycle order: medium (default) → small → large → medium ...
+	    const sizes = ["small", "medium", "large", "extralarge"];
+	    const fontMap = { small: 10, medium: 12, large: 14, extralarge: 16};
+	    let idx = 1;
+
+	    // restore saved size if any
+	    const saved = localStorage.getItem("editorFontSize");
+	    if (saved && sizes.includes(saved)) {
+		idx = sizes.indexOf(saved);
+	    }
+
+	    function applyFontSize(size) {
+		const pt = fontMap[size];
+
+		// Update Monaco editor
+		if (window.editor) {
+		    window.editor.updateOptions({ fontSize: pt });
+		}
+
+		// Update input & output panes
+		const stdin = document.getElementById("stdin-input");
+		const stdout = document.getElementById("stdout-output");
+		if (stdin) stdin.style.fontSize = `${pt}px`;
+		if (stdout) stdout.style.fontSize = `${pt}px`;
+
+		// Persist and log
+		localStorage.setItem("editorFontSize", size);
+	    }
+
+	    // apply initial size
+	    applyFontSize(sizes[idx]);
+
+	    // cycle on button click
+	    btn.addEventListener("click", () => {
+		idx = (idx + 1) % sizes.length;
+		applyFontSize(sizes[idx]);
+	    });
+	})();
 
 
-
-        // --- Language Client Logic (formerly language-client.js) ---
-    // This is now placed inside the main callback to ensure all libraries are loaded first.
-    //
-    (function () {
-        const isSecure = window.location.protocol === 'https:';
-        const protocol = isSecure ? 'wss://' : 'ws://';
-        const WEBSOCKET_BASE_URL = `${protocol}${window.location.host}/ws`;
-        let activeLanguageClient = null;
-
-        function createUrl(language) {
-            return `${WEBSOCKET_BASE_URL}/${language}/`;
-        }
-
-        function connectLanguageServer(language) {
-            if (activeLanguageClient) {
-                activeLanguageClient.stop();
-                activeLanguageClient = null;
-            }
-            const supportedLanguages = ['cpp', 'java', 'python'];
-            if (!supportedLanguages.includes(language)) {
-                console.log(`Language '${language}' does not have a configured language server.`);
-                return;
-            }
-
-            console.log(`Attempting to connect to language server for: ${language} at ${createUrl(language)}`);
-            
-            const url = createUrl(language);
-            const webSocket = new WebSocket(url);
-            
-            // CORRECTED: This is the proper way to create the connection for this library version.
-            const connectionProvider = {
-                get: () => {
-                    return Promise.resolve(new monaco.languages.WebSocketMessageReader(webSocket), new monaco.languages.WebSocketMessageWriter(webSocket));
-                }
-            };
-            
-            const client = new monaco.languages.MonacoLanguageClient({
-                name: `${language.toUpperCase()} Language Client`,
-                clientOptions: {
-                    documentSelector: [language]
-                },
-                connectionProvider: connectionProvider
-            });
-
-            const disposable = client.start();
-            console.log(`${language.toUpperCase()} Language Client starting...`);
-
-            webSocket.onopen = () => console.log("WebSocket connection opened successfully.");
-            webSocket.onerror = (err) => console.error("WebSocket Error:", err);
-            webSocket.onclose = (event) => {
-                console.log(`WebSocket connection closed. Disposing client. Code: ${event.code}`);
-                disposable.dispose();
-            };
-
-            activeLanguageClient = {
-                language: language,
-                stop: () => disposable.dispose()
-            };
-        }
-
-        window.languageClientManager = {
-            connect: connectLanguageServer
-        };
-    })();
-
-     (function () {
-        const isSecure = window.location.protocol === 'https:';
-        const protocol = isSecure ? 'wss://' : 'ws://';
-        const WEBSOCKET_BASE_URL = `${protocol}${window.location.host}/ws`;
-        let activeLanguageClient = null;
-
-        function createUrl(language) {
-            return `${WEBSOCKET_BASE_URL}/${language}/`;
-        }
-
-        function connectLanguageServer(language) {
-            if (activeLanguageClient) {
-                activeLanguageClient.stop();
-                activeLanguageClient = null;
-            }
-            const supportedLanguages = ['cpp', 'java', 'python'];
-            if (!supportedLanguages.includes(language)) {
-                console.log(`Language '${language}' does not have a configured language server.`);
-                return;
-            }
-
-            console.log(`Attempting to connect to language server for: ${language} at ${createUrl(language)}`);
-            
-            const url = createUrl(language);
-            const webSocket = new WebSocket(url);
-            
-            // CORRECTED: Use the 'languageClient' variable passed into the require callback.
-            const connectionProvider = {
-                get: () => {
-                    return Promise.resolve(new languageClient.WebSocketMessageReader(webSocket), new languageClient.WebSocketMessageWriter(webSocket));
-                }
-            };
-            
-            // Use the captured languageClient object here
-            const client = new languageClient.MonacoLanguageClient({
-                name: `${language.toUpperCase()} Language Client`,
-                clientOptions: {
-                    documentSelector: [language]
-                },
-                connectionProvider: connectionProvider
-            });
-
-            const disposable = client.start();
-            console.log(`${language.toUpperCase()} Language Client starting...`);
-
-            webSocket.onopen = () => console.log("WebSocket connection opened successfully.");
-            webSocket.onerror = (err) => console.error("WebSocket Error:", err);
-            webSocket.onclose = (event) => {
-                console.log(`WebSocket connection closed. Disposing client. Code: ${event.code}`);
-                disposable.dispose();
-            };
-
-            activeLanguageClient = {
-                language: language,
-                stop: () => disposable.dispose()
-            };
-        }
-
-        window.languageClientManager = {
-            connect: connectLanguageServer
-        };
-    })();
-
-});
-
-
+    }); // End of window.require callback
+}); // End of DOMContentLoaded listener
 
 var outputBuffer = "";
 
@@ -1121,9 +992,9 @@ function getCurrentTaskId() {
 // Send status to the per-tab store in status.js.
 // If tabId isn't passed, use the currently active tab.
 function setStatusLabel(text, { spinning = false, tabId } = {}) {
-  const id = tabId || window.currentTask || null;
-  if (!id) return;
-  window.App?.Status?.set(id, text || 'Inativo', { spinning });
+    const id = tabId || window.currentTask || null;
+    if (!id) return;
+    window.App?.Status?.set(id, text || 'Inativo', { spinning });
 }
 
 
@@ -1298,36 +1169,36 @@ function getLocalizedTime(locale = 'pt-BR') {
 }
 
 function readCurrentPanes() {
-  return {
-    code: window.editor?.getValue?.() || "",
-    input: document.getElementById("stdin-input")?.value || "",
-    output: document.getElementById("stdout-output")?.innerHTML || "",
-    language: document.getElementById("language-select")?.value || ""
-  };
+    return {
+	code: window.editor?.getValue?.() || "",
+	input: document.getElementById("stdin-input")?.value || "",
+	output: document.getElementById("stdout-output")?.innerHTML || "",
+	language: document.getElementById("language-select")?.value || ""
+    };
 }
 
 function scheduleSaveSnapshot() {
-  if (_suppressSnapshot) return;
-  const tabId = window.currentTask;
-  if (!tabId) return;
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    try {
-      const old = loadTabSnapshot(tabId) || { id: tabId, title: tabId };
-      const snap = { ...old, ...readCurrentPanes() };
-      saveTabSnapshot(tabId, snap);
-      //checkStorageQuotaAndWarn?.();
-    } catch (e) {
-      console.warn("saveSnapshot failed:", e);
-      alert("Armazenamento local está cheio. Limpe espaço e tente de novo.");
-    }
-  }, 400);
+    if (_suppressSnapshot) return;
+    const tabId = window.currentTask;
+    if (!tabId) return;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+	try {
+	    const old = loadTabSnapshot(tabId) || { id: tabId, title: tabId };
+	    const snap = { ...old, ...readCurrentPanes() };
+	    saveTabSnapshot(tabId, snap);
+	    //checkStorageQuotaAndWarn?.();
+	} catch (e) {
+	    console.warn("saveSnapshot failed:", e);
+	    alert("Armazenamento local está cheio. Limpe espaço e tente de novo.");
+	}
+    }, 400);
 }
 
 
 
 // Debounced saver
-let _saveTimer = null;
+window._saveTimer = null;
 
 // Editor changes
 if (window.editor?.onDidChangeModelContent) {
@@ -1339,61 +1210,61 @@ const _stdin = document.getElementById("stdin-input");
 if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 
 
-let _suppressSnapshot = false;
+window._suppressSnapshot = false;
 
 function loadTabIntoUI(tabId) {
-  const snap = loadTabSnapshot(tabId);
-  if (!snap) return;
+    const snap = loadTabSnapshot(tabId);
+    if (!snap) return;
 
-  window.currentTask = tabId; // for reuse of existing code paths
+    window.currentTask = tabId; // for reuse of existing code paths
 
-  // language (programmatic — DO NOT inject template)
-  const lang = snap.language || "cpp";
-  if (window.setLanguageProgrammatic) {
-    window.setLanguageProgrammatic(lang, { injectTemplate: false });
-  } else {
-    const sel = document.getElementById("language-select");
-    if (sel) {
-      const idx = Array.from(sel.options).findIndex(o => o.value === lang);
-      if (idx !== -1) {
-        sel.selectedIndex = idx;
-        // ensure Monaco mode switches but not template
-        monaco.editor.setModelLanguage(window.editor.getModel(), lang);
-        window.syncLanguageSelectorUI?.();
-      }
+    // language (programmatic — DO NOT inject template)
+    const lang = snap.language || "cpp";
+    if (window.setLanguageProgrammatic) {
+	window.setLanguageProgrammatic(lang, { injectTemplate: false });
+    } else {
+	const sel = document.getElementById("language-select");
+	if (sel) {
+	    const idx = Array.from(sel.options).findIndex(o => o.value === lang);
+	    if (idx !== -1) {
+		sel.selectedIndex = idx;
+		// ensure Monaco mode switches but not template
+		monaco.editor.setModelLanguage(window.editor.getModel(), lang);
+		window.syncLanguageSelectorUI?.();
+	    }
+	}
     }
-  }
 
-  // code
-  window.editor?.setValue?.(snap.code || "");
+    // code
+    window.editor?.setValue?.(snap.code || "");
 
-  // input
-  const stdin = document.getElementById("stdin-input");
+    // input
+    const stdin = document.getElementById("stdin-input");
     if (stdin) {
 	stdin.value = snap.input || "";
 	stdin.scrollTo({ top: stdin.scrollHeight, behavior: "smooth" });
     }
 
-  // output (and seed buffer)
-  const out = document.getElementById("stdout-output");
+    // output (and seed buffer)
+    const out = document.getElementById("stdout-output");
     if (out) {
 	out.innerHTML = snap.output || "";
 	out.scrollTo({ top: out.scrollHeight, behavior: "smooth" });
     }
-  _outputBuffers[tabId] = snap.output || "";
+    _outputBuffers[tabId] = snap.output || "";
 
-  applyGlobalTheme(getGlobalTheme())
+    applyGlobalTheme(getGlobalTheme())
 
-  // status footer (if you show tab name there)
-  document.getElementById("status-task")?.replaceChildren(document.createTextNode(snap.title || tabId));
+    // status footer (if you show tab name there)
+    document.getElementById("status-task")?.replaceChildren(document.createTextNode(snap.title || tabId));
 
-  // remember
-  setLastTab(tabId);
+    // remember
+    setLastTab(tabId);
 
     window.App?.Status?.renderFor(tabId);
     
-  // focus editor
-  setTimeout(() => window.editor?.focus?.(), 80);
+    // focus editor
+    setTimeout(() => window.editor?.focus?.(), 80);
 }
 
 
@@ -1401,29 +1272,29 @@ function loadTabIntoUI(tabId) {
 window.__initialTaskBootDone = false;
 
 async function initFirstTabIfNeeded() {
-  // 1) If there is an index, use it; else try to migrate tarefa* → tabs
-  let tabs = readTabsIndex();
+    // 1) If there is an index, use it; else try to migrate tarefa* → tabs
+    let tabs = readTabsIndex();
 
-  if (!tabs.length) {
- 
-      const tabId = makeTabIdFromTitle("Tarefa");
-      writeTabsIndex([tabId]);
-      saveTabSnapshot(tabId, {
-        id: tabId,
-        title: "Tarefa",
-        language: "cpp",
-        code: window.templates?.cpp || "",
-        input: "",
-        output: ""
-      });
-      tabs = [tabId];
+    if (!tabs.length) {
+	
+	const tabId = makeTabIdFromTitle("Tarefa");
+	writeTabsIndex([tabId]);
+	saveTabSnapshot(tabId, {
+            id: tabId,
+            title: "Tarefa",
+            language: "cpp",
+            code: window.templates?.cpp || "",
+            input: "",
+            output: ""
+	});
+	tabs = [tabId];
     }
 
-  // 2) Render the tabs bar
-  const last = getLastTab();
-  const active = (last && tabs.includes(last)) ? last : tabs[0];
-  renderTabs(active);
-  loadTabIntoUI(active);
+    // 2) Render the tabs bar
+    const last = getLastTab();
+    const active = (last && tabs.includes(last)) ? last : tabs[0];
+    renderTabs(active);
+    loadTabIntoUI(active);
 }
 
 
@@ -1433,33 +1304,33 @@ const _outputBuffers = Object.create(null); // { taskId: htmlString }
 
 // Save only the output for a given task snapshot
 function persistTabOutput(tabId, htmlOutput) {
-  if (!tabId) return;
+    if (!tabId) return;
 
-  // Always use your snapshot helpers (they handle the correct storage key)
-  let snap = loadTabSnapshot(tabId);
+    // Always use your snapshot helpers (they handle the correct storage key)
+    let snap = loadTabSnapshot(tabId);
 
-  // If there’s no snapshot yet, seed a minimal one without clobbering defaults
-  if (!snap) {
-    snap = {
-      id: tabId,
-      title: (typeof getTabTitle === 'function' && getTabTitle(tabId)) || tabId,
-      language: document.getElementById('language-select')?.value || 'cpp',
-      code: '',   // leave code/input empty; we’re only ensuring the object exists
-      input: '',
-      output: ''
-    };
-  }
+    // If there’s no snapshot yet, seed a minimal one without clobbering defaults
+    if (!snap) {
+	snap = {
+	    id: tabId,
+	    title: (typeof getTabTitle === 'function' && getTabTitle(tabId)) || tabId,
+	    language: document.getElementById('language-select')?.value || 'cpp',
+	    code: '',   // leave code/input empty; we’re only ensuring the object exists
+	    input: '',
+	    output: ''
+	};
+    }
 
-  // Update only the output field
-  snap.output = htmlOutput;
+    // Update only the output field
+    snap.output = htmlOutput;
 
-  try {
-    saveTabSnapshot(tabId, snap);
-  } catch (e) {
-    console.warn('persistTabOutput failed:', e);
-    // Optional: alert the user if storage is full
-    // alert('Falha ao salvar a saída (armazenamento local está cheio).');
-  }
+    try {
+	saveTabSnapshot(tabId, snap);
+    } catch (e) {
+	console.warn('persistTabOutput failed:', e);
+	// Optional: alert the user if storage is full
+	// alert('Falha ao salvar a saída (armazenamento local está cheio).');
+    }
 }
 
 // Unified setter (append or replace) that targets a specific task
@@ -1488,57 +1359,52 @@ function setOutputForTab(taskId, htmlChunk, { append = true } = {}) {
 // Maps your select values to Monaco language ids.
 const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
-function switchLanguage(lang) {
-    const model = window.editor?.getModel?.();
-    if (model && window.monaco?.editor) {
-	window.monaco.editor.setModelLanguage(model, langMap[lang] || 'plaintext');
-    }
-}
+
 
 // Render tabs
 
 function renderTabs(activeId) {
-  const tabs = readTabsIndex();
-  const bar = document.getElementById('tabs-bar');
-  if (!bar) return;
-  bar.innerHTML = "";
+    const tabs = readTabsIndex();
+    const bar = document.getElementById('tabs-bar');
+    if (!bar) return;
+    bar.innerHTML = "";
 
-  tabs.forEach((tid) => {
-    const snap = loadTabSnapshot(tid) || { id: tid, title: tid };
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "tab";
-    btn.setAttribute("role", "tab");
-    btn.setAttribute("aria-selected", String(tid === activeId));
-    btn.dataset.tabId = tid;
-    btn.innerHTML = `
+    tabs.forEach((tid) => {
+	const snap = loadTabSnapshot(tid) || { id: tid, title: tid };
+	const btn = document.createElement("button");
+	btn.type = "button";
+	btn.className = "tab";
+	btn.setAttribute("role", "tab");
+	btn.setAttribute("aria-selected", String(tid === activeId));
+	btn.dataset.tabId = tid;
+	btn.innerHTML = `
   <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
   ${runningTaskId === tid ? `<span class="tab-spinner" aria-hidden="true"></span>` : ''}
   <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
 `;
-    btn.addEventListener("click", (e) => {
-      const close = e.target.closest(".tab-close");
-      if (close) {
-        e.stopPropagation();
-        closeTab(tid);
-        return;
-      }
-      setLastTab(tid);
-      renderTabs(tid);
-      loadTabIntoUI(tid);
+	btn.addEventListener("click", (e) => {
+	    const close = e.target.closest(".tab-close");
+	    if (close) {
+		e.stopPropagation();
+		closeTab(tid);
+		return;
+	    }
+	    setLastTab(tid);
+	    renderTabs(tid);
+	    loadTabIntoUI(tid);
+	});
+	btn.addEventListener("dblclick", () => renameTab(tid));
+	bar.appendChild(btn);
     });
-    btn.addEventListener("dblclick", () => renameTab(tid));
-    bar.appendChild(btn);
-  });
 }
 
 window.onbeforeunload = function (e) {
-// warn on closing
-  if (true) {
-    e.preventDefault();
-    e.returnValue = '';
-    return '';
-  }
+    // warn on closing
+    if (true) {
+	e.preventDefault();
+	e.returnValue = '';
+	return '';
+    }
 };
 
 // Cooldown
@@ -1548,15 +1414,15 @@ const LS_LAST   = 'run:lastStartMs';  // epoch ms
 
 // --- boot: if a run was in progress, restart a fresh 30s on reload
 (function bootCooldown() {
-  if (localStorage.getItem(LS_STATUS) === 'running') {
-    localStorage.setItem(LS_LAST, String(Date.now())); // full 30s after reload
-  }
+    if (localStorage.getItem(LS_STATUS) === 'running') {
+	localStorage.setItem(LS_LAST, String(Date.now())); // full 30s after reload
+    }
 })();
 
 // --- helpers you can call from your code ---
 function markRunStart() {
-  localStorage.setItem(LS_STATUS, 'running');
-  localStorage.setItem(LS_LAST, String(Date.now()));
+    localStorage.setItem(LS_STATUS, 'running');
+    localStorage.setItem(LS_LAST, String(Date.now()));
 }
 
 function markRunComplete() {
@@ -1568,10 +1434,10 @@ function markRunComplete() {
 }
 
 function cooldownLeft() {
-  const last = Number(localStorage.getItem(LS_LAST) || 0);
-  if (!last) return 0;
-  const msLeft = last + COOLDOWN_MS - Date.now();
-  return Math.max(0, Math.ceil(msLeft / 1000));
+    const last = Number(localStorage.getItem(LS_LAST) || 0);
+    if (!last) return 0;
+    const msLeft = last + COOLDOWN_MS - Date.now();
+    return Math.max(0, Math.ceil(msLeft / 1000));
 }
 
 function stopCooldownTicker() {

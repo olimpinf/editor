@@ -192,41 +192,40 @@
 			examGate: { enabled: false }
 		};
 
-  (function(){
-    try {
-      var mode = localStorage.getItem('obi:globalTheme') || 'light';
-      document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
-      // Pre-apply pane class so initial paint matches
-      var isLight = (mode === 'light');
-      var add = function(sel){ var el=document.querySelector(sel); if (el) el.classList.toggle('light-mode', isLight); };
-      add('#pane-rtop .pane-container');
-      add('#pane-rbot .pane-container');
-    } catch (e) {}
-  })();
-
-
-</script>
+	  (function(){
+	      try {
+		  var mode = localStorage.getItem('obi:globalTheme') || 'light';
+		  document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
+		  // Pre-apply pane class so initial paint matches
+		  var isLight = (mode === 'light');
+		  var add = function(sel){ var el=document.querySelector(sel); if (el) el.classList.toggle('light-mode', isLight); };
+		  add('#pane-rtop .pane-container');
+		  add('#pane-rbot .pane-container');
+	      } catch (e) {}
+	  })();
+	</script>
+	
 <script src="static/monaco/dev/vs/loader.js"></script>
 <script>
-  // This is the single, consolidated configuration
   require.config({
     paths: {
       'vs': 'static/monaco/dev/vs',
-      'vscode-ws-jsonrpc': 'static/js/vscode-ws-jsonrpc',
-      'monaco-language-client': 'static/js/monaco-language-client'
+      'monaco-languageclient': 'https://esm.sh/monaco-languageclient@8.1.0/lib/index',
+      'vscode-ws-jsonrpc': 'https://esm.sh/vscode-ws-jsonrpc@8.1.0/lib/index.browser'
     }
   });
 </script>
-<script src="static/js/language-client.js"></script>
+
 <script src="static/js/utils.js"></script>
 <script src="static/js/cms.js"></script>
 <script src="static/js/storage.js"></script>
 <script src="static/js/theme.js"></script>
 <script src="static/js/accessible-select.js"></script>
 <script src="static/js/status.js"></script>
-<script src="static/js/editor.js?v=2025-10-11"></script>
 <script src="static/js/info-modal.js"></script>
 <script src="static/js/init-accessible-select.js"></script>
+
+<script type="module" src="static/js/editor.js"></script>
 </body>
 
 </html>

@@ -1,64 +1,43 @@
-// --- Language Client Logic (formerly language-client.js) ---
-    // This is now placed inside the main callback to ensure all libraries are loaded first.
-    //
-    (function () {
-        const isSecure = window.location.protocol === 'https:';
-        const protocol = isSecure ? 'wss://' : 'ws://';
-        const WEBSOCKET_BASE_URL = `${protocol}${window.location.host}/ws`;
-        let activeLanguageClient = null;
+// static/js/language-client.js
 
-        function createUrl(language) {
-            return `${WEBSOCKET_BASE_URL}/${language}/`;
-        }
+// Import the necessary components from the esm.sh CDN.
+import { MonacoLanguageClient, CloseAction, ErrorAction } from 'https://esm.sh/monaco-languageclient@8.1.0';
+import { WebSocketMessageReader, WebSocketMessageWriter } from 'https://esm.sh/vscode-ws-jsonrpc/browser';
 
-        function connectLanguageServer(language) {
-            if (activeLanguageClient) {
-                activeLanguageClient.stop();
-                activeLanguageClient = null;
-            }
-            const supportedLanguages = ['cpp', 'java', 'python'];
-            if (!supportedLanguages.includes(language)) {
-                console.log(`Language '${language}' does not have a configured language server.`);
-                return;
-            }
+// Export the function so editor.js can import it.
+export function launchLanguageClient(language) {
+    console.log(`Attempting to launch Language Client for ${language}...`);
 
-            console.log(`Attempting to connect to language server for: ${language} at ${createUrl(language)}`);
-            
-            const url = createUrl(language);
-            const webSocket = new WebSocket(url);
-            
-            // CORRECTED: This is the proper way to create the connection for this library version.
-            const connectionProvider = {
-                get: () => {
-                    return Promise.resolve(new monaco.languages.WebSocketMessageReader(webSocket), new monaco.languages.WebSocketMessageWriter(webSocket));
-                }
-            };
-            
-            const client = new monaco.languages.MonacoLanguageClient({
-                name: `${language.toUpperCase()} Language Client`,
-                clientOptions: {
-                    documentSelector: [language]
+    const isSecure = window.location.protocol === 'https:';
+    const protocol = isSecure ? 'wss' : 'ws';
+    const url = `${protocol}://${window.location.host}/ws/${language}/`;
+    const webSocket = new WebSocket(url);
+
+    webSocket.onopen = () => {
+        console.log(`WebSocket opened for ${language}.`);
+        const reader = new WebSocketMessageReader(webSocket);
+        const writer = new WebSocketMessageWriter(webSocket);
+
+        const client = new MonacoLanguageClient({
+            name: `${language.toUpperCase()} Language Client`,
+            clientOptions: {
+                documentSelector: [language],
+                errorHandler: {
+                    error: () => ({ action: ErrorAction.Continue }),
+                    closed: () => ({ action: CloseAction.DoNotRestart }),
                 },
-                connectionProvider: connectionProvider
-            });
+            },
+            connectionProvider: {
+                get: () => Promise.resolve({ reader, writer })
+            }
+        });
 
-            const disposable = client.start();
-            console.log(`${language.toUpperCase()} Language Client starting...`);
+        client.start();
+        console.log(`${language.toUpperCase()} Language Client started.`);
+        reader.onClose(() => client.stop());
+    };
 
-            webSocket.onopen = () => console.log("WebSocket connection opened successfully.");
-            webSocket.onerror = (err) => console.error("WebSocket Error:", err);
-            webSocket.onclose = (event) => {
-                console.log(`WebSocket connection closed. Disposing client. Code: ${event.code}`);
-                disposable.dispose();
-            };
-
-            activeLanguageClient = {
-                language: language,
-                stop: () => disposable.dispose()
-            };
-        }
-
-        window.languageClientManager = {
-            connect: connectLanguageServer
-        };
-    })();
+    webSocket.onerror = (event) => {
+        console.error("WebSocket Error:", event);
+    };
+}
