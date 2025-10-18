@@ -10,15 +10,17 @@ window.colorEmphasisTextDark = "YellowGreen";
 initGlobalTheme();
 
 // 1. Import the language client function from our other module.
-import { launchLanguageClient } from './language-client.js';
+//import { startLanguageClient } from './language-client.js';
 
 // 2. Wait for the entire page to load. This solves the race condition where
 //    `loader.js` hasn't created `window.require` yet.
 window.addEventListener('DOMContentLoaded', () => {
 
     // 3. Now that we know loader.js is ready, use window.require to load Monaco.
-    window.require(['vs/editor/editor.main'], (monaco) => {
+    window.require(['vs/editor/editor.main'], () => {
 
+	const monaco = window.monaco;
+	const container = document.getElementById('editor-container');
 
 	// starter templates
 	window.templates = {
@@ -67,13 +69,35 @@ if __name__ == "__main__":
 	    minimap: { enabled: false },
 	    padding: { top: 10 }  
 	});
-	console.log("will call window.languageClientManager.connect");
-	if (window.languageClientManager) {
-	    window.languageClientManager.connect('cpp');
-	}
+
+	// // If you start the LSP, import it *after* Monaco is ready:
+	// import('./vscode-api-init.js')
+	//     .then(({ initVsCodeApi }) => initVsCodeApi(monaco))
+
+	// // 2) only after shim is ready, start the LSP client
+	//     .then(() => import('./language-client.js'))
+	//     .then(({ startLanguageClient }) => {
+	// 	startLanguageClient({
+	// 	    socketUrl: 'wss://olimpiada.ic.unicamp.br/ws/cpp/', // <-- trailing slash matches your Channels route
+	// 	    languages: ['cpp', 'python', 'java'],
+	// 	    // onReady: (client) => console.log('[LSP] ready', client)
+	// 	});
+	//     })
+	//     .catch((e) => {
+	// 	console.error('[LSP bootstrap] failed:', e);
+	//     });
+
+	// console.log("will call window.languageClientManager.connect");
+	// if (window.languageClientManager) {
+	//     window.languageClientManager.connect('cpp');
+	// }
 	applyGlobalTheme(getGlobalTheme());
 	initFirstTabIfNeeded();
 
+
+
+
+	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 	(function ExamGate() {
 	    if (!window.AppConfig?.examGate?.enabled) return; 
@@ -312,8 +336,11 @@ if __name__ == "__main__":
 
 	function switchLanguage(lang) {
             monaco.editor.setModelLanguage(window.editor.getModel(), lang);
-            // Launch the language client for the new language
-            launchLanguageClient(lang); 
+	    // startLanguageClient({
+	    // 	socketUrl: 'wss://olimpiada.ic.unicamp.br/ws',
+	    // 	languages: ['cpp', 'python', 'java'],
+	    // 	monaco: window.monaco
+	    // });
 	}
 	
 	function getSanitizedTabName() {
@@ -465,7 +492,7 @@ if __name__ == "__main__":
 	    const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
 	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
 	    
-	    displayProgramOutput(formatOutput(initMessage, color=colorEmphasis));
+	    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	    try {
 		// Submit the code and get the test ID
 		const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
@@ -477,7 +504,7 @@ if __name__ == "__main__":
 	    } catch (error) {
 		console.warn("CMS Test Submission Failed:", error);
 		setStatusLabel("Execução falhou", { spinning: false });
-		displayProgramOutput(formatOutput("Execução falhou.", color="red"));
+		displayProgramOutput(formatOutput("Execução falhou.", "red"));
 	    }
 	    scheduleSaveSnapshot();	
 	});
@@ -1007,7 +1034,6 @@ const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
  */
 
 function displayStdout(head, str) {
-    console.log("displayStdout");
     const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
@@ -1015,22 +1041,19 @@ function displayStdout(head, str) {
 	tmp += formatOutput("O programa não gerou saída.\n", color);
     }
     else {
-	tmp += formatOutput("Saída produzida:\n---------\n", color);
+	tmp += formatOutput("Saída produzida:", color);
 	tmp += "<pre>" + str + "</pre>";
-	tmp += formatOutput("---------\n", color);
     }
     displayProgramOutput(tmp);
 }
 
 function displayStderr(head, str) {
-    console.log("displayStderr");
     const theme = getGlobalTheme();
     const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     let tmp = formatOutput(head, color);
     if (str != "") {
-	tmp += formatOutput("Mensagens de erro:\n---------\n", color);
+	tmp += formatOutput("Mensagens de erro:", color);
 	tmp += '<pre class="error">' +str + "</pre>";
-	tmp += formatOutput("---------\n", color);
 	displayProgramOutput(tmp);
     }
 }
@@ -1104,10 +1127,10 @@ async function pollTestStatus(testId) {
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = formatOutput("\nErro de compilação:\n", colorInfoText);
-		program_output += formatOutput("---------\n", colorInfoText);
-		program_output += '<pre class="error">' + theCompilation_stdout + "</pre>" , "red";
+		if (theCompilation_stdout != "")
+		    program_output += '<pre class="error">' + theCompilation_stdout + "</pre>" , "red";
+		if (theCompilation_stderr != "")
 		program_output += '<pre class="error">'  + theCompilation_stderr + "</pre>", "red";
-		program_output += formatOutput("---------\n", colorInfoText);
                 displayProgramOutput(program_output);
 		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTaskId });
 		markRunComplete();
@@ -1408,7 +1431,7 @@ window.onbeforeunload = function (e) {
 };
 
 // Cooldown
-const COOLDOWN_MS = 30_000;
+const COOLDOWN_MS = 10_000;
 const LS_STATUS = 'run:status';       // "running" | null
 const LS_LAST   = 'run:lastStartMs';  // epoch ms
 
@@ -1455,4 +1478,437 @@ function startCooldownTicker() {
 	}
     }, 1000);
 }
+
+// ====  Tabs  ====
+// === Dynamic Tabs (storage keys) ===
+const TABS_INDEX_KEY = "obi:tabs:index:v1";   // array of tabIds, in order
+const LAST_TAB_KEY   = "obi:lastTabId";       // active tab id
+const SNAP_PREFIX    = "obi:tab:v1:";         // per-tab snapshot key prefix
+const PRUNE_PREFIXES = [SNAP_PREFIX];
+
+function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
+
+function readTabsIndex() {
+  const bbb = localStorage.getItem(TABS_INDEX_KEY);
+    const ddd = bbb ? JSON.parse(bbb) : null;
+  try {
+    const raw = localStorage.getItem(TABS_INDEX_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function writeTabsIndex(list) {
+  try { localStorage.setItem(TABS_INDEX_KEY, JSON.stringify(list)); } catch {}
+}
+
+function saveTabSnapshot(tabId, snap) {
+    try { localStorage.setItem(tabStorageKey(tabId), JSON.stringify(snap)); } catch {}
+    pruneOldest();
+}
+
+function loadTabSnapshot(tabId) {
+  try {
+    const raw = localStorage.getItem(tabStorageKey(tabId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+// Global: remember active tab
+function setLastTab(tabId) { try { localStorage.setItem(LAST_TAB_KEY, tabId); } catch {} }
+function getLastTab() { try { return localStorage.getItem(LAST_TAB_KEY) || null; } catch { return null; } }
+
+function makeTabIdFromTitle(title) {
+  // unique-ish id: sanitized title + timestamp
+  const base = String(title || "tab")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24) || "tab";
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+function newTab(initialTitle = "") {
+    const title = initialTitle || prompt("Nome da nova aba:", "Tarefa");
+    if (!title) return;
+
+    const tabId = makeTabIdFromTitle(title);
+    const tabs = readTabsIndex();
+    tabs.push(tabId);
+    writeTabsIndex(tabs);
+
+    const lang = document.getElementById("language-select")?.value || "cpp";
+    const initSnap = {
+	id: tabId,
+	title: title,
+	language: lang,
+	code: window.templates?.[lang] || "",
+	input: "",
+	output: ""
+    };
+    saveTabSnapshot(tabId, initSnap);
+
+    renderTabs(tabId);       // selects new tab
+    loadTabIntoUI(tabId);    // sets editor/input/output
+
+
+}
+
+function renameTab(tabId) {
+    const snap = loadTabSnapshot(tabId);
+    if (!snap) return;
+    const next = prompt("Renomear aba:", snap.title || "");
+    if (!next || next === snap.title) return;
+    snap.title = next;
+    saveTabSnapshot(tabId, snap);
+    renderTabs(tabId);
+}
+
+function closeTab(tabId) {
+    const tabs = readTabsIndex();
+    const idx = tabs.indexOf(tabId);
+    if (idx < 0) return;
+    if (!confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.")) return;
+
+    if (tabId === runningTaskId) setRunningTab(null);
+    
+    // Remove snapshot and id
+    try { localStorage.removeItem(tabStorageKey(tabId)); } catch {}
+    tabs.splice(idx, 1);
+    writeTabsIndex(tabs);
+
+    // Choose next active
+    const nextActive = tabs[idx] || tabs[idx - 1] || tabs[0] || null;
+    renderTabs(nextActive);
+    if (nextActive) loadTabIntoUI(nextActive);
+    else { // no tabs → create one
+	newTab("Tarefa");
+    }
+}
+
+// pruning
+const MAX_BYTES = 5 * 1024 * 1024;     // ~5 MB hard cap
+const PRUNE_THRESHOLD = 4 * 1024 * 1024; // start pruning above 4 MB
+const TARGET_AFTER_PRUNE = 3.5 * 1024 * 1024; // stop once below this
+
+function byteLen(str) {
+    try { return new TextEncoder().encode(String(str)).length; }
+    catch { return String(str).length * 2; }
+}
+
+function usageBytes() {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+	const k = localStorage.key(i);
+	const v = localStorage.getItem(k);
+	total += byteLen(k) + byteLen(v);
+    }
+    return total;
+}
+
+function getCandidateKeys() {
+    const list = [];
+    for (let i = 0; i < localStorage.length; i++) {
+	const key = localStorage.key(i);
+	if (!key) continue;
+	if (PRUNE_PREFIXES.some(p => key.startsWith(p))) {
+            try {
+		const item = JSON.parse(localStorage.getItem(key));
+		const ts = item?._lastAccess || 0;
+		list.push({ key, ts });
+            } catch {
+		list.push({ key, ts: 0 });
+            }
+	}
+    }
+    return list;
+}
+
+function pruneOldest() {
+    let used = usageBytes();
+    if (used < PRUNE_THRESHOLD) return;
+
+    const candidates = getCandidateKeys().sort((a, b) => a.ts - b.ts);
+    console.warn(`[OBI Storage] usage ${Math.round(used / 1024)} KB; pruning…`);
+
+    for (const c of candidates) {
+	localStorage.removeItem(c.key);
+	used = usageBytes();
+	if (used < TARGET_AFTER_PRUNE) break;
+    }
+
+    console.info(`[OBI Storage] pruned; new usage ${Math.round(used / 1024)} KB`);
+}
+
+/**
+ * Escapes special characters in a string for use in a regular expression.
+ * @param {string} str The string to escape.
+ * @returns {string} The escaped string.
+ */
+function escapeRegExp(str) {
+  // $& means the whole matched string
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Replaces all occurrences of a specific color value within the inline style="color: ..." 
+ * attributes of an element's inner HTML.
+ *
+ * @param {HTMLElement} element The container element to search within.
+ * @param {string} oldColor The color to replace (e.g., 'red', '#FF0000', 'rgb(255, 0, 0)').
+ * @param {string} newColor The new color to substitute.
+ */
+function replaceColor(element, oldColor, newColor) {
+  if (!element || typeof element.innerHTML !== 'string') {
+    console.error("Invalid element provided to replaceColor function.");
+    return;
+  }
+
+  // Escape the old color string to safely use it in a regular expression.
+  const escapedOldColor = escapeRegExp(oldColor);
+
+  // This regex finds "color:", allows for any whitespace, and then matches the old color.
+  // It's global ('g') to replace all instances and case-insensitive ('i').
+  // The first part (color:\s*) is captured so we can preserve original whitespace.
+  const regex = new RegExp(`(color\\s*:\\s*)${escapedOldColor}`, 'gi');
+
+  const oldHtml = element.innerHTML;
+  const newHtml = oldHtml.replace(regex, `$1${newColor}`);
+
+  // Only update the DOM if a change was actually made.
+  if (oldHtml !== newHtml) {
+    element.innerHTML = newHtml;
+  }
+}
+
+/**
+ * Remove all HTML tags from a string, replacing <br> or <br/> with newline characters.
+ * @param {string} content - The HTML string.
+ * @returns {string} The plain text string with <br> converted to "\n".
+ */
+function removeHtmlTags(content) {
+  if (typeof content !== 'string') return '';
+
+  // Normalize <br> tags to a placeholder newline
+  let text = content.replace(/<br\s*\/?>/gi, '\n');
+
+  // Remove all remaining HTML tags
+  text = text.replace(/<\/?[^>]+(>|$)/g, '');
+
+  // Decode basic HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  return text.trim();
+}
+
+/**
+ * Get the title of a tab/task from localStorage
+ * @param {string} tabId - The internal ID of the tab (e.g. "tarefa1-abc123")
+ * @returns {string|null} The stored title, or null if not found
+ */
+function getTabTitle(tabId) {
+  if (!tabId) return null;
+  const key = `${SNAP_PREFIX}${tabId}`; // same prefix as your tab storage
+  try {
+      const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const snap = JSON.parse(raw);
+    return snap?.title || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function removeString(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || !a) return b;
+  const idx = b.indexOf(a);
+  if (idx === -1) return b;
+  return b.slice(0, idx) + b.slice(idx + a.length);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// runningTaskId already exists in your code; we’ll just manipulate it.
+function setRunningTab(tabIdOrNull) {
+  const prev = runningTaskId || null;
+  runningTaskId = tabIdOrNull || null;
+  // Update the previous and the new tab buttons
+  updateTabSpinnerFor(prev);
+  updateTabSpinnerFor(runningTaskId);
+}
+
+function updateTabSpinnerFor(tabId) {
+  if (!tabId) return;
+  const btn = document.querySelector(`.tabs-bar .tab[data-tab-id="${CSS.escape(tabId)}"]`);
+  if (!btn) return;
+
+  let sp = btn.querySelector('.tab-spinner');
+
+  if (runningTaskId === tabId) {
+    // ensure spinner exists
+    if (!sp) {
+      sp = document.createElement('span');
+      sp.className = 'tab-spinner';
+      sp.setAttribute('aria-hidden', 'true');
+      const close = btn.querySelector('.tab-close');
+      if (close) btn.insertBefore(sp, close); else btn.appendChild(sp);
+    }
+  } else {
+    // ensure spinner is removed
+    if (sp) sp.remove();
+  }
+}
+
+// === Global Theme (applies to all tasks) ===
+const THEME_KEY = "obi:globalTheme"; // 'light' | 'dark'
+
+function getGlobalTheme() {
+  try { return localStorage.getItem(THEME_KEY) || "light"; } // default = light
+  catch { return "light"; }
+}
+
+function setGlobalTheme(mode /* 'light'|'dark' */) {
+  try { localStorage.setItem(THEME_KEY, mode); } catch {}
+  applyGlobalTheme(mode);
+}
+
+function initGlobalTheme() {
+  const mode = getGlobalTheme();
+  // Apply immediately for panes and document
+  applyGlobalTheme(mode);
+}
+
+
+function applyGlobalTheme(mode) {
+  // mode: 'light' or 'dark'
+  const light = (mode === 'light');
+
+  // Right panes: add/remove .light-mode on their content containers
+  const rtop = document.querySelector('#pane-rtop .pane-container');
+  const rbot = document.querySelector('#pane-rbot .pane-container');
+  rtop?.classList.toggle('light-mode', light);
+  rbot?.classList.toggle('light-mode', light);
+
+  // Monaco editor theme (left pane)
+  if (window.monaco?.editor && window.editor) {
+    window.monaco.editor.setTheme(light ? 'vs' : 'vs-dark');
+  }
+    
+    if (light) {
+	replaceColor(rbot, colorInfoTextDark, colorInfoTextLight);
+	replaceColor(rbot, colorEmphasisTextDark, colorEmphasisTextLight);
+    }
+    else {
+	replaceColor(rbot, colorInfoTextLight, colorInfoTextDark);
+	replaceColor(rbot, colorEmphasisTextLight, colorEmphasisTextDark);
+    }    
+}
+
+
+(function (window, document) {
+  "use strict";
+  window.App = window.App || {};
+  const ROOT = document.documentElement;
+  function get() { return ROOT.dataset.theme || "light"; }
+  function set(theme) { ROOT.dataset.theme = theme; }
+  function toggle() { set(get() === "dark" ? "light" : "dark"); }
+  window.App.Theme = { get, set, toggle };
+})(window, document);
+
+
+(function (window, document) {
+  "use strict";
+  window.App = window.App || {};
+
+  // In-memory cache: taskId -> { text, spinning }
+  const map = new Map();
+
+  // Persist to localStorage so status survives reloads
+  const PREFIX = "obi:status:"; // key: obi:status:<taskId>
+
+  function loadFromStorage(taskId) {
+    try {
+      const raw = localStorage.getItem(PREFIX + taskId);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function saveToStorage(taskId, data) {
+    try {
+      localStorage.setItem(PREFIX + taskId, JSON.stringify(data));
+    } catch (_) {
+      // ignore quota errors
+    }
+  }
+  function removeFromStorage(taskId) {
+    try { localStorage.removeItem(PREFIX + taskId); } catch (_) {}
+  }
+
+  function get(taskId) {
+    // prefer memory, then storage, then default
+    return map.get(taskId) || loadFromStorage(taskId) || { text: "Inativo", spinning: false };
+  }
+
+  function set(taskId, text, { spinning = false } = {}) {
+    if (!taskId) return;
+    const payload = { text, spinning };
+    map.set(taskId, payload);
+    saveToStorage(taskId, payload);
+    if (taskId === window.currentTask) renderFor(taskId);
+  }
+
+  function clear(taskId) {
+    if (!taskId) return;
+    map.delete(taskId);
+    removeFromStorage(taskId);
+    if (runningTaskId === window.currentTask) renderFor(taskId);
+  }
+
+  function clearAll() {
+    // remove all keys with our prefix
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(PREFIX)) toRemove.push(k);
+    }
+    toRemove.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    map.clear();
+    renderCurrent();
+  }
+
+    function renderFor(taskId) {
+	const { text, spinning } = get(taskId);
+    const labelEl = document.getElementById("status-label");
+    const taskEl  = document.getElementById("status-task");
+    const spinEl  = document.getElementById("status-spinner");
+    const tabTitle = getTabTitle(taskId);
+
+   if (taskEl) {
+      taskEl.textContent = `${tabTitle}`;
+    }
+   if (labelEl) {
+      labelEl.textContent = `${text}`;
+    }
+    if (spinEl)  spinEl.hidden = !spinning;
+  }
+
+  // Convenience helpers for the current task
+  function setForCurrent(text, opts)       { set(window.currentTask, text, opts); }
+  function renderCurrent()                 { renderFor(window.currentTask); }
+  function clearForCurrent()               { clear(window.currentTask); }
+
+  window.App.Status = {
+    get, set, renderFor,
+    setForCurrent, renderCurrent,
+    clear, clearForCurrent, clearAll
+  };
+})(window, document);
 

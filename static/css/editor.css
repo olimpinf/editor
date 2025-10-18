@@ -27,6 +27,13 @@ html,body{
     /* background: #eef2f6; */
 }
 
+pre {
+    border: 1px solid #888;
+    margin-top:0px;
+    margin-bottom:0px;
+    padding: 5px;
+}
+
 pre.error {
   color: red;
 }

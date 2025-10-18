@@ -210,21 +210,26 @@
   require.config({
     paths: {
       'vs': 'static/monaco/dev/vs',
-      'monaco-languageclient': 'https://esm.sh/monaco-languageclient@8.1.0/lib/index',
-      'vscode-ws-jsonrpc': 'https://esm.sh/vscode-ws-jsonrpc@8.1.0/lib/index.browser'
     }
   });
 </script>
+<script type="importmap">
+{
+  "imports": {
+    "vscode-languageclient": "https://unpkg.com/vscode-languageclient@8.1.0/lib/common/api.js?module",
+    "vscode-languageclient/": "https://unpkg.com/vscode-languageclient@8.1.0/?module",
 
-<script src="static/js/utils.js"></script>
+    "vscode-jsonrpc": "https://unpkg.com/vscode-jsonrpc@8.2.0/lib/common/api.js?module",
+    "vscode-languageserver-protocol": "https://unpkg.com/vscode-languageserver-protocol@3.17.5/lib/common/api.js?module",
+    "vscode-languageserver-textdocument": "https://unpkg.com/vscode-languageserver-textdocument@1.0.11/lib/esm/main.js?module",
+    "vscode-uri": "https://unpkg.com/vscode-uri@3.0.8/lib/esm/index.js?module"
+  }
+}
+</script>
 <script src="static/js/cms.js"></script>
-<script src="static/js/storage.js"></script>
-<script src="static/js/theme.js"></script>
 <script src="static/js/accessible-select.js"></script>
-<script src="static/js/status.js"></script>
 <script src="static/js/info-modal.js"></script>
 <script src="static/js/init-accessible-select.js"></script>
-
 <script type="module" src="static/js/editor.js"></script>
 </body>
 
