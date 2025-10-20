@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>EditorOBI</title>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+	      rel="stylesheet">
+</head>
+<body>
+	<div class="container" id="container">
+		<!-- Global toolbar (full width) -->
+		<div class="main-toolbar" id="global-toolbar">
+			<div class="bar">
+				<span class="title">EditorOBI</span>
+				<div class="controls">
+					<!-- Run button -->
+					<button id="run-btn" title="Executar">
+						<img src="/img/icon-play.svg" height="17pt" alt="Executar">
+					</button>
+					<!-- Font size -->
+					<button id="font-btn" data-scope="global" title="Tamanho fonte">
+						<img src="/img/icon-font-size.svg" height="16pt" alt="Tamanho fonte">
+					</button>
+
+					<!-- Dark/Light -->
+					<button class="style-toggle-btn" id="global-style-toggle" title="Tema">
+						<img src="/img/icon-theme.svg" height="17pt" alt="Tema">
+					</button>
+
+					<!-- New tab -->
+					<button id="new-tab-btn" title="Nova aba">
+						<img src="/img/icon-new-tab.svg" height="19" alt="Nova aba"
+							onerror="this.textContent='+';">
+					</button>
+					<span style="margin-left:10px"></span>
+
+					<!-- Language selector -->
+					<div class="custom-select" id="language-select-wrapper">
+						<select id="language-select">
+							<option value="cpp">C++</option>
+							<option value="java">Java</option>
+							<option value="python">Python</option>
+						</select>
+					</div>
+					<span style="margin-left:10px"></span>
+					<!-- Info button -->
+					<button id="info-btn" title="Informações">
+						<img src="/img/icon-info.svg" height="18pt" alt="Info"
+							onerror="this.replaceWith(document.createTextNode('Info'));">
+					</button>
+
+				</div>
+			</div>
+		</div>
+
+		<!-- Tabs bar -->
+		<div id="tabs-bar" class="tabs-bar" role="tablist" aria-label="Abas">
+		</div>
+
+		<div class="left">
+			<div class="pane" id="left-pane">
+				<div class="bar">
+					<span>Código</span>
+					<div class="controls">
+						<button id="download-btn" title="Download">
+							<img src="/img/icon-download.svg" height="17pt" alt="Download">
+						</button>
+						<button id="upload-btn" title="Upload">
+							<img src="/img/icon-upload.svg" height="17pt" alt="Upload">
+						</button>
+						<button id="clear-btn" title="Clear">
+							<img src="/img/icon-thrash.svg" height="17pt" alt="Clear code">
+						</button>
+						<button title="Tela cheia código" aria-label="Tela cheia código" class="btn-expand"
+							data-target="left-pane">
+							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia código">
+						</button>
+					</div>
+				</div>
+				<div id="editor-container" style="height: calc(100% - 30px);"></div>
+			</div>
+		</div>
+
+		<div class="right">
+			<div class="pane" id="pane-rtop" data-pane="rtop">
+				<div class="bar">
+					<span>Entrada</span>
+					<div class="controls">
+						<button id="download-input-btn" title="Descarregar entrada" aria-label="Descarregar entrada">
+							<img src="/img/icon-download.svg" height="17pt" alt="Descarregar entrada">
+						</button>
+						<button id="upload-input-btn" title="Carregar entrada" aria-label="Carregar entrada">
+							<img src="/img/icon-upload.svg" height="17pt" alt="Carregar entrada">
+						</button>
+						<button id="clear-input-btn" title="Limpar entrada" aria-label="Limpar entrada">
+							<img src="/img/icon-thrash.svg" height="17pt" alt="Limpar entrada">
+						</button>
+						<button title="Tela cheia entrada" aria-label="Tela cheia entrada" class="btn-expand"
+							data-target="pane-rtop">
+							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia entrada">
+						</button>
+					</div>
+				</div>
+				<div class="pane-container">
+					<textarea id="stdin-input" spellcheck="false" placeholder="Digite sua entrada aqui…"></textarea>
+				</div>
+			</div>
+
+			<div class="pane" id="pane-rbot" data-pane="rbot">
+				<div class="bar">
+					<span>Saída</span>
+					<div class="controls">
+						<button id="download-output-btn" title="Descarregar saída" aria-label="Descarregar saída">
+							<img src="/img/icon-download.svg" height="17pt" alt="Descarregar saída">
+						</button>
+						<button id="clear-output-btn" title="Limpar saída">
+							<img src="/img/icon-thrash.svg" height="17pt" alt="Limpar saída" title="Limpar saída">
+						</button>
+						<button id="clear-output-btn" title="Tela cheia saída" aria-label="Tela cheia saída"
+							class="btn-expand" data-target="pane-rbot">
+							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia saída">
+						</button>
+					</div>
+				</div>
+				<div id="stdout-output" class="pane-container">
+				</div>
+			</div>
+		</div>
+		<div class="pane" id="pane-footer" data-pane="footer">
+			<div class="status-bar">
+				<div class="status-left">
+					<a href="https://olimpiada.ic.unicamp.br" target="_blank" rel="noopener">Olimpíada Brasileira de Informática</a>
+				</div>
+				<div class="status-right" id="run-status" aria-live="polite">
+					<strong>Status <span id="status-task"></span>: </strong><span id="status-label">Inativo</span>
+					<span class="spinner" id="status-spinner" hidden></span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Info Modal -->
+	<div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title"
+		aria-hidden="true">
+		<div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+		<div class="obi-modal__dialog" role="document">
+			<div class="obi-modal__header">
+				<h2 id="info-title">Como usar o EditorOBI</h2>
+				<button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
+			</div>
+			<div id="info-content" class="obi-modal__body">
+				<!-- Instructions -->
+			</div>
+			<div class="obi-modal__footer">
+				<button id="info-ok-btn" class="obi-modal__action">OK</button>
+			</div>
+		</div>
+		<span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+	</div>
+
+	<script>
+		window.AppConfig = {
+			examGate: { enabled: false }
+		};
+
+	  (function(){
+	      try {
+		  var mode = localStorage.getItem('obi:globalTheme') || 'light';
+		  document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
+		  var isLight = (mode === 'light');
+		  var add = function(sel){ var el=document.querySelector(sel); if (el) el.classList.toggle('light-mode', isLight); };
+		  add('#pane-rtop .pane-container');
+		  add('#pane-rbot .pane-container');
+	      } catch (e) {}
+	  })();
+	</script>
+
+	<!-- Monaco Editor -->
+	<script src="./monaco/dev/vs/loader.js"></script>
+	<script>
+	  require.config({
+	      paths: {
+		  'vs': '/static/editor/monaco/dev/vs',
+	      }
+	  });
+	</script>
+	
+	<!-- Main entry point -->
+
+	<!-- Main entry point -->
+	<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

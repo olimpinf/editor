@@ -70,32 +70,23 @@ if __name__ == "__main__":
 	    padding: { top: 10 }  
 	});
 
-	// // If you start the LSP, import it *after* Monaco is ready:
-	// import('./vscode-api-init.js')
-	//     .then(({ initVsCodeApi }) => initVsCodeApi(monaco))
-
-	// // 2) only after shim is ready, start the LSP client
-	//     .then(() => import('./language-client.js'))
-	//     .then(({ startLanguageClient }) => {
-	// 	startLanguageClient({
-	// 	    socketUrl: 'wss://olimpiada.ic.unicamp.br/ws/cpp/', // <-- trailing slash matches your Channels route
-	// 	    languages: ['cpp', 'python', 'java'],
-	// 	    // onReady: (client) => console.log('[LSP] ready', client)
-	// 	});
-	//     })
-	//     .catch((e) => {
-	// 	console.error('[LSP bootstrap] failed:', e);
-	//     });
-
-	// console.log("will call window.languageClientManager.connect");
-	// if (window.languageClientManager) {
-	//     window.languageClientManager.connect('cpp');
-	// }
+	// After Monaco is ready, initialize LSP
+	//setTimeout(() => {
+	// Initialize LSP
+	if (typeof window.initLanguageClient === 'function') {
+            window.initLanguageClient(monaco, window.editor, {
+		socketUrl: 'wss://olimpiada.ic.unicamp.br/ws/clangd/',
+		languages: ['cpp', 'c'],
+		debounceDelay: 300,
+		maxConcurrentRequests: 2
+            });
+	} else {
+            console.warn('[LSP] initLanguageClient not available');
+	}
+	//}, 100);
+	
 	applyGlobalTheme(getGlobalTheme());
 	initFirstTabIfNeeded();
-
-
-
 
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
@@ -336,11 +327,13 @@ if __name__ == "__main__":
 
 	function switchLanguage(lang) {
             monaco.editor.setModelLanguage(window.editor.getModel(), lang);
-	    // startLanguageClient({
-	    // 	socketUrl: 'wss://olimpiada.ic.unicamp.br/ws',
-	    // 	languages: ['cpp', 'python', 'java'],
-	    // 	monaco: window.monaco
-	    // });
+	    // If LSP is active and language is C++/C, it will automatically handle it
+	    // For other languages, LSP can be disabled
+	    if (lang === 'cpp' || lang === 'c') {
+		console.log('[LSP] Switched to', lang);
+	    } else {
+		console.log('[LSP] Language', lang, 'does not support LSP');
+	    }
 	}
 	
 	function getSanitizedTabName() {
@@ -1258,6 +1251,13 @@ function loadTabIntoUI(tabId) {
 	}
     }
 
+    // Notify LSP of new document content
+    if (window.editor) {
+        const model = window.editor.getModel();
+        // LSP will automatically track the new content via didChange events
+    }
+
+    
     // code
     window.editor?.setValue?.(snap.code || "");
 
