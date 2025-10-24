@@ -1,2 +1,3 @@
 # editor
-Editor para provas.
+Editor para provas. Sem suport LSP.
+
