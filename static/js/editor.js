@@ -94,9 +94,7 @@ if __name__ == "__main__":
 	applyGlobalTheme(getGlobalTheme());
 	initFirstTabIfNeeded();
 
-
-
-
+	document.getElementById('loading-overlay')?.classList.add('hidden');
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 	(function ExamGate() {

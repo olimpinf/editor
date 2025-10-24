@@ -207,13 +207,26 @@
 	
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs/loader.js"></script>
 <script>
-require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs' } });
+  require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs' } });
+  require(['vs/editor/editor.main'], function() {
+    // Hide overlay once Monaco has initialized
+    document.getElementById('loading-overlay')?.classList.add('hidden');
+  });
 </script>
+
 <script src="static/js/cms.js"></script>
 <script src="static/js/accessible-select.js"></script>
 <script src="static/js/info-modal.js"></script>
 <script src="static/js/init-accessible-select.js"></script>
 <script type="module" src="static/js/editor.js"></script>
+
+<!-- Loading overlay -->
+<div id="loading-overlay" role="status" aria-live="polite">
+  <div class="spinner" aria-hidden="true"></div>
+  <p>Carregando…</p>
+</div>
+
+
 </body>
 
 </html>

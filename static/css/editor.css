@@ -29,9 +29,11 @@ html,body{
 
 pre {
     border: 1px solid #888;
-    margin-top:0px;
-    margin-bottom:0px;
-    padding: 5px;
+  margin: 0;
+  padding: 5px;
+  overflow-x: auto;      /* allows horizontal scrolling */
+  white-space: pre;      /* ensures spaces/newlines are preserved */
+  display: block;
 }
 
 pre.error {
@@ -610,4 +612,28 @@ body.pane-expanded .pane:not(.expanded) {
 
 @keyframes tabspin {
   to { transform: rotate(360deg); }
+}
+
+#loading-overlay{
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,.55);
+  z-index: 9999;
+  color: white;
+  font: 600 16px/1.2 system-ui, sans-serif;
+}
+#loading-overlay.hidden{ display: none; }
+.spinner{
+  width: 28px; height: 28px;
+  border: 3px solid #fff; border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* (optional) after ~8s, hint slow network */
+#loading-overlay.slow p::after{
+  content: "  (conexão lenta…)";
+  font-weight: 400; opacity: .9;
 }
