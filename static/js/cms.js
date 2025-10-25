@@ -6,7 +6,8 @@ const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 /**
  * Hardcoded CMS credentials (shared by all students)
  */
-const URL_API = "https://pj.provas.ic.unicamp.br"
+//const URL_API = "http://143.106.73.75"
+const URL_API = ""
 const CMS_USERNAME = "00000-A";
 const CMS_PASSWORD = "tarefa-forte-pilha-fraca";
 
@@ -36,7 +37,7 @@ function loadLoginData() {
  * Perform login using the fixed username/password.
  */
 async function taskList() {
-    const url = "/api/task_list"
+    const url = URL_API + "/api/task_list"
 
     try {
         const resp = await fetch(url, {
@@ -62,10 +63,10 @@ async function taskList() {
 async function cmsSubmit(codeContent, language, languageExtension) {
     // --- Configuration ---
     if (languageExtension == '.cpp' ) {
-     const SUBMIT_API_URL = "/api/tarefa/submit";
+     const SUBMIT_API_URL = URL_API + "/api/tarefa/submit";
     }
     else {
-     const SUBMIT_API_URL = "/api/hashedName-d8724aa0b88f985f11/submit";
+     const SUBMIT_API_URL =  URL_API + "/api/hashedName-d8724aa0b88f985f11/submit";
     }
     
     // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
@@ -125,12 +126,12 @@ async function cmsSubmit(codeContent, language, languageExtension) {
  */
 async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
     // --- Configuration ---
-    let TEST_API_URL = "/api/hashedName-d8724aa0b88f985f11/test";
+    let TEST_API_URL = URL_API + "/api/hashedName-d8724aa0b88f985f11/test";
     let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
     let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension; 
     
     if (languageExtension == "java") {
-	TEST_API_URL = "/api/tarefa/test";
+	TEST_API_URL = URL_API + "/api/tarefa/test";
 	fileNameField = "tarefa.%l";
 	fileName = "tarefa.java";
     }
@@ -187,9 +188,9 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
  * Get status of a test submission
  */
 async function cmsTestStatus(theTaskId, id) {
-    let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id
+    let url = URL_API + "/api/hashedName-d8724aa0b88f985f11/test/" + id
     if (runningLanguage == "java") {
-	url = "/api/tarefa/test/" + id
+	url = URL_API + "/api/tarefa/test/" + id
     }
 
     try {
