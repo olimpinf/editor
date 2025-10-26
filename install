@@ -1,4 +1,4 @@
 #! /usr/bin/sh
 
-rsync -avz --exclude="install*" --exclude=".git" --delete . /var/www/html
+sudo rsync -avz --chown=www-data:www-data --exclude="install*" --exclude=".git" --delete . /var/www/html
 
