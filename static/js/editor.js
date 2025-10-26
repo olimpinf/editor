@@ -25,7 +25,7 @@ window.addEventListener('DOMContentLoaded', () => {
 	// starter templates
 	window.templates = {
 	    cpp: `// ========================
-// Compilator online da OBI
+// Compilador online da OBI
 // ========================
 
 #include <bits/stdc++.h>
@@ -40,7 +40,7 @@ int main() {
     return 0;
 }`,
 	    java: `// ========================
-// Compilator online da OBI
+// Compilador online da OBI
 // ========================
 
 public class tarefa {
@@ -50,7 +50,7 @@ public class tarefa {
     }
 }`,
 	    python: `# ========================
-# Compilator online da OBI
+# Compilador online da OBI
 # ========================
 
 # Digite seu código aqui
