@@ -498,7 +498,7 @@ public class tarefa {
 	    runningLanguage = selectedLanguage;
 	    const theme = getGlobalTheme();
 	    const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
+	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": Execução iniciada\n";
 	    
 	    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	    try {
@@ -1088,6 +1088,7 @@ async function pollTestStatus(testId) {
 	    let theExecution_stderr = execution_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stderr = compilation_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stdout = compilation_stdout?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
+	    const initMessage = "<b>" + getLocalizedTime() + "</b>" + ": ";
 
             if (status == EVALUATED) {
                 // 1. STOP POLLING
@@ -1096,32 +1097,32 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
 		if (status_text == "Execution completed successfully") {
-		    displayStdout("Execução terminou sem erros. ", theOutput);
+		    displayStdout(initMessage + "Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
-		    displayStdout("Execução interrompida por limite de tempo excedido. ", theOutput);
+		    displayStdout(initMessage + "Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Memory limit exceeded") {
-		    displayStdout("Execução interrompida por limite de memória excedido. ", theOutput);
+		    displayStdout(initMessage + "Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
-		    displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		    displayStderr(initMessage + "Execução interrompida por erro de execução. ", theExecution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else {
-		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
+		    displayStderr("initMessage + Execução interrompida por erro de execução. ", execution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
@@ -1134,7 +1135,7 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = formatOutput("\nErro de compilação:\n", colorInfoText);
+		var program_output = formatOutput(initMessage + "Erro de compilação:\n", colorInfoText);
 		if (theCompilation_stdout != "")
 		    program_output += '<pre class="error">' + theCompilation_stdout + "</pre>" , "red";
 		if (theCompilation_stderr != "")
@@ -1149,7 +1150,7 @@ async function pollTestStatus(testId) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
-		displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		displayStderr(initMessage + "Execução interrompida por erro de execução. ", theExecution_stderr);
 		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
@@ -1162,7 +1163,7 @@ async function pollTestStatus(testId) {
 	    console.error("erro cms:", error);
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
-	    displayStderr("Erro de processamento. ", "");
+	    displayStderr(initMessage + "Erro de processamento. ", "");
 	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 	    markRunComplete();
         }

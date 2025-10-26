@@ -1,0 +1,6 @@
+
+1) in cms.toml set proxies = 0 if stand alone, so that tornado returns ip='127.0.0.1' to all requests
+2) in cms admin, set tests allowed
+3) in cms admin, set user
+  unrestricted participation
+  IP address or subnet = '127.0.0.1' (anyone if standalone, fix if not standalone and set proxies=1 in cms.toml)
