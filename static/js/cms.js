@@ -6,11 +6,15 @@ const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 /**
  * Hardcoded CMS credentials (shared by all students)
  */
-//const URL_API = "http://143.106.73.75"
-const URL_API = ""
+const protocol = window.location.protocol
+const hostname = window.location.hostname
+const URL_API = protocol + '//' + hostname
+//const URL_API = "http://143.106.73.75/cws"
+//const URL_API = ""
 const CMS_USERNAME = "00000-A";
 const CMS_PASSWORD = "tarefa-forte-pilha-fraca";
 
+console.log("URL_API",URL_API);
 /**
  * Save login_data to localStorage
  */

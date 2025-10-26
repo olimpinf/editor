@@ -24,28 +24,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
 	// starter templates
 	window.templates = {
-	    cpp: `#include <bits/stdc++.h>
+	    cpp: `// ========================
+// Compilator online da OBI
+// ========================
+
+#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    // Start coding here
+    // Digite seu código aqui
 
     return 0;
 }`,
-	    java: `public class tarefa {
+	    java: `// ========================
+// Compilator online da OBI
+// ========================
+
+public class tarefa {
     public static void main(String[] args) {
-        // Start coding here
+        // Digite seu código aqui
+
     }
 }`,
-	    python: `def main():
-    # Start coding here
-    pass
+	    python: `# ========================
+# Compilator online da OBI
+# ========================
 
-if __name__ == "__main__":
-    main()`
+# Digite seu código aqui
+
+`
 	};
 
 	// === Tabs (dynamic tasks) ===

@@ -1,0 +1,4 @@
+#! /usr/bin/sh
+
+rsync -avz --exclude="install*" --exclude=".git" --delete . /var/www/html
+
