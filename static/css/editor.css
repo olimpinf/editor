@@ -518,6 +518,7 @@ body.pane-expanded .pane:not(.expanded) {
   box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   display: flex;
   flex-direction: column;
+  max-height: 88vh; /* <-- ADD THIS */
 }
 
 .obi-modal__header {
@@ -556,6 +557,8 @@ body.pane-expanded .pane:not(.expanded) {
   overflow-y: auto;
   font-size: 15px;
   line-height: 1.6;
+  flex-grow: 1;
+  min-height: 0;
 }
 .obi-modal__body p:first-child { margin-top: 0; }
 .obi-modal__body p:last-child { margin-bottom: 0; }
