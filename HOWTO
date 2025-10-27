@@ -4,3 +4,44 @@
 3) in cms admin, set user
   unrestricted participation
   IP address or subnet = '127.0.0.1' (anyone if standalone, fix if not standalone and set proxies=1 in cms.toml)
+
+4) alter nginx conf
+	# ranido-begin
+        # Serve CWS unprefixed.
+        # location / {
+        #     proxy_pass http://cws/;
+        #     include proxy_params;
+        #     proxy_http_version 1.1;
+        #     proxy_set_header Connection "";
+
+        #     # Needs to be as large as the maximum allowed submission
+        #     # and input lengths set in cms.conf.
+        #     client_max_body_size 50M;
+        # }
+        location /api/ {
+            #proxy_pass http://cws/;
+            proxy_pass http://cws/api/;
+            include proxy_params;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+
+            # Needs to be as large as the maximum allowed submission
+            # and input lengths set in cms.conf.
+            client_max_body_size 50M;
+        }
+
+        include /etc/nginx/mime.types;
+
+        location / {
+	    alias /var/www/html/;
+            index index.html;
+            try_files $uri $uri/ =404;
+            # Optional: caching
+            #location ~* \.(js|css|png|jpg|jpeg|svg|ico|woff2?)$ {
+            #    expires 7d;
+            #    add_header Cache-Control "public, max-age=604800";
+       	    #    try_files $uri =404;
+    	    #}
+        }
+        # ranido-end
+	

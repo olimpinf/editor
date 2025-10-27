@@ -8,7 +8,8 @@ const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
  */
 const protocol = window.location.protocol
 const hostname = window.location.hostname
-const URL_API = protocol + '//' + hostname
+//const URL_API = protocol + '//' + hostname
+const URL_API = protocol + '//' + hostname + '/api'
 //const URL_API = "http://143.106.73.75/cws"
 //const URL_API = ""
 const CMS_USERNAME = "00000-A";
