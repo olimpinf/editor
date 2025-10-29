@@ -24,6 +24,41 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
   const requestDebounce: { [key: string]: NodeJS.Timeout } = {};
   const concurrentRequests = new Map<string, number>();
 
+/**
+   * Maps LSP CompletionItemKind to Monaco's enum
+   */
+  function toMonacoCompletionItemKind(lspKind: number) {
+    const m = monaco.languages.CompletionItemKind; // Now 'monaco' is defined
+    switch (lspKind) {
+      case 1: return m.Text;
+      case 2: return m.Method;
+      case 3: return m.Function;
+      case 4: return m.Constructor;
+      case 5: return m.Field;
+      case 6: return m.Variable;
+      case 7: return m.Class;
+      case 8: return m.Interface;
+      case 9: return m.Module;
+      case 10: return m.Property;
+      case 11: return m.Unit;
+      case 12: return m.Value;
+      case 13: return m.Enum;
+      case 14: return m.Keyword;
+      case 15: return m.Snippet;
+      case 16: return m.Color;
+      case 17: return m.File;
+      case 18: return m.Reference;
+      case 19: return m.Folder;
+      case 20: return m.EnumMember;
+      case 21: return m.Constant;
+      case 22: return m.Struct;
+      case 23: return m.Event;
+      case 24: return m.Operator;
+      case 25: return m.TypeParameter;
+      default: return m.Property;
+    }
+  }
+
   console.log('[LSP] Connecting to', socketUrl);
 
   webSocket.onopen = () => {
@@ -197,7 +232,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
 
             return {
               label: item.label,
-              kind: 9,
+              kind: toMonacoCompletionItemKind(item.kind),
               detail: item.detail || '',
               documentation: item.documentation,
               insertText: item.insertText || item.label,
@@ -206,7 +241,10 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
                 startColumn: startColumn,
                 endLineNumber: position.lineNumber,
                 endColumn: position.column
-              }
+              },
+	      insertTextRules: item.insertTextFormat === 2
+    	      ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+    	      : undefined
             };
           });
           
@@ -226,10 +264,13 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
             }
           });
 
+	  console.log('[LSP] Definition Result:', result);
+	  
           if (!result) {
             return null;
           }
 
+	  try {
           const locations = Array.isArray(result) ? result : [result];
           
           return locations.map((loc) => ({
@@ -241,6 +282,10 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
               endColumn: loc.range.end.character + 1
             }
           }));
+	  } catch (e) {
+          console.error('[LSP] Error parsing definition:', e);
+          return null;
+        }
         }
       });
 
@@ -263,3 +308,38 @@ export default initLanguageClient;
 
 // Also expose globally
 (window as any).initLanguageClient = initLanguageClient;
+
+/**
+ * Maps LSP CompletionItemKind to Monaco's enum
+ */
+// function toMonacoCompletionItemKind(lspKind: number) {
+//   const m = monaco.languages.CompletionItemKind;
+//   switch (lspKind) {
+//     case 1: return m.Text;
+//     case 2: return m.Method;
+//     case 3: return m.Function;
+//     case 4: return m.Constructor;
+//     case 5: return m.Field;
+//     case 6: return m.Variable;
+//     case 7: return m.Class;
+//     case 8: return m.Interface;
+//     case 9: return m.Module;
+//     case 10: return m.Property;
+//     case 11: return m.Unit;
+//     case 12: return m.Value;
+//     case 13: return m.Enum;
+//     case 14: return m.Keyword;
+//     case 15: return m.Snippet;
+//     case 16: return m.Color;
+//     case 17: return m.File;
+//     case 18: return m.Reference;
+//     case 19: return m.Folder;
+//     case 20: return m.EnumMember;
+//     case 21: return m.Constant;
+//     case 22: return m.Struct;
+//     case 23: return m.Event;
+//     case 24: return m.Operator;
+//     case 25: return m.TypeParameter;
+//     default: return m.Property;
+//   }
+// }

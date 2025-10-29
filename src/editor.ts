@@ -26,28 +26,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
 	// starter templates
 	window.templates = {
-	    cpp: `#include <bits/stdc++.h>
+	    cpp: `// ========================
+// Compilador online da OBI
+// ========================
+
+#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    // Start coding here
+    // Digite seu código aqui
 
     return 0;
 }`,
-	    java: `public class tarefa {
+	    java: `// ========================
+// Compilador online da OBI
+// ========================
+
+public class tarefa {
     public static void main(String[] args) {
-        // Start coding here
+        // Digite seu código aqui
+
     }
 }`,
-	    python: `def main():
-    # Start coding here
-    pass
+	    python: `# ========================
+# Compilador online da OBI
+# ========================
 
-if __name__ == "__main__":
-    main()`
+# Digite seu código aqui
+
+`
 	};
 
 	// === Tabs (dynamic tasks) ===
@@ -60,11 +70,22 @@ if __name__ == "__main__":
 	// Snapshot shape per tab
 	// { id, title, language, code, input, output }
 
+	// 1. This URI MUST be identical to the 'documentUri' in your language-client.ts
+	//    (e.g., `${workspaceRoot}/main.cpp`)
+	const modelUri = monaco.Uri.parse('file:///home/olimpinf/clangd_workspaces/default/main.cpp');
+
+	// 2. Create the model with the URI, language, and initial code
+	const editorModel = monaco.editor.createModel(
+		templates.cpp, // your default code
+		'cpp',         // default language
+		modelUri       // The crucial URI for LSP
+	);
 	
 	// Initialize editor
 	window.editor = monaco.editor.create(document.getElementById('editor-container'), {
-	    value: templates.cpp,   // default
-	    language: 'cpp',
+	    model: editorModel,  // <-- Use 'model' instead of 'value'/'language'
+	    //value: templates.cpp,   // default
+	    //language: 'cpp',
 	    theme: 'vs',
 	    automaticLayout: true,
 	    fontSize: 14,
@@ -150,10 +171,12 @@ if __name__ == "__main__":
 	    }
 
 	    function showModal() {
+	    console.log("show modal");
 		ensureModal();
 		document.getElementById("exam-gate-overlay")?.classList.remove("hidden");
 	    }
 	    function hideModal() {
+	    console.log("hide modal");
 		document.getElementById("exam-gate-overlay")?.classList.add("hidden");
 	    }
 

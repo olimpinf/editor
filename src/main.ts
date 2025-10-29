@@ -1,3 +1,4 @@
+import 'monaco-editor/min/vs/editor/editor.main.css';
 import './style.css';
 import { initLanguageClient } from './language-client';
 import './cms';
