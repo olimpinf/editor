@@ -94,13 +94,17 @@ public class tarefa {
 	});
 
 	// After Monaco is ready, initialize LSP
+	const studentId = "00000-A";
+	const studentWorkspaceRoot = `file:///home/olimpinf/clangd_workspaces/${studentId}`;
+	
 	//setTimeout(() => {
 	// Initialize LSP
 	 initLanguageClient(monaco, window.editor, {
 		socketUrl: 'wss://olimpiada.ic.unicamp.br/ws/clangd/',
 		languages: ['cpp', 'c'],
 		debounceDelay: 300,
-		maxConcurrentRequests: 2
+		maxConcurrentRequests: 2,
+		workspaceRoot: studentWorkspaceRoot
             });
 	//}, 100);
 	
