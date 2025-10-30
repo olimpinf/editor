@@ -12,7 +12,16 @@ initGlobalTheme();
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 
+window.currentLspClient = null;
 
+// This helper function is needed to get the user ID for the workspace path.
+// You must implement this to match your app's auth.
+// It might come from a cookie, or a global object set by Django.
+function getAppUserId() {
+    // EXAMPLE: You need to replace this with your actual user ID logic
+    // It must match the ID used on the server (self.scope['user'].id)
+    return window.AppConfig?.userId || '00000-A';
+}
 
 // 2. Wait for the entire page to load. This solves the race condition where
 //    `loader.js` hasn't created `window.require` yet.
@@ -92,24 +101,12 @@ public class tarefa {
 	    minimap: { enabled: false },
 	    padding: { top: 10 }  
 	});
-
-	// After Monaco is ready, initialize LSP
-	const studentId = "00000-A";
-	const studentWorkspaceRoot = `file:///home/olimpinf/clangd_workspaces/${studentId}`;
-	
-	//setTimeout(() => {
-	// Initialize LSP
-	 initLanguageClient(monaco, window.editor, {
-		socketUrl: 'wss://olimpiada.ic.unicamp.br/ws/clangd/',
-		languages: ['cpp', 'c'],
-		debounceDelay: 300,
-		maxConcurrentRequests: 2,
-		workspaceRoot: studentWorkspaceRoot
-            });
-	//}, 100);
 	
 	applyGlobalTheme(getGlobalTheme());
 	initFirstTabIfNeeded();
+
+	let initialLang = document.getElementById('language-select')?.value || 'cpp';
+        switchLanguage(initialLang);
 
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
@@ -352,13 +349,41 @@ public class tarefa {
 
 	function switchLanguage(lang) {
             monaco.editor.setModelLanguage(window.editor.getModel(), lang);
-	    // If LSP is active and language is C++/C, it will automatically handle it
-	    // For other languages, LSP can be disabled
-	    if (lang === 'cpp' || lang === 'c') {
-		console.log('[LSP] Switched to', lang);
-	    } else {
-		console.log('[LSP] Language', lang, 'does not support LSP');
-	    }
+
+            // 1. Disconnect the previous LSP client, if one exists
+            if (window.currentLspClient) {
+                window.currentLspClient.close();
+                window.currentLspClient = null;
+                console.log('[LSP] Disconnected old client.');
+            }
+            
+            const userId = getAppUserId(); // Get the current user ID
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+
+            // 2. Connect a new LSP client based on the language
+            if (lang === 'cpp' || lang === 'c') {
+                const workspaceRoot = `file:///home/olimpinf/clangd_workspaces/${userId}`;
+                
+                console.log('[LSP] Initializing clangd...');
+                window.currentLspClient = initLanguageClient(monaco, window.editor, {
+                    socketUrl: `${proto}//${host}/ws/lsp/cpp/`,
+                    languages: ['cpp', 'c'],
+                    workspaceRoot: workspaceRoot
+                });
+                
+            } else if (lang === 'python') {
+                const workspaceRoot = `file:///home/olimpinf/python_workspaces/${userId}`;
+
+                console.log('[LSP] Initializing pylsp...');
+                window.currentLspClient = initLanguageClient(monaco, window.editor, {
+                    socketUrl: `${proto}//${host}/ws/lsp/python/`,
+                    languages: ['python'],
+                    workspaceRoot: workspaceRoot
+                });
+            } else {
+                console.log('[LSP] Language', lang, 'does not support LSP.');
+            }
 	}
 	
 	function getSanitizedTabName() {
