@@ -75,38 +75,70 @@ public class tarefa {
 	const SNAP_PREFIX    = "obi:tab:v1:";           // per-tab snapshot key prefix
 	
 	function tabStorageKey(tabId) { return `${SNAP_PREFIX}${tabId}`; }
-	
 	// Snapshot shape per tab
 	// { id, title, language, code, input, output }
 
-	// 1. This URI MUST be identical to the 'documentUri' in your language-client.ts
-	//    (e.g., `${workspaceRoot}/main.cpp`)
-	const modelUri = monaco.Uri.parse('file:///home/olimpinf/clangd_workspaces/default/main.cpp');
+	// Cache for our models (one for cpp, one for python)
+	window.editorModels = {};
 
-	// 2. Create the model with the URI, language, and initial code
-	const editorModel = monaco.editor.createModel(
-		templates.cpp, // your default code
-		'cpp',         // default language
-		modelUri       // The crucial URI for LSP
-	);
+	/**
+	 * Gets or creates a new model for a given language,
+	 * with the correct, unique URI.
+	 */
+	function getOrCreateEditorModel(language) {
+		const userId = getAppUserId();
+		let modelUri;
+		let model;
+		let template = (window.templates && window.templates[language]) || '// code';
+
+		if (language === 'python') {
+			modelUri = monaco.Uri.parse(`file:///home/olimpinf/python_workspaces/${userId}/main.py`);
+		} else { // default to cpp
+			language = 'cpp'; // Ensure 'c' maps to 'cpp' model
+			template = window.templates.cpp;
+			modelUri = monaco.Uri.parse(`file:///home/olimpinf/clangd_workspaces/${userId}/main.cpp`);
+		}
+
+		// Check if we already created it
+		if (window.editorModels[language]) {
+			return window.editorModels[language];
+		}
+
+		// Check if Monaco has it cached (e.g., from a page reload)
+		model = monaco.editor.getModel(modelUri);
+		if (model) {
+			window.editorModels[language] = model;
+			return model;
+		}
+
+		// Create a new model
+		console.log(`[Editor] Creating new model for ${language} at ${modelUri.toString()}`);
+		model = monaco.editor.createModel(
+			template,
+			language,
+			modelUri
+		);
+		window.editorModels[language] = model;
+		return model;
+	}
 	
-	// Initialize editor
+
+	let initialLang = document.getElementById('language-select')?.value || 'cpp';
+
 	window.editor = monaco.editor.create(document.getElementById('editor-container'), {
-	    model: editorModel,  // <-- Use 'model' instead of 'value'/'language'
-	    //value: templates.cpp,   // default
-	    //language: 'cpp',
-	    theme: 'vs',
-	    automaticLayout: true,
-	    fontSize: 14,
-	    minimap: { enabled: false },
-	    padding: { top: 10 }  
+	 model: getOrCreateEditorModel(initialLang), // <-- Use the helper
+	theme: 'vs',
+	automaticLayout: true,
+	fontSize: 14,
+	minimap: { enabled: false },
+	padding: { top: 10 }
 	});
 	
 	applyGlobalTheme(getGlobalTheme());
 	initFirstTabIfNeeded();
 
-	let initialLang = document.getElementById('language-select')?.value || 'cpp';
-        switchLanguage(initialLang);
+	// initialLang = document.getElementById('language-select')?.value || 'cpp';
+    // switchLanguage(initialLang);
 
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
@@ -347,43 +379,51 @@ public class tarefa {
             try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
 	});
 
-	function switchLanguage(lang) {
-            monaco.editor.setModelLanguage(window.editor.getModel(), lang);
+function switchLanguage(lang) {
+        // 1. Get the new model
+		const newModel = getOrCreateEditorModel(lang);
 
-            // 1. Disconnect the previous LSP client, if one exists
-            if (window.currentLspClient) {
-                window.currentLspClient.close();
-                window.currentLspClient = null;
-                console.log('[LSP] Disconnected old client.');
-            }
-            
-            const userId = getAppUserId(); // Get the current user ID
-            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host;
+        // 2. Set this model on the editor
+		if (window.editor.getModel() !== newModel) {
+            // This preserves the editor's view state
+			window.editor.setModel(newModel);
+			console.log(`[Editor] Switched model to ${lang}`);
+		}
+		
+        // 3. Disconnect old LSP
+		if (window.currentLspClient) {
+			window.currentLspClient.close();
+			window.currentLspClient = null;
+			console.log('[LSP] Disconnected old client.');
+		}
+		
+		const userId = getAppUserId(); 
+		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = window.location.host;
 
-            // 2. Connect a new LSP client based on the language
-            if (lang === 'cpp' || lang === 'c') {
-                const workspaceRoot = `file:///home/olimpinf/clangd_workspaces/${userId}`;
-                
-                console.log('[LSP] Initializing clangd...');
-                window.currentLspClient = initLanguageClient(monaco, window.editor, {
-                    socketUrl: `${proto}//${host}/ws/lsp/cpp/`,
-                    languages: ['cpp', 'c'],
-                    workspaceRoot: workspaceRoot
-                });
-                
-            } else if (lang === 'python') {
-                const workspaceRoot = `file:///home/olimpinf/python_workspaces/${userId}`;
+        // 4. Connect new LSP client based on the language
+		if (lang === 'cpp' || lang === 'c') {
+			const workspaceRoot = `file:///home/olimpinf/clangd_workspaces/${userId}`;
+			
+			console.log('[LSP] Initializing clangd...');
+			window.currentLspClient = initLanguageClient(monaco, window.editor, {
+				socketUrl: `${proto}//${host}/ws/lsp/cpp/`,
+				languages: ['cpp', 'c'],
+				workspaceRoot: workspaceRoot
+			});
+			
+		} else if (lang === 'python') {
+			const workspaceRoot = `file:///home/olimpinf/python_workspaces/${userId}`;
 
-                console.log('[LSP] Initializing pylsp...');
-                window.currentLspClient = initLanguageClient(monaco, window.editor, {
-                    socketUrl: `${proto}//${host}/ws/lsp/python/`,
-                    languages: ['python'],
-                    workspaceRoot: workspaceRoot
-                });
-            } else {
-                console.log('[LSP] Language', lang, 'does not support LSP.');
-            }
+			console.log('[LSP] Initializing pylsp...');
+			window.currentLspClient = initLanguageClient(monaco, window.editor, {
+				socketUrl: `${proto}//${host}/ws/lsp/python/`,
+				languages: ['python'],
+				workspaceRoot: workspaceRoot
+			});
+		} else {
+			console.log('[LSP] Language', lang, 'does not support LSP.');
+		}
 	}
 	
 	function getSanitizedTabName() {
@@ -626,6 +666,8 @@ public class tarefa {
 		applyFontSize(sizes[idx]);
 	    });
 	})();
+
+	switchLanguage(initialLang);
 
 
     }); // End of window.require callback

@@ -16,6 +16,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
 
   let messageId = 1;
   let initialized = false;
+  let changeListener: any = null;
   const webSocket = new WebSocket(socketUrl);
   const mainFile = languages.includes('python') ? 'main.py' : 'main.cpp';
   const documentUri = `${workspaceRoot}/${mainFile}`;
@@ -105,7 +106,16 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
       });
 
       const model = editorInstance.getModel();
-      if (model) {
+
+      // ================================================================
+      // 1. ADD THESE LOGS
+      // ================================================================
+      console.log('[LSP] textDocument/didOpen Check');
+      console.log('  > Model URI:', model.uri.toString());
+      console.log('  > Client URI:', documentUri);
+      // ================================================================
+      
+      if (model && model.uri.toString() === documentUri) { // Check URI here too
         writer.write({
           jsonrpc: '2.0',
           method: 'textDocument/didOpen',
@@ -113,7 +123,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
             textDocument: {
               uri: documentUri,
               languageId: languages[0],
-              version: 1,
+              version: model.getVersionId(),
               text: model.getValue()
             }
           }
@@ -121,9 +131,57 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
       }
 
       // Track document changes
-      editorInstance.onDidChangeModelContent(() => {
+      // changeListener = editorInstance.onDidChangeModelContent(() => { 
+      //   const model = editorInstance.getModel();
+
+      // // ================================================================
+      // console.log('[LSP] textDocument/didChange Check');
+      // console.log('  > Model URI:', model.uri.toString());
+      // console.log('  > Client URI:', documentUri);
+      // // ================================================================
+
+      //   // Only send change if it's for the file this client cares about
+      //   if (model && model.uri.toString() === documentUri) {
+      //     console.log('[LSP] ✅ URIs match! Sending didChange.'); // Also add this
+      //     console.log(model.getValue());
+      //     writer.write({
+      //       jsonrpc: '2.0',
+      //       method: 'textDocument/didChange',
+      //       params: {
+      //         textDocument: {
+      //           uri: documentUri,
+      //           version: model.getVersionId() 
+      //         },
+      //         contentChanges: [{ text: model.getValue() }]
+      //       }
+      //     });
+      //   }
+      // });
+
+      // Track document changes
+      changeListener = editorInstance.onDidChangeModelContent((e) => { // <-- Get the event 'e'
         const model = editorInstance.getModel();
-        if (model) {
+
+        // Your debug logs (they are still correct)
+        console.log('[LSP] textDocument/didChange Check');
+        console.log('  > Model URI:', model.uri.toString());
+        console.log('  > Client URI:', documentUri);
+
+        if (model && model.uri.toString() === documentUri) {
+          console.log('[LSP] ✅ URIs match! Sending didChange.');
+
+          // Convert Monaco's changes to LSP changes
+          const contentChanges = e.changes.map(change => {
+            return {
+              range: {
+                start: { line: change.range.startLineNumber - 1, character: change.range.startColumn - 1 },
+                end: { line: change.range.endLineNumber - 1, character: change.range.endColumn - 1 }
+              },
+              rangeLength: change.rangeLength,
+              text: change.text
+            };
+          });
+          console.log("Change:", contentChanges)
           writer.write({
             jsonrpc: '2.0',
             method: 'textDocument/didChange',
@@ -132,11 +190,12 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
                 uri: documentUri,
                 version: model.getVersionId()
               },
-              contentChanges: [{ text: model.getValue() }]
+              contentChanges: contentChanges // <-- Send the mapped deltas
             }
           });
         }
       });
+
 
       // Helper function to send LSP requests
       const sendLspRequest = (method, params) => {
@@ -315,11 +374,16 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
   return {
     socket: webSocket,
     close: () => {
-        (webSocket as any).isExplicitlyClosed = true;
-        webSocket.close(1000, "Client switching language");
+      (webSocket as any).isExplicitlyClosed = true;
+      if (changeListener) {
+        changeListener.dispose();
+        changeListener = null;
+      }
+      webSocket.close(1000, "Client switching language");
     }
   };
 }
+
 export default initLanguageClient;
 
 // Also expose globally
