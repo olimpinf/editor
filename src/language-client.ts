@@ -10,6 +10,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
     socketUrl, // Dynamic (e.g., /ws/lsp/cpp/ or /ws/lsp/python/)
     languages = ['cpp', 'c'], // This will be overriden for Python
     workspaceRoot, // Dynamic (e.g., /.../clangd_workspaces/ or /.../python_workspaces/)
+    documentUri, 
     debounceDelay = 300,
     maxConcurrentRequests = 2,
   } = options;
@@ -18,8 +19,6 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
   let initialized = false;
   let changeListener: any = null;
   const webSocket = new WebSocket(socketUrl);
-  const mainFile = languages.includes('python') ? 'main.py' : 'main.cpp';
-  const documentUri = `${workspaceRoot}/${mainFile}`;
 
   // Request debouncing and limiting system
   const requestDebounce: { [key: string]: NodeJS.Timeout } = {};

@@ -82,63 +82,100 @@ public class tarefa {
 	window.editorModels = {};
 
 	/**
-	 * Gets or creates a new model for a given language,
+	 * Gets or creates a new model for a given LANGUAGE and TAB,
 	 * with the correct, unique URI.
 	 */
 	function getOrCreateEditorModel(language) {
 		const userId = getAppUserId();
+        const tabId = window.currentTask; // READ THE CURRENT TAB ID
+        
+        if (!tabId) {
+            console.error("getOrCreateEditorModel called with no currentTask!");
+            return window.editor.getModel(); // Failsafe
+        }
+
+        const modelCacheKey = `${userId}:${tabId}:${language}`;
+        
+		if (window.editorModels[modelCacheKey]) {
+			return window.editorModels[modelCacheKey];
+		}
+
 		let modelUri;
 		let model;
-		let template = (window.templates && window.templates[language]) || '// code';
+        let workspacePath;
+        let fileName;
+        let codeToLoad; // <-- Will hold the correct code
+
+        // 1. Load the saved data for this tab *first*.
+        const snap = loadTabSnapshot(tabId); // This function is in your tab-manager.js
 
 		if (language === 'python') {
-			modelUri = monaco.Uri.parse(`file:///home/olimpinf/python_workspaces/${userId}/main.py`);
-		} else { // default to cpp
+            workspacePath = `file:///home/olimpinf/python_workspaces/${userId}`;
+            fileName = `${tabId}.py`;
+            // Use snapshot code if it exists, otherwise use template
+            codeToLoad = snap?.code || window.templates.python; 
+
+		} else if (language === 'java') {
+            workspacePath = `file:///home/olimpinf/java_workspaces/${userId}`;
+            fileName = `${tabId}.java`;
+            // Use snapshot code or generated template
+            codeToLoad = snap?.code || window.templates.java(tabId); 
+
+        } else { // default to cpp
 			language = 'cpp'; // Ensure 'c' maps to 'cpp' model
-			template = window.templates.cpp;
-			modelUri = monaco.Uri.parse(`file:///home/olimpinf/clangd_workspaces/${userId}/main.cpp`);
+            workspacePath = `file:///home/olimpinf/clangd_workspaces/${userId}`;
+            fileName = `${tabId}.cpp`;
+            // Use snapshot code or template
+			codeToLoad = snap?.code || window.templates.cpp;
 		}
+        
+        modelUri = monaco.Uri.parse(`${workspacePath}/${fileName}`);
 
-		// Check if we already created it
-		if (window.editorModels[language]) {
-			return window.editorModels[language];
-		}
-
-		// Check if Monaco has it cached (e.g., from a page reload)
 		model = monaco.editor.getModel(modelUri);
 		if (model) {
-			window.editorModels[language] = model;
+            // Model already exists, just update its code if it's different
+            if (model.getValue() !== codeToLoad) {
+                model.setValue(codeToLoad);
+            }
+            console.log(`[Editor] Re-attached to existing model for ${fileName}`);
+			window.editorModels[modelCacheKey] = model;
 			return model;
 		}
 
-		// Create a new model
-		console.log(`[Editor] Creating new model for ${language} at ${modelUri.toString()}`);
+		// Create a new model with the *correct* code from the start
+		console.log(`[Editor] Creating new model for ${fileName} at ${modelUri.toString()}`);
 		model = monaco.editor.createModel(
-			template,
+			codeToLoad, // <-- Use the loaded code, not the template
 			language,
 			modelUri
 		);
-		window.editorModels[language] = model;
+		window.editorModels[modelCacheKey] = model;
 		return model;
 	}
-	
 
-	let initialLang = document.getElementById('language-select')?.value || 'cpp';
-
+	// 1. Create the editor FIRST with a temporary blank model.
+	// We create it *before* initFirstTabIfNeeded so that window.editor exists.
 	window.editor = monaco.editor.create(document.getElementById('editor-container'), {
-	 model: getOrCreateEditorModel(initialLang), // <-- Use the helper
-	theme: 'vs',
-	automaticLayout: true,
-	fontSize: 14,
-	minimap: { enabled: false },
-	padding: { top: 10 }
+	    model: monaco.editor.createModel("", "cpp"), // A temporary blank model
+	    theme: 'vs',
+	    automaticLayout: true,
+	    fontSize: 14,
+	    minimap: { enabled: false },
+	    padding: { top: 10 }  
 	});
-	
-	applyGlobalTheme(getGlobalTheme());
-	initFirstTabIfNeeded();
 
-	// initialLang = document.getElementById('language-select')?.value || 'cpp';
-    // switchLanguage(initialLang);
+	// 2. Now, set the theme and initialize the tab system.
+	// This will call loadTabIntoUI, which calls switchLanguage.
+	applyGlobalTheme(getGlobalTheme());
+	initFirstTabIfNeeded(); 
+	
+	// 3. Get the language of the tab we just loaded
+	const initialLang = document.getElementById('language-select')?.value || 'cpp';
+
+	// 4. Manually call switchLanguage one time.
+	// This will create the *real* model and connect the first LSP client.
+	// This is safe because window.editor is now defined.
+	switchLanguage(initialLang);
 
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
@@ -382,6 +419,7 @@ public class tarefa {
 function switchLanguage(lang) {
         // 1. Get the new model
 		const newModel = getOrCreateEditorModel(lang);
+		const newModelUri = newModel.uri.toString();
 
         // 2. Set this model on the editor
 		if (window.editor.getModel() !== newModel) {
@@ -409,7 +447,8 @@ function switchLanguage(lang) {
 			window.currentLspClient = initLanguageClient(monaco, window.editor, {
 				socketUrl: `${proto}//${host}/ws/lsp/cpp/`,
 				languages: ['cpp', 'c'],
-				workspaceRoot: workspaceRoot
+				workspaceRoot: workspaceRoot,
+				documentUri: newModelUri
 			});
 			
 		} else if (lang === 'python') {
@@ -419,8 +458,21 @@ function switchLanguage(lang) {
 			window.currentLspClient = initLanguageClient(monaco, window.editor, {
 				socketUrl: `${proto}//${host}/ws/lsp/python/`,
 				languages: ['python'],
-				workspaceRoot: workspaceRoot
+				workspaceRoot: workspaceRoot,
+				documentUri: newModelUri
 			});
+		} else if (lang === 'java') {
+            const workspaceRoot = `file:///home/olimpinf/java_workspaces/${userId}`;
+
+			console.log('[LSP] Initializing jdt.ls...');
+			window.currentLspClient = initLanguageClient(monaco, window.editor, {
+				socketUrl: `${proto}//${host}/ws/lsp/java/`,
+				languages: ['java'],
+				workspaceRoot: workspaceRoot,
+				documentUri: newModelUri
+			});
+        // ================================================================
+
 		} else {
 			console.log('[LSP] Language', lang, 'does not support LSP.');
 		}
