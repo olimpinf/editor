@@ -6,6 +6,7 @@ window.colorInfoTextLight = "Blue";
 window.colorInfoTextDark = "Gold";
 window.colorEmphasisTextLight = "Green";
 window.colorEmphasisTextDark = "YellowGreen";
+window.currentUserId = null;
 
 initGlobalTheme();
 
@@ -19,16 +20,35 @@ window.currentLspClient = null;
 // You must implement this to match your app's auth.
 // It might come from a cookie, or a global object set by Django.
 function getAppUserId() {
-    // EXAMPLE: You need to replace this with your actual user ID logic
-    // It must match the ID used on the server (self.scope['user'].id)
-    return window.AppConfig?.userId || '00000-A';
+    // After init, window.currentUserId will be set from /editor/editor_user
+    return window.currentUserId;
 }
 
 // 2. Wait for the entire page to load. This solves the race condition where
 //    `loader.js` hasn't created `window.require` yet.
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    // 1. Fetch the logged-in username (this is our userId / workspace owner)
+    try {
+        const resp = await fetch("/editor/editor_user", {
+            method: "GET",
+            credentials: "include",           // include session cookies
+            headers: { "Accept": "application/json" }
+        });
 
-    // 3. Now that we know loader.js is ready, use window.require to load Monaco.
+        if (!resp.ok) {
+            throw new Error("Failed to get user id: HTTP " + resp.status);
+        }
+
+        const data = await resp.json();       // { "username": "00000-A" }
+        window.currentUserId = data.username; // <- store globally
+        console.log("[Init] currentUserId =", window.currentUserId);
+    } catch (err) {
+        console.error("[Init] Could not load user id:", err);
+        // Hard fallback if you want:
+        window.currentUserId = "anonymous";
+    }
+
+    // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
 
 	const monaco = window.monaco;
