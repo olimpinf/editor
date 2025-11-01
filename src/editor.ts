@@ -7,6 +7,8 @@ window.colorInfoTextDark = "Gold";
 window.colorEmphasisTextLight = "Green";
 window.colorEmphasisTextDark = "YellowGreen";
 window.currentUserId = null;
+window.currentLspClient = null;
+
 
 initGlobalTheme();
 
@@ -15,8 +17,7 @@ import { initLanguageClient } from './language-client';
 import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
 
 
-window.currentLspClient = null;
-
+// Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
     return !!(window as any).AppConfig?.useLSP;
 }
@@ -453,6 +454,12 @@ function switchLanguage(lang) {
 			console.log('[LSP] Disconnected old client.');
 		}
 		
+	    // 3.5 If LSP is disabled via AppConfig, stop here.
+	    if (!isLSPEnabled()) {
+		    console.log('[LSP] Disabled (AppConfig.useLSP === false). Using plain Monaco only.');
+		    return;
+        }
+
 		const userId = getAppUserId(); 
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = window.location.host;
