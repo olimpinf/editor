@@ -486,105 +486,6 @@ body.pane-expanded .pane:not(.expanded) {
     background: rgba(220,220,220,0.7);
 }
 
-/* === Info Modal (robust, minimal) === */
-#info-modal[aria-hidden="true"] { display: none; }
-
-#info-modal[aria-hidden="false"] {
-  display: flex;
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 6vh 1rem;
-  box-sizing: border-box;
-}
-
-.obi-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-}
-
-.obi-modal__dialog {
-  position: relative;
-  z-index: 1;
-  max-width: 720px;
-  width: 100%;
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid #aaa;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  display: flex;
-  flex-direction: column;
-}
-
-.obi-modal__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  flex-shrink: 0;
-}
-
-.obi-modal__header h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.obi-modal__close {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  opacity: 0.7;
-  font-size: 24px;
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-}
-.obi-modal__close:hover {
-  opacity: 1;
-}
-
-.obi-modal__body {
-  padding: 20px;
-  overflow-y: auto;
-  font-size: 15px;
-  line-height: 1.6;
-}
-.obi-modal__body p:first-child { margin-top: 0; }
-.obi-modal__body p:last-child { margin-bottom: 0; }
-
-
-.obi-modal__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid rgba(0,0,0,0.1);
-  flex-shrink: 0;
-}
-
-.obi-modal__action {
-  appearance: none;
-  border: 1px solid transparent;
-  background-color: var(--bar-bg);
-  color: var(--bar-color);
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.obi-modal__action:hover {
-  opacity: 0.9;
-}
     
 .monospaced-regular {
   font-family: "Courier New", monospace;
@@ -637,4 +538,165 @@ body.pane-expanded .pane:not(.expanded) {
 #loading-overlay.slow p::after{
   content: "  (conexão lenta…)";
   font-weight: 400; opacity: .9;
+}
+
+/* === Info Modal (with proper scrolling) === */
+#info-modal[aria-hidden="true"] { display: none; }
+
+#info-modal[aria-hidden="false"] {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  align-items: center;  /* Changed from flex-start to center */
+  justify-content: center;
+  padding: 2vh 1rem;  /* Reduced top/bottom padding */
+  box-sizing: border-box;
+  overflow: auto;  /* Allow scrolling if dialog is taller than viewport */
+}
+
+.obi-modal__backdrop {
+  position: fixed;  /* Changed from absolute to fixed */
+  inset: 0;
+  background: rgba(0,0,0,.45);
+}
+
+.obi-modal__dialog {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  width: 100%;
+  max-height: 90vh;  /* CRITICAL: Limit dialog height to 90% of viewport */
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #aaa;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  margin: auto;  /* Center vertically if shorter than viewport */
+}
+
+.obi-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  flex-shrink: 0;  /* Header never shrinks */
+}
+
+.obi-modal__header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.obi-modal__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+.obi-modal__close:hover {
+  opacity: 1;
+}
+
+.obi-modal__body {
+  padding: 20px;
+  overflow-y: auto;  /* Enable vertical scrolling */
+  flex: 1;  /* CRITICAL: Body takes remaining space */
+  min-height: 0;  /* CRITICAL: Allows flex child to shrink below content size */
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.obi-modal__body p:first-child { margin-top: 0; }
+.obi-modal__body p:last-child { margin-bottom: 0; }
+
+/* Custom scrollbar for modal body */
+.obi-modal__body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.obi-modal__body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.obi-modal__body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.obi-modal__body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox scrollbar */
+@supports (scrollbar-color: auto) {
+  .obi-modal__body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+  }
+}
+
+.obi-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  flex-shrink: 0;  /* Footer never shrinks */
+}
+
+.obi-modal__action {
+  appearance: none;
+  border: 1px solid transparent;
+  background-color: var(--bar-bg);
+  color: var(--bar-color);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.obi-modal__action:hover {
+  opacity: 0.9;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 600px) {
+  #info-modal[aria-hidden="false"] {
+    padding: 1vh 0.5rem;  /* Less padding on mobile */
+  }
+  
+  .obi-modal__dialog {
+    max-height: 95vh;  /* More height on mobile */
+    border-radius: 8px;  /* Smaller radius on mobile */
+  }
+  
+  .obi-modal__header,
+  .obi-modal__footer {
+    padding: 12px 16px;  /* Less padding on mobile */
+  }
+  
+  .obi-modal__body {
+    padding: 16px;  /* Less padding on mobile */
+    font-size: 14px;  /* Slightly smaller text on mobile */
+  }
+}
+
+/* Very small screens (phones in portrait) */
+@media (max-width: 400px) {
+  .obi-modal__dialog {
+    max-height: 98vh;  /* Almost full height on tiny screens */
+  }
 }
