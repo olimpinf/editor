@@ -14,11 +14,13 @@ initGlobalTheme();
 import { initLanguageClient } from './language-client';
 import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
 
+
 window.currentLspClient = null;
 
-// This helper function is needed to get the user ID for the workspace path.
-// You must implement this to match your app's auth.
-// It might come from a cookie, or a global object set by Django.
+function isLSPEnabled(): boolean {
+    return !!(window as any).AppConfig?.useLSP;
+}
+
 function getAppUserId() {
     // After init, window.currentUserId will be set from /editor/editor_user
     return window.currentUserId;
