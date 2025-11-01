@@ -11,6 +11,7 @@ initGlobalTheme();
 
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
+import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
 
 window.currentLspClient = null;
 
@@ -85,73 +86,68 @@ public class tarefa {
 	 * Gets or creates a new model for a given LANGUAGE and TAB,
 	 * with the correct, unique URI.
 	 */
-	function getOrCreateEditorModel(language) {
-		const userId = getAppUserId();
-        const tabId = window.currentTask; // READ THE CURRENT TAB ID
-        
-        if (!tabId) {
-            console.error("getOrCreateEditorModel called with no currentTask!");
-            return window.editor.getModel(); // Failsafe
-        }
+		function getOrCreateEditorModel(language) {
+			const userId = getAppUserId();
+			const tabId = window.currentTask;
 
-        const modelCacheKey = `${userId}:${tabId}:${language}`;
-        
-		if (window.editorModels[modelCacheKey]) {
-			return window.editorModels[modelCacheKey];
-		}
+			if (!tabId) {
+				console.error("getOrCreateEditorModel called with no currentTask!");
+				return window.editor.getModel();
+			}
 
-		let modelUri;
-		let model;
-        let workspacePath;
-        let fileName;
-        let codeToLoad; // <-- Will hold the correct code
+			const modelCacheKey = `${userId}:${tabId}:${language}`;
 
-        // 1. Load the saved data for this tab *first*.
-        const snap = loadTabSnapshot(tabId); // This function is in your tab-manager.js
+			if (window.editorModels[modelCacheKey]) {
+				return window.editorModels[modelCacheKey];
+			}
 
-		if (language === 'python') {
-            workspacePath = `file:///home/olimpinf/python_workspaces/${userId}`;
-            fileName = `${tabId}.py`;
-            // Use snapshot code if it exists, otherwise use template
-            codeToLoad = snap?.code || window.templates.python; 
+			let modelUri;
+			let model;
+			let workspacePath;
+			let fileName;
+			let codeToLoad;
 
-		} else if (language === 'java') {
-            workspacePath = `file:///home/olimpinf/java_workspaces/${userId}`;
-            fileName = `${tabId}.java`;
-            // Use snapshot code or generated template
-            codeToLoad = snap?.code || window.templates.java(tabId); 
+			const snap = loadTabSnapshot(tabId);
 
-        } else { // default to cpp
-			language = 'cpp'; // Ensure 'c' maps to 'cpp' model
-            workspacePath = `file:///home/olimpinf/clangd_workspaces/${userId}`;
-            fileName = `${tabId}.cpp`;
-            // Use snapshot code or template
-			codeToLoad = snap?.code || window.templates.cpp;
-		}
-        
-        modelUri = monaco.Uri.parse(`${workspacePath}/${fileName}`);
+			if (language === 'python') {
+				workspacePath = `file:///home/olimpinf/python_workspaces/${userId}`;
+				fileName = `${tabId}.py`;
+				codeToLoad = snap?.code || window.templates.python;
 
-		model = monaco.editor.getModel(modelUri);
-		if (model) {
-            // Model already exists, just update its code if it's different
-            if (model.getValue() !== codeToLoad) {
-                model.setValue(codeToLoad);
-            }
-            console.log(`[Editor] Re-attached to existing model for ${fileName}`);
+			} else if (language === 'java') {
+				workspacePath = `file:///home/olimpinf/java_workspaces/${userId}`;
+				// CRITICAL: Must be "tarefa.java" to match the class name in the template
+				fileName = `tarefa.java`;
+				codeToLoad = snap?.code || window.templates.java;
+
+			} else { // default to cpp
+				language = 'cpp';
+				workspacePath = `file:///home/olimpinf/clangd_workspaces/${userId}`;
+				fileName = `${tabId}.cpp`;
+				codeToLoad = snap?.code || window.templates.cpp;
+			}
+
+			modelUri = monaco.Uri.parse(`${workspacePath}/${fileName}`);
+
+			model = monaco.editor.getModel(modelUri);
+			if (model) {
+				if (model.getValue() !== codeToLoad) {
+					model.setValue(codeToLoad);
+				}
+				console.log(`[Editor] Re-attached to existing model for ${fileName}`);
+				window.editorModels[modelCacheKey] = model;
+				return model;
+			}
+
+			console.log(`[Editor] Creating new model for ${fileName} at ${modelUri.toString()}`);
+			model = monaco.editor.createModel(
+				codeToLoad,
+				language,
+				modelUri
+			);
 			window.editorModels[modelCacheKey] = model;
 			return model;
 		}
-
-		// Create a new model with the *correct* code from the start
-		console.log(`[Editor] Creating new model for ${fileName} at ${modelUri.toString()}`);
-		model = monaco.editor.createModel(
-			codeToLoad, // <-- Use the loaded code, not the template
-			language,
-			modelUri
-		);
-		window.editorModels[modelCacheKey] = model;
-		return model;
-	}
 
 	// 1. Create the editor FIRST with a temporary blank model.
 	// We create it *before* initFirstTabIfNeeded so that window.editor exists.
@@ -620,21 +616,25 @@ function switchLanguage(lang) {
 	    const languageExtension = cmsExtension[selectedLanguage];
 
 	    runningTaskId = getCurrentTaskId()
+		console.log("will show spinner on tab", runningTaskId);
 	    setRunningTab(runningTaskId);             // show spinner on that tab
 	    setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
 	    runningLanguage = selectedLanguage;
+
 	    const theme = getGlobalTheme();
 	    const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": execução iniciada\n";
+	    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": Execução iniciada\n";
 	    
 	    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	    try {
 		// Submit the code and get the test ID
 		const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
 		const testId = submissionResult.data.id;
+
+		console.log("testId", testId);
 		
 		// Start polling for the status
-		await pollTestStatus(testId);
+		await pollTestStatus(testId, runningTaskId, language);
 
 	    } catch (error) {
 		console.warn("CMS Test Submission Failed:", error);
@@ -1161,8 +1161,6 @@ function setStatusLabel(text, { spinning = false, tabId } = {}) {
     window.App?.Status?.set(id, text || 'Inativo', { spinning });
 }
 
-
-
 const POLLING_INTERVAL_MS = 5000; // Poll every 2 seconds
 
 /**
@@ -1195,7 +1193,7 @@ function displayStderr(head, str) {
     }
 }
 
-async function pollTestStatus(testId) {
+async function pollTestStatus(testId: string, runningTaskId: string, language: string) {
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
 
@@ -1211,13 +1209,13 @@ async function pollTestStatus(testId) {
 	const EVALUATED = 4;
 
         try {
-            const result = await cmsTestStatus(runningTaskId, testId);
+            const result = await cmsTestStatus(runningTaskId, testId, language);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 	    let theOutput = output?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theExecution_stderr = execution_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stderr = compilation_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theCompilation_stdout = compilation_stdout?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
-
+		const initMessage = "<b>" + getLocalizedTime() + "</b>" + ": ";
             if (status == EVALUATED) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1225,32 +1223,32 @@ async function pollTestStatus(testId) {
                 // 2. DISPLAY FINAL RESULTS
 		var program_output = "";
 		if (status_text == "Execution completed successfully") {
-		    displayStdout("Execução terminou sem erros. ", theOutput);
+		    displayStdout(initMessage + "Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
-		    displayStdout("Execução interrompida por limite de tempo excedido. ", theOutput);
+		    displayStdout(initMessage + "Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Memory limit exceeded") {
-		    displayStdout("Execução interrompida por limite de memória excedido. ", theOutput);
+		    displayStdout(initMessage + "Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
-		    displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		    displayStderr(initMessage + "Execução interrompida por erro de execução. ", theExecution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 		}
 		else {
-		    displayStderr("Execução interrompida por erro de execução. ", execution_stderr);
+		    displayStderr("initMessage + Execução interrompida por erro de execução. ", execution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
@@ -1263,7 +1261,7 @@ async function pollTestStatus(testId) {
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval; // Clean up the interval reference
                 // 2. DISPLAY FINAL RESULTS
-		var program_output = formatOutput("\nErro de compilação:\n", colorInfoText);
+		var program_output = formatOutput(initMessage + "Erro de compilação:\n", colorInfoText);
 		if (theCompilation_stdout != "")
 		    program_output += '<pre class="error">' + theCompilation_stdout + "</pre>" , "red";
 		if (theCompilation_stderr != "")
@@ -1278,7 +1276,7 @@ async function pollTestStatus(testId) {
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
                 delete window.currentTestInterval;
-		displayStderr("Execução interrompida por erro de execução. ", theExecution_stderr);
+		displayStderr(initMessage + "Execução interrompida por erro de execução. ", theExecution_stderr);
 		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
@@ -1291,7 +1289,7 @@ async function pollTestStatus(testId) {
 	    console.error("erro cms:", error);
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
-	    displayStderr("Erro de processamento. ", "");
+	    displayStderr(initMessage + "Erro de processamento. ", "");
 	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
 	    markRunComplete();
         }

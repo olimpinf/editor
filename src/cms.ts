@@ -2,7 +2,7 @@
  * Global variable for the login result
  */
 let login_data = null;
-const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
+export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 /**
  * Hardcoded CMS credentials (shared by all students)
  */
@@ -123,7 +123,7 @@ async function cmsSubmit(codeContent, language, languageExtension) {
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
+export async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
     // --- Configuration ---
     let TEST_API_URL = "/api/hashedName-d8724aa0b88f985f11/test";
     let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
@@ -141,9 +141,7 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
     
     formData.append(fileNameField, codeBlob, fileName);
     formData.append("input", inputBlob, "input.txt");
-    
     formData.append("language", language);
-
     
     try {
         const response = await fetch(TEST_API_URL, {
@@ -186,14 +184,15 @@ async function cmsTestSend(runninTaskId, codeContent, inputContent, language, la
 /**
  * Get status of a test submission
  */
-async function cmsTestStatus(theTaskId, id) {
+export async function cmsTestStatus(theTaskId: string, id: string, language: string) {
+    console.log("cmsTestStatus, language:", language);
     let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id;
-    if (runningLanguage == "java") {
+    if (language == "Java / JDK") {
 	url = "/api/tarefa/test/" + id;
     }
 
-    data = "";
-    try {
+    let data = "";
+    try {        
         const resp = await fetch(url, {
              method: "GET" 
          });
