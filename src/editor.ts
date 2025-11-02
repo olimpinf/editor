@@ -554,6 +554,19 @@ function switchLanguage(lang) {
 	    downloadContent('saida.txt', txtContent);
 	});
 
+
+	window.addEventListener('beforeunload', function (e) {
+            // A standard message (browsers will show their own default prompt)
+            var confirmationMessage = 'Tem certeza que quer fechar esta aba? Não será possível desfazer.';
+
+            // Standard-compliant
+            e.preventDefault();
+    
+            // For older browsers
+            e.returnValue = confirmationMessage;
+            return confirmationMessage;
+        });
+	
 	// ============================================================
 	// LANGUAGE CHANGE HANDLERS (manual vs programmatic)
 	// ============================================================
