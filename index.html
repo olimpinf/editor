@@ -25,21 +25,21 @@
 				<div class="controls">
 					<!-- Run button -->
 					<button id="run-btn" title="Executar">
-						<img src="/img/icon-play.svg" height="17pt" alt="Executar">
+						<img src="static/img/icon-play.svg" height="17pt" alt="Executar">
 					</button>
 					<!-- Font size -->
 					<button id="font-btn" data-scope="global" title="Tamanho fonte">
-						<img src="/img/icon-font-size.svg" height="16pt" alt="Tamanho fonte">
+						<img src="static/img/icon-font-size.svg" height="16pt" alt="Tamanho fonte">
 					</button>
 
 					<!-- Dark/Light -->
 					<button class="style-toggle-btn" id="global-style-toggle" title="Tema">
-						<img src="/img/icon-theme.svg" height="17pt" alt="Tema">
+						<img src="static/img/icon-theme.svg" height="17pt" alt="Tema">
 					</button>
 
 					<!-- New tab -->
 					<button id="new-tab-btn" title="Nova aba">
-						<img src="/img/icon-new-tab.svg" height="19" alt="Nova aba"
+						<img src="static/img/icon-new-tab.svg" height="19" alt="Nova aba"
 							onerror="this.textContent='+';">
 					</button>
 					<span style="margin-left:10px"></span>
@@ -55,7 +55,7 @@
 					<span style="margin-left:10px"></span>
 					<!-- Info button -->
 					<button id="info-btn" title="Informações">
-						<img src="/img/icon-info.svg" height="18pt" alt="Info"
+						<img src="static/img/icon-info.svg" height="18pt" alt="Info"
 							onerror="this.replaceWith(document.createTextNode('Info'));">
 					</button>
 
@@ -73,17 +73,17 @@
 					<span>Código</span>
 					<div class="controls">
 						<button id="download-btn" title="Download">
-							<img src="/img/icon-download.svg" height="17pt" alt="Download">
+							<img src="static/img/icon-download.svg" height="17pt" alt="Download">
 						</button>
 						<button id="upload-btn" title="Upload">
-							<img src="/img/icon-upload.svg" height="17pt" alt="Upload">
+							<img src="static/img/icon-upload.svg" height="17pt" alt="Upload">
 						</button>
 						<button id="clear-btn" title="Clear">
-							<img src="/img/icon-thrash.svg" height="17pt" alt="Clear code">
+							<img src="static/img/icon-thrash.svg" height="17pt" alt="Clear code">
 						</button>
 						<button title="Tela cheia código" aria-label="Tela cheia código" class="btn-expand"
 							data-target="left-pane">
-							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia código">
+							<img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia código">
 						</button>
 					</div>
 				</div>
@@ -97,17 +97,17 @@
 					<span>Entrada</span>
 					<div class="controls">
 						<button id="download-input-btn" title="Descarregar entrada" aria-label="Descarregar entrada">
-							<img src="/img/icon-download.svg" height="17pt" alt="Descarregar entrada">
+							<img src="static/img/icon-download.svg" height="17pt" alt="Descarregar entrada">
 						</button>
 						<button id="upload-input-btn" title="Carregar entrada" aria-label="Carregar entrada">
-							<img src="/img/icon-upload.svg" height="17pt" alt="Carregar entrada">
+							<img src="static/img/icon-upload.svg" height="17pt" alt="Carregar entrada">
 						</button>
 						<button id="clear-input-btn" title="Limpar entrada" aria-label="Limpar entrada">
-							<img src="/img/icon-thrash.svg" height="17pt" alt="Limpar entrada">
+							<img src="static/img/icon-thrash.svg" height="17pt" alt="Limpar entrada">
 						</button>
 						<button title="Tela cheia entrada" aria-label="Tela cheia entrada" class="btn-expand"
 							data-target="pane-rtop">
-							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia entrada">
+							<img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia entrada">
 						</button>
 					</div>
 				</div>
@@ -121,14 +121,14 @@
 					<span>Saída</span>
 					<div class="controls">
 						<button id="download-output-btn" title="Descarregar saída" aria-label="Descarregar saída">
-							<img src="/img/icon-download.svg" height="17pt" alt="Descarregar saída">
+							<img src="static/img/icon-download.svg" height="17pt" alt="Descarregar saída">
 						</button>
 						<button id="clear-output-btn" title="Limpar saída">
-							<img src="/img/icon-thrash.svg" height="17pt" alt="Limpar saída" title="Limpar saída">
+							<img src="static/img/icon-thrash.svg" height="17pt" alt="Limpar saída" title="Limpar saída">
 						</button>
 						<button id="clear-output-btn" title="Tela cheia saída" aria-label="Tela cheia saída"
 							class="btn-expand" data-target="pane-rbot">
-							<img src="/img/icon-grow.svg" height="17pt" alt="Tela cheia saída">
+							<img src="static/img/icon-grow.svg" height="17pt" alt="Tela cheia saída">
 						</button>
 					</div>
 				</div>
@@ -187,7 +187,8 @@
 	<script>
 		window.AppConfig = {
 			examGate: { enabled: false },
-			useLSP: true
+			openExamUrl: true,
+			useLSP: false
 		};
 
 	  (function(){
@@ -211,6 +212,7 @@
 	      document.getElementById('loading-overlay')?.classList.add('hidden');
 	  });
 	</script>
+
 	
 	<!-- Main entry point -->
 	<script type="module" src="/src/main.ts"></script>

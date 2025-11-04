@@ -2,4 +2,4 @@
 
 sudo rsync -av --delete dist/ /ext/static/editor/
 
-#sudo rsync -avz --chown=www-data:www-data --delete index.html static /var/www/html
+rsync -avz --delete dist/*  pj.provas.ic.unicamp.br:/var/www/html/

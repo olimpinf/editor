@@ -22,34 +22,48 @@ function isLSPEnabled(): boolean {
     return !!(window as any).AppConfig?.useLSP;
 }
 
+// Helper: is openExamUrl enabled for this session?
+function isOpenExamUrlEnabled(): boolean {
+    return !!(window as any).AppConfig?.openExamUrl;
+}
+
 function getAppUserId() {
     // After init, window.currentUserId will be set from /editor/editor_user
-    return window.currentUserId;
+    //return window.myApp.username;
+    return "username";
 }
 
 // 2. Wait for the entire page to load. This solves the race condition where
 //    `loader.js` hasn't created `window.require` yet.
+
+
 window.addEventListener('DOMContentLoaded', async () => {
     // 1. Fetch the logged-in username (this is our userId / workspace owner)
-    try {
-        const resp = await fetch("/editor/editor_user", {
-            method: "GET",
-            credentials: "include",           // include session cookies
-            headers: { "Accept": "application/json" }
-        });
+    if (isOpenExamUrlEnabled()) {
+		window.currentUserId = "anonymous";
 
-        if (!resp.ok) {
-            throw new Error("Failed to get user id: HTTP " + resp.status);
-        }
+	// 	try {
+    //     const resp = await fetch("/editor/editor_user", {
+    //         method: "GET",
+    //         credentials: "include",           // include session cookies
+    //         headers: { "Accept": "application/json" }
+    //     });
 
-        const data = await resp.json();       // { "username": "00000-A" }
-        window.currentUserId = data.username; // <- store globally
-        console.log("[Init] currentUserId =", window.currentUserId);
-    } catch (err) {
-        console.error("[Init] Could not load user id:", err);
-        // Hard fallback if you want:
+    //     if (!resp.ok) {
+    //         throw new Error("Failed to get user id: HTTP " + resp.status);
+    //     }
+
+    //     const data = await resp.json();       // { "username": "00000-A" }
+    //     window.currentUserId = data.username; // <- store globally
+    //     console.log("[Init] currentUserId =", window.currentUserId);
+    // } catch (err) {
+    //     console.error("[Init] Could not load user id:", err);
+    //     // Hard fallback if you want:
+    //     window.currentUserId = "anonymous";
+    // }
+} else {
         window.currentUserId = "anonymous";
-    }
+} 
 
     // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
@@ -198,6 +212,100 @@ public class tarefa {
 
 	
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
+
+    (function() {
+        // I am the Editor Tab (Controller).
+        // I should have an opener (the Exam Tab).
+        if (!window.opener) {
+            // If I'm opened directly, do nothing.
+            return;
+        }
+
+        console.log("Editor Tab (Controller): Script Active");
+        const bc = new BroadcastChannel('obi_exam_visibility');
+        let examTabState = 'unknown'; // Tracks the other tab
+        let isLocked = false; // Prevent multiple triggers
+
+        // --- LOCKOUT FUNCTION ---
+        function showLockoutScreen() {
+            // Check if already locked
+            if (isLocked) return;
+            isLocked = true;
+            
+            // Disable the "Are you sure?" prompt
+            window.onbeforeunload = null; 
+
+            const newHTML = `
+            <style>
+                body { background-color: #333; color: white; font-family: sans-serif; }
+                div { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100vh; font-size: 1.5rem; }
+                h1 { color: #FF6B6B; font-size: 3rem; }
+            </style>
+            <div>
+                <h1>Exame Terminado</h1>
+                <p>Esta sessão foi encerrada por violar as regras do exame.</p>
+                <p>Por favor, aguarde instruções de um fiscal.</p>
+            </div>`;
+            
+            // Overwrite the entire page
+            document.body.innerHTML = newHTML;
+        }
+        // --- END LOCKOUT FUNCTION ---
+
+        // 1. Listen for messages from the Exam (Worker) tab
+        bc.onmessage = (event) => {
+            if (isLocked) return; // Don't process if already locked
+
+			// --- NEW: Listen for the username message ---
+    		// if (event.data.id === 'exam' && event.data.command === 'set_username') {
+        	// 	const username = event.data.value;
+        	// 	console.log("Received username from worker tab:", username);
+        	// 	// Now you can use the username for your LSP
+        	// 	// For example:
+        	// 	// initializeLSP(username);
+        	// 	// or set it on a global object:
+        	// 	window.myApp.username = username;
+    		// }
+
+            if (event.data.id === 'exam') {
+                examTabState = event.data.state;
+                checkAndLock();
+            }
+        };
+
+        // 2. Listen for my own visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (isLocked) return;
+            checkAndLock();
+        });
+
+        // 3. Check if the opener (Exam tab) has closed
+        setInterval(() => {
+            if (window.opener && window.opener.closed) {
+                console.log("Editor Tab: Opener (Exam) tab closed. Locking self.");
+                // If the other tab closes for any reason, lock this one.
+                showLockoutScreen();
+            }
+        }, 1000); // Check every second
+
+        /**
+         * Checks if both tabs are hidden, and if so, locks both.
+         */
+        function checkAndLock() {
+            if (isLocked) return;
+            if (document.hidden && examTabState === 'hidden') {
+                console.log("Both tabs are hidden. Locking both.");
+                
+                // 1. Send the LOCK command to the Exam tab
+                bc.postMessage({ command: 'LOCK' });
+                
+                // 2. Lock self
+                showLockoutScreen();
+            }
+        }
+    })();
+
+
 	(function ExamGate() {
 	    if (!window.AppConfig?.examGate?.enabled) return; 
 	    
@@ -435,7 +543,7 @@ public class tarefa {
             try { localStorage.setItem('obi:lastTask', newTaskID); } catch (_) {}
 	});
 
-function switchLanguage(lang) {
+	function switchLanguage(lang) {
         // 1. Get the new model
 		const newModel = getOrCreateEditorModel(lang);
 		const newModelUri = newModel.uri.toString();
@@ -511,6 +619,50 @@ function switchLanguage(lang) {
 	    sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
 	    return sanitized || 'programa';
 	}
+
+	// // ****************************************
+	// // detect visibility changes and terminate
+
+	// var browserPrefixes = ['moz', 'ms', 'o', 'webkit'];
+
+	// // get the correct attribute name
+	// function getHiddenPropertyName(prefix) {
+	// 	return (prefix ? prefix + 'Hidden' : 'hidden');
+	// }
+
+	// // get the correct event name
+	// function getVisibilityEvent(prefix) {
+	// 	return (prefix ? prefix : '') + 'visibilitychange';
+	// }
+
+	// // get current browser vendor prefix
+	// function getBrowserPrefix() {
+	// 	for (var i = 0; i < browserPrefixes.length; i++) {
+	// 		if (getHiddenPropertyName(browserPrefixes[i]) in document) {
+	// 			// return vendor prefix
+	// 			return browserPrefixes[i];
+	// 		}
+	// 	}
+
+	// 	// no vendor prefix needed
+	// 	return null;
+	// }
+
+	// // bind and handle events
+	// var browserPrefix = getBrowserPrefix();
+
+	// function handleVisibilityChange() {
+	// 	if (document[getHiddenPropertyName(browserPrefix)]) {
+	// 		// the page is hidden
+	// 		console.log('HIDDEN');
+	// 	} else {
+	// 		// the page is visible
+	// 		console.log('VISIBLE');
+	// 	}
+	// }
+
+	// document.addEventListener(getVisibilityEvent(browserPrefix), handleVisibilityChange, false);
+
 
 	// Download buttons
 	function downloadContent(filename, content) {
