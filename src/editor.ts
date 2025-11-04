@@ -252,22 +252,26 @@ public class tarefa {
         }
         // --- END LOCKOUT FUNCTION ---
 
+		// --- Request the username as soon as we are ready ---
+		console.log("Editor Tab: Requesting username from worker.");
+    	bc.postMessage({ 'command': 'request_username' });
+
         // 1. Listen for messages from the Exam (Worker) tab
         bc.onmessage = (event) => {
             if (isLocked) return; // Don't process if already locked
-
-			// --- NEW: Listen for the username message ---
-    		// if (event.data.id === 'exam' && event.data.command === 'set_username') {
-        	// 	const username = event.data.value;
-        	// 	console.log("Received username from worker tab:", username);
+			console.log("received event", event);
+			// --- Listen for the username message ---
+    		if (event.data.id === 'exam' && event.data.command === 'set_username') {
+        		const username = event.data.value;
+        		console.log("Received username from worker tab:", username);
         	// 	// Now you can use the username for your LSP
         	// 	// For example:
         	// 	// initializeLSP(username);
         	// 	// or set it on a global object:
         	// 	window.myApp.username = username;
-    		// }
+    		}
 
-            if (event.data.id === 'exam') {
+            if (event.data.id === 'exam' && event.data.state) {
                 examTabState = event.data.state;
                 checkAndLock();
             }
