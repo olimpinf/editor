@@ -3,3 +3,4 @@
 sudo rsync -av --delete dist/ /ext/static/editor/
 
 rsync -avz --delete dist/*  pj.provas.ic.unicamp.br:/var/www/html/
+rsync -avz --delete dist/*  cms@editor.provas.ic.unicamp.br:/var/www/html/
