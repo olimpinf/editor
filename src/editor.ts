@@ -236,18 +236,19 @@ public class tarefa {
         // Disable the "Are you sure?" prompt
         window.onbeforeunload = null; 
 
-        const newHTML = `
-        <style>
-            body { background-color: #333; color: white; font-family: sans-serif; }
-            div { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100vh; font-size: 1.5rem; }
-            h1 { color: #FF6B6B; font-size: 3rem; }
-            p { padding-top: 2.0rem; }
-        </style>
-        <div>
-            <h1>Exame Terminado</h1>
-            <p>Esta sessão foi encerrada por violar as regras do exame.</p>
-            <p>Por favor, aguarde instruções de um fiscal.</p>
-        </div>`;
+        const newHTML = `                                                                                                                                                                      
+        <style>                                                                                                                                                                                
+            body { background-color: #333; color: white; font-family: sans-serif; }                                                                                                            
+            div { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100vh; font-size: 1.5rem; }                                 
+            h1 { color: #FF6B6B; font-size: 3rem; }                                                                                                                                            
+            p { padding-top: 2.0rem; }                                                                                                                                                         
+        </style>                                                                                                                                                                               
+        <div>                                                                                                                                                                                  
+            <h1>Exame Terminado</h1>                                                                                                                                                           
+            <p>Esta sessão foi encerrada por violar as regras do exame.</p>                                                                                                                    
+            <p>Por favor, aguarde instruções de um fiscal.</p>                                                                                                                                 
+        </div>`;                                                                                                                                                                               
+
         
         // Overwrite the entire page
         document.body.innerHTML = newHTML;
