@@ -15,7 +15,7 @@ initGlobalTheme();
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
-
+import { initSubmitModal } from './submit-modal';
 
 // Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
@@ -204,6 +204,8 @@ public class tarefa {
 	// This is safe because window.editor is now defined.
 	switchLanguage(initialLang);
 
+	// submit button modal
+	initSubmitModal();
 	
 	(function() {
     // I am the Editor Tab (Controller).
@@ -218,9 +220,9 @@ public class tarefa {
     
     // Track state of all tabs
     const tabStates = {
-        exam: 'unknown',  // Worker 1
-        info: 'unknown', // Worker 2
-        editor: 'unknown' // Controller
+        exam: 'hidden',  // Worker 1
+        info: 'unknown', // Worker 2, wait for it to load (?)
+        editor: 'hidden' // Controller
     };
     
     let isLocked = false; // Prevent multiple triggers
@@ -2292,3 +2294,127 @@ function applyGlobalTheme(mode) {
   };
 })(window, document);
 
+//Submit Modal Handler
+(function() {
+  // Task names (you can modify these or fetch them from elsewhere)
+  const task1_name = "Tarefa 1";
+  const task2_name = "Tarefa 2"; 
+  const task3_name = "Tarefa 3";
+
+  // Create the modal HTML and inject it into the page
+  function createSubmitModal() {
+    const modalHTML = `
+      <div id="submit-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="submit-title" aria-hidden="true">
+        <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+        <div class="obi-modal__dialog" role="document">
+          <div class="obi-modal__header">
+            <h2 id="submit-title">Submeter Solução</h2>
+            <button id="submit-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
+          </div>
+          <div class="obi-modal__body">
+            <div style="margin-bottom: 20px;">
+              <label for="task-select" style="display: block; margin-bottom: 8px; font-weight: 600;">Tarefa:</label>
+              <div class="custom-select" style="width: 100%;">
+                <select id="task-select" style="width: 100%; padding: 8px; font-size: 14px;">
+                  <option value="task1">${task1_name}</option>
+                  <option value="task2">${task2_name}</option>
+                  <option value="task3">${task3_name}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="obi-modal__footer">
+            <button id="submit-cancel-btn" class="obi-modal__action" style="background: #6c757d; margin-right: 10px;">Cancelar</button>
+            <button id="submit-confirm-btn" class="obi-modal__action">Submeter</button>
+          </div>
+        </div>
+        <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+      </div>
+    `;
+
+    // Insert modal into the page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  }
+
+  // Show modal
+  function showModal() {
+    const modal = document.getElementById('submit-modal');
+    if (!modal) return;
+    
+    modal.setAttribute('aria-hidden', 'false');
+    modal.style.display = 'block';
+    
+    // Focus on the select element
+    setTimeout(() => {
+      document.getElementById('task-select')?.focus();
+    }, 100);
+  }
+
+  // Hide modal
+  function hideModal() {
+    const modal = document.getElementById('submit-modal');
+    if (!modal) return;
+    
+    modal.setAttribute('aria-hidden', 'true');
+    modal.style.display = 'none';
+  }
+
+  // Handle submit confirmation
+  function handleSubmitConfirm() {
+    const selectedTask = document.getElementById('task-select')?.value;
+    const selectedTaskName = document.getElementById('task-select')?.selectedOptions[0]?.text;
+    
+    console.log('Submitting task:', selectedTask, selectedTaskName);
+    
+    // TODO: Add your actual submit logic here
+    // For example:
+    // submitSolution(selectedTask);
+    
+    hideModal();
+    
+    // Optional: Show a confirmation message
+    alert(`Submetendo para: ${selectedTaskName}`);
+  }
+
+  // Initialize when DOM is ready
+  function init() {
+    // Create the modal
+    createSubmitModal();
+    
+    // Get the submit button
+    const submitBtn = document.getElementById('submit-btn');
+    if (!submitBtn) {
+      console.error('Submit button not found');
+      return;
+    }
+
+    // Attach event listener to submit button
+    submitBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      showModal();
+    });
+
+    // Close button
+    document.getElementById('submit-close-btn')?.addEventListener('click', hideModal);
+    
+    // Cancel button
+    document.getElementById('submit-cancel-btn')?.addEventListener('click', hideModal);
+    
+    // Confirm button
+    document.getElementById('submit-confirm-btn')?.addEventListener('click', handleSubmitConfirm);
+    
+    // Backdrop click to close
+    document.querySelector('#submit-modal .obi-modal__backdrop')?.addEventListener('click', hideModal);
+    
+    // ESC key to close
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('submit-modal');
+        if (modal && modal.getAttribute('aria-hidden') === 'false') {
+          hideModal();
+        }
+      }
+    });
+  }
+
+})();
