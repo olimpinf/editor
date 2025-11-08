@@ -369,7 +369,9 @@ export function initBackups(): void {
 
   // Replace download-btn functionality with save backup
   const downloadBtn = document.getElementById('download-btn');
+  console.log('remove listeners download');
   if (downloadBtn) {
+    console.log('found download button');
     // Remove existing click listeners by cloning the node
     const newDownloadBtn = downloadBtn.cloneNode(true) as HTMLElement;
     downloadBtn.parentNode?.replaceChild(newDownloadBtn, downloadBtn);
@@ -410,8 +412,10 @@ export function initBackups(): void {
   }
 
   // Replace download-input-btn functionality with save backup
+  console.log('remove listeners download-input-btn');
   const downloadInputBtn = document.getElementById('download-input-btn');
   if (downloadInputBtn) {
+    console.log('remove listeners download-input-btn');
     const newDownloadInputBtn = downloadInputBtn.cloneNode(true) as HTMLElement;
     downloadInputBtn.parentNode?.replaceChild(newDownloadInputBtn, downloadInputBtn);
 
@@ -426,8 +430,10 @@ export function initBackups(): void {
   }
 
   // Replace upload-input-btn functionality with load backup
+  console.log('remove listeners upload-input-button');
   const uploadInputBtn = document.getElementById('upload-input-btn');
   if (uploadInputBtn) {
+    console.log('fount upload-input-button');
     const newUploadInputBtn = uploadInputBtn.cloneNode(true) as HTMLElement;
     uploadInputBtn.parentNode?.replaceChild(newUploadInputBtn, uploadInputBtn);
 

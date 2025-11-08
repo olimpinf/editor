@@ -12,6 +12,7 @@ window.currentLspClient = null;
 
 initGlobalTheme();
 
+
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
@@ -58,7 +59,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     // }
 } else {
         window.currentUserId = "anonymous";
-} 
+
+}
+
 
     // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
@@ -207,7 +210,6 @@ public class tarefa {
 
 	// submit button modal
 	initSubmitModal();
-	initBackups();
 
 	(function() {
     // I am the Editor Tab (Controller).
@@ -216,6 +218,9 @@ public class tarefa {
         // If I'm opened directly, do nothing.
         return;
     }
+
+    console.log("will call initBackups()");
+    initBackups();
 
     console.log("Editor Tab (Controller): Three-tab monitoring active");
     const bc = new BroadcastChannel('obi_exam_visibility');
