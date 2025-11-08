@@ -4,7 +4,7 @@
   <defs>
     <style>
       .st0 {
-        stroke-width: 5.2px;
+        stroke-width: 6.6px;
       }
 
       .st0, .st1 {
@@ -14,7 +14,7 @@
       }
 
       .st1 {
-        stroke-width: 3.5px;
+        stroke-width: 3.4px;
       }
 
       .st2 {
@@ -22,9 +22,9 @@
       }
     </style>
   </defs>
-  <polyline class="st1" points="4.2 21.4 4.2 36.3 35.3 36.3 35.3 21.3"/>
+  <polyline class="st1" points="4.2 22.4 4.2 36.3 35.3 36.3 35.3 22.3"/>
   <g>
-    <line class="st0" x1="19.7" y1="2.2" x2="19.7" y2="14.7"/>
-    <polygon class="st2" points="12 8.8 19.7 12.1 27.5 8.8 19.7 27.2 12 8.8"/>
+    <line class="st0" x1="19.8" y1="2.2" x2="19.8" y2="14.7"/>
+    <polygon class="st2" points="7.3 8.8 19.8 12.1 32.3 8.8 19.8 27.2 7.3 8.8"/>
   </g>
 </svg>
