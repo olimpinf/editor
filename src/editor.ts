@@ -16,6 +16,7 @@ initGlobalTheme();
 import { initLanguageClient } from './language-client';
 import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
 import { initSubmitModal } from './submit-modal';
+import { initBackups } from './backups';
 
 // Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
@@ -206,7 +207,8 @@ public class tarefa {
 
 	// submit button modal
 	initSubmitModal();
-	
+	initBackups();
+
 	(function() {
     // I am the Editor Tab (Controller).
     // I should have an opener (the Exam Tab).
