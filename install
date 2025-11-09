@@ -1,6 +1,7 @@
 #! /usr/bin/sh
 
-sudo rsync -av --delete dist/ /ext/static/editor/
+sudo rsync -av --delete dist/* /var/www/html
+sudo chown -R www-data:www-data /var/www/html/*
 
 rsync -avz --delete dist/*  pj.provas.ic.unicamp.br:/var/www/html/
 rsync -avz --delete dist/*  cms@editor.provas.ic.unicamp.br:/var/www/html/

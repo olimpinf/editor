@@ -23,10 +23,10 @@ interface BackupData {
 
 // API endpoints
 const ENDPOINTS = {
-  retrieveBackups: '/editor/retrieve_backups',
-  retrieveBackup: '/editor/retrieve_a_backup',
-  deleteBackup: '/editor/delete_a_backup',
-  addBackup: '/editor/add_a_backup'
+  retrieveBackups: '/api/retrieve_backups',
+  retrieveBackup: '/api/retrieve_a_backup',
+  deleteBackup: '/api/delete_a_backup',
+  addBackup: '/api/add_a_backup'
 };
 
 /**
@@ -174,6 +174,17 @@ async function showLoadBackupModal(type: 'code' | 'input'): Promise<string | nul
     if (existingModal) {
       existingModal.remove();
     }
+    
+    // Get current tab name for the title
+    const currentTabId = (window as any).currentTask;
+    const getTabTitle = (window as any).getTabTitle;
+    let tabName = '';
+    if (typeof getTabTitle === 'function' && currentTabId) {
+        tabName = getTabTitle(currentTabId) || currentTabId;
+	}
+    const titleText = 'Recuperar Backup ' + 
+                  (type === 'code' ? 'de Código' : 'de Entrada') + 
+                  (tabName ? ' para ' + tabName : '');	
 
     // Generate backup list
     const backupListHTML = backups
@@ -191,27 +202,30 @@ async function showLoadBackupModal(type: 'code' | 'input'): Promise<string | nul
       .join('');
 
     const modalHTML = `
-      <div id="${modalId}" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="load-backup-title-${type}" aria-hidden="false" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
-        <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
-        <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 400px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-          <div class="obi-modal__header" style="margin-bottom: 20px; position: relative;">
-            <h2 id="load-backup-title-${type}" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px;">Carregar Backup ${type === 'code' ? 'de Código' : 'de Entrada'}</h2>
-            <button id="load-backup-close-${type}" class="obi-modal__close" aria-label="Fechar" style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; color: #666; line-height: 1;">✕</button>
-          </div>
-          <div class="obi-modal__body" style="max-height: 50vh; overflow-y: auto;">
-            <div id="backup-list-${type}">
-              ${backupListHTML}
-            </div>
-          </div>
-          <div class="obi-modal__footer" style="margin-top: 20px; display: flex; justify-content: flex-end;">
-            <button id="load-backup-cancel-${type}" class="obi-modal__action" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancelar</button>
+    <div id="${modalId}" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="save-backup-title-${type}" aria-hidden="false" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
+      <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
+      <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 400px; max-width: 600px; width: 90%;">
+        <div class="obi-modal__header" style="margin-bottom: 20px; position: relative;">
+          <h2 id="save-backup-title-${type}" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px; word-wrap: break-word;">${titleText}</h2>
+          <button id="save-backup-close-${type}" class="obi-modal__close" aria-label="Fechar" style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; color: #666; line-height: 1;">✕</button>
+        </div>
+        <div class="obi-modal__body">
+          <div style="margin-bottom: 20px;">
+            <label for="backup-comment-${type}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Descrição do backup:</label>
+            <input type="text" id="backup-comment-${type}" placeholder="Ex: Solução problema 1" style="width: 100%; max-width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" />
           </div>
         </div>
+        <div class="obi-modal__footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="save-backup-cancel-${type}" class="obi-modal__action" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">Cancelar</button>
+          <button id="save-backup-confirm-${type}" class="obi-modal__action" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">Salvar</button>
+        </div>
       </div>
-    `;
+    </div>
+  `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     const modal = document.getElementById(modalId);
+    console.log("modal",modal);
     if (!modal) return null;
 
     // Prevent body scroll
@@ -232,7 +246,9 @@ async function showLoadBackupModal(type: 'code' | 'input'): Promise<string | nul
       // Backup item click handlers
       const backupItems = modal.querySelectorAll('.backup-item');
       backupItems.forEach(item => {
-        item.addEventListener('click', async () => {
+        item.addEventListener('click', async (e) => {
+      	  e.preventDefault();       // Stops default browser action
+      	  e.stopPropagation();     // Stops event bubbling
           const backupId = parseInt(item.getAttribute('data-backup-id') || '0');
           if (!backupId) return;
 
@@ -276,18 +292,46 @@ async function showSaveBackupModal(
     existingModal.remove();
   }
 
+  // Get current tab name by reading from localStorage directly
+  const currentTabId = (window as any).currentTask;
+  let tabName = '';
+
+  if (currentTabId) {
+    const SNAP_PREFIX = "obi:tab:v1:";
+    const key = `${SNAP_PREFIX}${currentTabId}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        tabName = snap?.title || currentTabId;
+      }
+    } catch (e) {
+      console.error('Error getting tab title:', e);
+      tabName = currentTabId;
+    }
+  }
+
+  console.log('Tab name retrieved:', tabName);
+  
+  // Build the complete title BEFORE the modalHTML
+  const titleText = 'Salvar Backup ' + 
+                    (type === 'code' ? 'de Código' : 'de Entrada') + 
+                    (tabName ? ' de ' + tabName : '');
+
+
+  console.log('titleText', titleText);
   const modalHTML = `
     <div id="${modalId}" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="save-backup-title-${type}" aria-hidden="false" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
       <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
-      <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 400px; width: auto; max-width: 90%;">
+      <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 400px; max-width: 600px; width: 90%;">
         <div class="obi-modal__header" style="margin-bottom: 20px; position: relative;">
-          <h2 id="save-backup-title-${type}" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px;">Salvar Backup ${type === 'code' ? 'de Código' : 'de Entrada'}</h2>
+          <h2 id="save-backup-title-${type}" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px; word-wrap: break-word;">${titleText}</h2>
           <button id="save-backup-close-${type}" class="obi-modal__close" aria-label="Fechar" style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; color: #666; line-height: 1;">✕</button>
         </div>
         <div class="obi-modal__body">
           <div style="margin-bottom: 20px;">
             <label for="backup-comment-${type}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Descrição do backup:</label>
-            <input type="text" id="backup-comment-${type}" placeholder="Ex: Solução problema 1" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; display: block;" />
+            <input type="text" id="backup-comment-${type}" placeholder="Ex: Solução problema 1" style="width: 100%; max-width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" />
           </div>
         </div>
         <div class="obi-modal__footer" style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -374,9 +418,14 @@ export function initBackups(): void {
     console.log('found download button');
     // Remove existing click listeners by cloning the node
     const newDownloadBtn = downloadBtn.cloneNode(true) as HTMLElement;
+    // Remove any download-related attributes
+    newDownloadBtn.removeAttribute('download');
+    newDownloadBtn.removeAttribute('href');
     downloadBtn.parentNode?.replaceChild(newDownloadBtn, downloadBtn);
 
-    newDownloadBtn.addEventListener('click', async () => {
+    newDownloadBtn.addEventListener('click', async (e) => {
+      e.preventDefault();       // Stops default browser action
+      e.stopPropagation();     // Stops event bubbling
       const code = (window as any).editor?.getValue() || '';
       if (!code.trim()) {
         alert('Não há código para salvar.');
@@ -419,7 +468,9 @@ export function initBackups(): void {
     const newDownloadInputBtn = downloadInputBtn.cloneNode(true) as HTMLElement;
     downloadInputBtn.parentNode?.replaceChild(newDownloadInputBtn, downloadInputBtn);
 
-    newDownloadInputBtn.addEventListener('click', async () => {
+    newDownloadInputBtn.addEventListener('click', async (e) => {
+      e.preventDefault();       // Stops default browser action
+      e.stopPropagation();     // Stops event bubbling
       const input = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || '';
       if (!input.trim()) {
         alert('Não há entrada para salvar.');
@@ -437,7 +488,9 @@ export function initBackups(): void {
     const newUploadInputBtn = uploadInputBtn.cloneNode(true) as HTMLElement;
     uploadInputBtn.parentNode?.replaceChild(newUploadInputBtn, uploadInputBtn);
 
-    newUploadInputBtn.addEventListener('click', async () => {
+    newUploadInputBtn.addEventListener('click', async (e) => {
+      e.preventDefault();       // Stops default browser action
+      e.stopPropagation();     // Stops event bubbling
       const inputEl = document.getElementById('stdin-input') as HTMLTextAreaElement;
       if (inputEl?.value.trim()) {
         if (!confirm('Deseja substituir a entrada atual?')) {

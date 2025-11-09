@@ -1,3 +1,10 @@
+// 1. Import the language client function from our other module.
+import { initLanguageClient } from './language-client';
+import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
+import { initSubmitModal } from './submit-modal';
+import { initBackups } from './backups';
+
+
 window.runningTaskId   = null;
 window.runningLanguage = null;
 window.lastRunStartMs  = 0;     // <— from click time
@@ -12,12 +19,6 @@ window.currentLspClient = null;
 
 initGlobalTheme();
 
-
-// 1. Import the language client function from our other module.
-import { initLanguageClient } from './language-client';
-import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
-import { initSubmitModal } from './submit-modal';
-import { initBackups } from './backups';
 
 // Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
@@ -59,9 +60,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // }
 } else {
         window.currentUserId = "anonymous";
-
-}
-
+} 
 
     // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
@@ -210,6 +209,7 @@ public class tarefa {
 
 	// submit button modal
 	initSubmitModal();
+	initBackups();
 
 	(function() {
     // I am the Editor Tab (Controller).
@@ -218,9 +218,6 @@ public class tarefa {
         // If I'm opened directly, do nothing.
         return;
     }
-
-    console.log("will call initBackups()");
-    initBackups();
 
     console.log("Editor Tab (Controller): Three-tab monitoring active");
     const bc = new BroadcastChannel('obi_exam_visibility');
@@ -715,49 +712,6 @@ public class tarefa {
 	// }
 
 	// document.addEventListener(getVisibilityEvent(browserPrefix), handleVisibilityChange, false);
-
-
-	// Download buttons
-	function downloadContent(filename, content) {
-	    const blob = new Blob([content], { type: 'text/plain' });
-	    const url = URL.createObjectURL(blob);
-	    const a = document.createElement('a');
-	    a.href = url;
-	    a.download = filename;
-	    document.body.appendChild(a);
-	    a.click();
-	    document.body.removeChild(a);
-	    URL.revokeObjectURL(url);
-	}
-
-
-	document.getElementById('download-btn')?.addEventListener('click', () => {
-	    const baseFilename = getSanitizedTabName();
-	    
-	    const langSelect = document.getElementById('language-select');
-	    const lang = langSelect ? langSelect.value : 'txt';
-	    let ext = 'txt';
-	    if (lang === 'cpp') ext = 'cpp';
-	    else if (lang === 'java') ext = 'java';
-	    else if (lang === 'python') ext = 'py';
-	    
-	    const filename = `${baseFilename}.${ext}`;
-	    const content = window.editor.getValue(); 	
-	    downloadContent(filename, content);
-	});
-
-	document.getElementById('download-input-btn')?.addEventListener('click', () => {
-	    const content = document.getElementById('stdin-input')?.value ?? "";
-	    downloadContent('entrada.txt', content);
-	});
-
-	document.getElementById('download-output-btn')?.addEventListener('click', () => {
-	    // Get text content from the <pre> tag inside the output container
-	    const outputContainer = document.getElementById('stdout-output');
-	    const htmlContent = outputContainer?.innerHTML ?? "";
-	    const txtContent = removeHtmlTags(htmlContent);
-	    downloadContent('saida.txt', txtContent);
-	});
 
 
 	window.addEventListener('beforeunload', function (e) {
