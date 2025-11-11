@@ -10,37 +10,18 @@ const URL_API = "https://pj.provas.ic.unicamp.br"
 const CMS_USERNAME = "00000-A";
 const CMS_PASSWORD = "tarefa-forte-pilha-fraca";
 
-/**
- * Save login_data to localStorage
- */
-function saveLoginData(value) {
-    login_data = value;
-    if (value !== null && value !== undefined) {
-	localStorage.setItem("login_data", value);
-    } else {
-	localStorage.removeItem("login_data");
-    }
-}
+
 
 /**
- * Load login_data from localStorage (if any)
- */
-function loadLoginData() {
-    const stored = localStorage.getItem("login_data");
-    if (stored) {
-	login_data = stored;
-    }
-}
-
-/**
- * Perform login using the fixed username/password.
+ * Get the task list.
  */
 async function taskList() {
     const url = "/api/task_list"
 
     try {
         const resp = await fetch(url, {
-             method: "GET" 
+             method: "GET",
+             headers: window.CMS_API_HEADERS
          });
 
         if (!resp.ok) {
