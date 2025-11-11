@@ -1,6 +1,6 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
-import { cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
+import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, cmsTaskList } from './cms';
 import { initSubmitModal } from './submit-modal';
 import { initBackups } from './backups';
 
@@ -828,6 +828,7 @@ public class tarefa {
 	    
 	    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	    try {
+        // just a test    const taskList = await cmsTaskList();
 		// Submit the code and get the test ID
 		const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
 		const testId = submissionResult.data.id;

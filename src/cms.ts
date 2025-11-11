@@ -1,28 +1,21 @@
-/**
- * Global variable for the login result
- */
-let login_data = null;
-export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
-/**
- * Hardcoded CMS credentials (shared by all students)
- */
-const URL_API = "https://pj.provas.ic.unicamp.br"
-const CMS_USERNAME = "00000-A";
-const CMS_PASSWORD = "tarefa-forte-pilha-fraca";
+import { stat } from "fs";
 
+export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
 
 /**
  * Get the task list.
  */
-async function taskList() {
+export async function cmsTaskList() {
     const url = "/api/task_list"
 
+    console.log("[cmsTaskList] url:", url);
+    console.log("[cmsTaskList] window.CMS_API_HEADERS:", window.CMS_API_HEADERS)
     try {
         const resp = await fetch(url, {
-             method: "GET",
-             headers: window.CMS_API_HEADERS
-         });
+            method: "GET",
+            headers: window.CMS_API_HEADERS
+        });
 
         if (!resp.ok) {
             console.error("Task List failed with status", resp.status);
@@ -31,9 +24,10 @@ async function taskList() {
 
         const data = await resp.json();
         console.log('[CMS] data', data);
-	
+        return data;
+
     } catch (err) {
-         console.error("Error during task list retrieval:", err); 
+        console.error("Error during task list retrieval:", err);
     }
 }
 
@@ -43,28 +37,29 @@ async function taskList() {
  */
 async function cmsSubmit(codeContent, language, languageExtension) {
     // --- Configuration ---
-    if (languageExtension == '.cpp' ) {
-     const SUBMIT_API_URL = "/api/tarefa/submit";
+    if (languageExtension == '.cpp') {
+        const SUBMIT_API_URL = "/api/tarefa/submit";
     }
     else {
-     const SUBMIT_API_URL = "/api/hashedName-d8724aa0b88f985f11/submit";
+        const SUBMIT_API_URL = "/api/hashedName-d8724aa0b88f985f11/submit";
     }
-    
+
     // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
     const fileNameField = "tarefa1.%l";
-    const fileName = "tarefa1" + languageExtension; 
+    const fileName = "tarefa1" + languageExtension;
 
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
-    
+
     // Example: formData.append("tarefa1.cpp", Blob, "tarefa1.cpp")
     formData.append(fileNameField, codeBlob, fileName);
-    
+
     formData.append("language", language);
 
     try {
         const response = await fetch(SUBMIT_API_URL, {
             method: 'POST',
+            headers: window.CMS_API_HEADERS,
             body: formData, // fetch automatically sets Content-Type: multipart/form-data
             redirect: 'manual' // Prevents fetch from following 302/303 redirects
         });
@@ -76,7 +71,7 @@ async function cmsSubmit(codeContent, language, languageExtension) {
             // Success: CMS returned a redirect (302/303) to the status page.
             const redirectLocation = response.headers.get('Location');
             return { success: true, redirect: redirectLocation };
-            
+
         } else if (status >= 200 && status < 300) {
             // Success: 200 OK. Try to parse JSON or display text.
             let data = {};
@@ -86,7 +81,7 @@ async function cmsSubmit(codeContent, language, languageExtension) {
                 data = await response.text();
             }
             return { success: true, data: data };
-            
+
         } else {
             // Failure: Non-success status code (4xx, 5xx).
             const errorText = await response.text();
@@ -109,37 +104,40 @@ export async function cmsTestSend(runninTaskId, codeContent, inputContent, langu
     // --- Configuration ---
     let TEST_API_URL = "/api/hashedName-d8724aa0b88f985f11/test";
     let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
-    let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension; 
-    
+    let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension;
+
     if (languageExtension == "java") {
-	TEST_API_URL = "/api/tarefa/test";
-	fileNameField = "tarefa.%l";
-	fileName = "tarefa.java";
+        TEST_API_URL = "/api/tarefa/test";
+        fileNameField = "tarefa.%l";
+        fileName = "tarefa.java";
     }
 
+    console.log("[cmsTestSend] URL", TEST_API_URL);
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
-    
+
     formData.append(fileNameField, codeBlob, fileName);
     formData.append("input", inputBlob, "input.txt");
     formData.append("language", language);
-    
+
     try {
         const response = await fetch(TEST_API_URL, {
             method: 'POST',
+            headers: window.CMS_API_HEADERS,
             body: formData, // fetch automatically sets Content-Type: multipart/form-data
             redirect: 'manual' // Prevents fetch from following 302/303 redirects
         });
 
         const status = response.status;
         const contentType = response.headers.get('content-type');
+        console.log("[cmsTestSend] POST status:", status);
 
         if (status === 302 || status === 303) {
             // Success: CMS returned a redirect (302/303) to the status page.
             const redirectLocation = response.headers.get('Location');
             return { success: true, redirect: redirectLocation };
-            
+
         } else if (status >= 200 && status < 300) {
             // Success: 200 OK. Try to parse JSON or display text.
             let data = {};
@@ -149,7 +147,7 @@ export async function cmsTestSend(runninTaskId, codeContent, inputContent, langu
                 data = await response.text();
             }
             return { success: true, data: data };
-            
+
         } else {
             // Failure: Non-success status code (4xx, 5xx).
             const errorText = await response.text();
@@ -170,38 +168,26 @@ export async function cmsTestStatus(theTaskId: string, id: string, language: str
     console.log("cmsTestStatus, language:", language);
     let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id;
     if (language == "Java / JDK") {
-	url = "/api/tarefa/test/" + id;
+        url = "/api/tarefa/test/" + id;
     }
 
     let data = "";
-    try {        
+    try {
         const resp = await fetch(url, {
-             method: "GET" 
-         });
+            method: "GET",
+            headers: window.CMS_API_HEADERS,
+        });
 
         if (!resp.ok) {
             console.error("Test Status failed with status", resp.status);
-	    data = {status: 0, status_text: "Erro"};
+            data = { status: 0, status_text: "Erro" };
             return;
         }
 
         data = await resp.json();
-	return data;
-	
+        return data;
+
     } catch (err) {
-         console.error("Error during task list retrieval:", err); 
+        console.error("Error during task list retrieval:", err);
     }
 }
-
-
-
-/**
- * On page load, try to restore login_data.
- * If not found, perform a login automatically.
- */
-// document.addEventListener("DOMContentLoaded", () => {
-//     loadLoginData();
-//     if (!login_data) {
-// 	doLogin();
-//     }
-// });
