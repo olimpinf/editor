@@ -49,6 +49,7 @@ async function taskList() {
         }
 
         const data = await resp.json();
+        console.log('[CMS] data', data);
 	
     } catch (err) {
          console.error("Error during task list retrieval:", err); 
