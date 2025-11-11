@@ -1,8 +1,9 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, cmsTaskList } from './cms';
-import { initSubmitModal } from './submit-modal';
 import { initBackups } from './backups';
+import { initSubmitModalWithTasks } from './submit-modal';
+await initSubmitModalWithTasks();
 
 
 window.runningTaskId   = null;

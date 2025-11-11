@@ -185,12 +185,16 @@ class SubmitModal {
  * Call this function from your editor.ts after DOM is ready
  */
 export function initSubmitModal(): void {
+  console.log('[SubmitModal] Initialization started');
+  
   // Ensure the editor and Monaco are fully initialized before creating the modal
   const checkEditorReady = () => {
     if ((window as any).editor && (window as any).monaco) {
+      console.log('[SubmitModal] Editor ready, creating modal instance');
       // Editor is ready, now we can safely create the modal
       createSubmitModalInstance();
     } else {
+      console.log('[SubmitModal] Waiting for editor to be ready...');
       // Editor not ready yet, check again in a bit
       setTimeout(checkEditorReady, 50);
     }
@@ -203,66 +207,166 @@ export function initSubmitModal(): void {
  * Internal function to create the actual modal instance
  */
 function createSubmitModalInstance(): void {
-  // Create the modal instance
-  const submitModal = new SubmitModal({
-    onSubmit: (taskId: string, taskName: string) => {
-      // This is where you integrate with your existing submission logic
-      console.log('[Submit] Task selected:', taskId, taskName);
-      
-      // TODO: Integrate with your existing CMS submission code
-      // You can call your existing submission functions here
-      // For example, if you have a function like:
-      // cmsTestSend(taskId, window.editor.getValue(), ...);
-      
-      // Show a status message
-      if ((window as any).App?.Status) {
-        (window as any).App.Status.setForCurrent(
-          `Submetendo para ${taskName}...`,
-          { spinning: true }
-        );
+  // Import the cms module dynamically
+  import('./cms').then(cms => {
+    console.log('[SubmitModal] CMS module loaded');
+    
+    // Create the modal instance
+    const submitModal = new SubmitModal({
+      onSubmit: async (taskId: string, taskName: string) => {
+        console.log('[SubmitModal] Submitting to task:', taskId, taskName);
+        
+        // Get current code from editor
+        const code = (window as any).editor?.getValue() || '';
+        const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+        const language = languageSelect?.value || 'C++20 / g++';
+        
+        // Determine file extension based on language
+        let languageExtension = '.cpp';
+        if (language.includes('Python')) {
+          languageExtension = '.py';
+        } else if (language.includes('Java')) {
+          languageExtension = '.java';
+        } else if (language.includes('C++')) {
+          languageExtension = '.cpp';
+        }
+        
+        console.log('[SubmitModal] Submission details:', {
+          taskId,
+          taskName,
+          language,
+          languageExtension,
+          codeLength: code.length
+        });
+        
+        // Show status message
+        if ((window as any).App?.Status) {
+          (window as any).App.Status.setForCurrent(
+            `Submetendo ${taskName}...`,
+            { spinning: true }
+          );
+        }
+        
+        try {
+          // Call the CMS submit function
+          const result = await cms.cmsSubmit(taskId, code, language, languageExtension);
+          
+          if (result.success) {
+            console.log('[SubmitModal] Submission successful!', result);
+            
+            // Update status
+            if ((window as any).App?.Status) {
+              (window as any).App.Status.setForCurrent(
+                `✓ ${taskName} submetido com sucesso!`,
+                { spinning: false }
+              );
+            }
+            
+            // If there's a redirect, you might want to handle it
+            if (result.redirect) {
+              console.log('[SubmitModal] Redirect to:', result.redirect);
+              // Optionally navigate to the redirect location
+              // window.location.href = result.redirect;
+            }
+          } else {
+            console.error('[SubmitModal] Submission failed:', result);
+            
+            // Update status with error
+            if ((window as any).App?.Status) {
+              (window as any).App.Status.setForCurrent(
+                `✗ Erro ao submeter ${taskName}`,
+                { spinning: false }
+              );
+            }
+            
+            // Show error alert
+            alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
+          }
+        } catch (error) {
+          console.error('[SubmitModal] Submission error:', error);
+          
+          // Update status with error
+          if ((window as any).App?.Status) {
+            (window as any).App.Status.setForCurrent(
+              `✗ Erro ao submeter ${taskName}`,
+              { spinning: false }
+            );
+          }
+          
+          alert(`Erro ao submeter: ${error.message}`);
+        }
       }
-      
-      // Example: You might want to call your existing submit logic here
-      // handleActualSubmission(taskId, taskName);
+    });
+
+    // Attach to the submit button
+    const submitBtn = document.getElementById('submit-btn');
+    if (!submitBtn) {
+      console.error('[SubmitModal] Submit button not found');
+      return;
     }
+
+    submitBtn.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      console.log('[SubmitModal] Submit button clicked');
+      submitModal.show();
+    });
+
+    console.log('[SubmitModal] Initialized successfully');
+  }).catch(error => {
+    console.error('[SubmitModal] Failed to load CMS module:', error);
   });
-
-  // Attach to the submit button
-  const submitBtn = document.getElementById('submit-btn');
-  if (!submitBtn) {
-    console.error('[SubmitModal] Submit button not found');
-    return;
-  }
-
-  submitBtn.addEventListener('click', (e: Event) => {
-    e.preventDefault();
-    submitModal.show();
-  });
-
-  console.log('[SubmitModal] Initialized successfully');
 }
 
 /**
- * Example function showing how to integrate with actual submission
- * You would replace this with your actual CMS submission logic
+ * Load task list from CMS and initialize the submit modal
+ * Call this function after the CMS authentication is ready
  */
-export function handleActualSubmission(taskId: string, taskName: string): void {
-  // Get current code from editor
-  const code = (window as any).editor?.getValue() || '';
-  const language = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
+export async function initSubmitModalWithTasks(): Promise<void> {
+  console.log('[SubmitModal] Loading tasks from CMS...');
   
-  console.log('[Submit] Preparing submission:', {
-    taskId,
-    taskName,
-    language,
-    codeLength: code.length
-  });
+  // Wait for CMS authentication to be ready
+  const waitForAuth = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if ((window as any).CMS_AUTH_TOKEN) {
+        console.log('[SubmitModal] Auth token already available');
+        resolve();
+      } else {
+        console.log('[SubmitModal] Waiting for auth token...');
+        window.addEventListener('cms-auth-ready', () => {
+          console.log('[SubmitModal] Auth token received');
+          resolve();
+        });
+      }
+    });
+  };
   
-  // Here you would integrate with your CMS module
-  // Example (based on your cms.ts import):
-  // cmsTestSend(taskId, code, language).then(response => {
-  //   // Handle success
-  // }).catch(error => {
-  //   // Handle error
-  // });
+  await waitForAuth();
+  
+  // Import CMS module and load tasks
+  try {
+    const cms = await import('./cms');
+    const tasks = await cms.cmsTaskList();
+    
+    if (tasks && tasks.length > 0) {
+      console.log('[SubmitModal] Tasks loaded successfully:', tasks);
+      
+      // Set the tasks in the modal
+      setTaskNames(tasks);
+      
+      // Initialize the modal with the loaded tasks
+      initSubmitModal();
+    } else {
+      console.error('[SubmitModal] No tasks returned from API');
+      
+      // Initialize with default tasks as fallback
+      console.warn('[SubmitModal] Using default tasks as fallback');
+      initSubmitModal();
+    }
+  } catch (error) {
+    console.error('[SubmitModal] Error loading tasks:', error);
+    
+    // Initialize with default tasks as fallback
+    console.warn('[SubmitModal] Using default tasks as fallback');
+    initSubmitModal();
+  }
 }

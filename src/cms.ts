@@ -4,9 +4,10 @@ export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
 
 /**
- * Get the task list.
+ * Get the task list from CMS API
+ * Returns an array of tasks formatted for the submit modal
  */
-export async function cmsTaskList() {
+export async function cmsTaskList(): Promise<Array<{ id: string; name: string }> | null> {
     const url = "/api/task_list"
 
     console.log("[cmsTaskList] url:", url);
@@ -18,49 +19,66 @@ export async function cmsTaskList() {
         });
 
         if (!resp.ok) {
-            console.error("Task List failed with status", resp.status);
-            return;
+            console.error("[cmsTaskList] Failed with status", resp.status);
+            return null;
         }
 
         const data = await resp.json();
-        console.log('[CMS] data', data);
-        return data;
+        console.log('[cmsTaskList] Raw data:', data);
+        
+        // Transform CMS task list into format expected by submit modal
+        // CMS returns: { "tasks": ["task1", "task2", ...] }
+        // We need: [{ id: "task1", name: "Task 1" }, ...]
+        if (data && data.tasks && Array.isArray(data.tasks)) {
+            const taskArray = data.tasks.map((taskName: string) => ({
+                id: taskName,
+                name: taskName // You can format the name here if needed
+            }));
+            console.log('[cmsTaskList] Formatted tasks:', taskArray);
+            return taskArray;
+        }
+        
+        console.error('[cmsTaskList] Unexpected data format:', data);
+        return null;
 
     } catch (err) {
-        console.error("Error during task list retrieval:", err);
+        console.error("[cmsTaskList] Error during task list retrieval:", err);
+        return null;
     }
 }
 
-/*
- * @param {string} codeContent - The raw source code string from the editor.
- * @param {string} language - The programming language string (e.g., 'C++20 / g++').
+/**
+ * Submit code to CMS for evaluation
+ * @param taskId - The task ID to submit to
+ * @param codeContent - The raw source code string from the editor
+ * @param language - The programming language string (e.g., 'C++20 / g++')
+ * @param languageExtension - File extension (e.g., '.cpp', '.py', '.java')
  */
-async function cmsSubmit(codeContent, language, languageExtension) {
-    // --- Configuration ---
-    if (languageExtension == '.cpp') {
-        const SUBMIT_API_URL = "/api/tarefa/submit";
-    }
-    else {
-        const SUBMIT_API_URL = "/api/hashedName-d8724aa0b88f985f11/submit";
-    }
+export async function cmsSubmit(taskId: string, codeContent: string, language: string, languageExtension: string) {
+    // Build the submit URL with the task ID
+    const SUBMIT_API_URL = `/api/${taskId}/submit`;
+    
+    // Build the file name field and file name
+    const fileNameField = `${taskId}.%l`;
+    const fileName = `${taskId}${languageExtension}`;
 
-    // The name of the file field in the multipart form (e.g., "tarefa1.cpp")
-    const fileNameField = "tarefa1.%l";
-    const fileName = "tarefa1" + languageExtension;
+    console.log('[cmsSubmit] Submitting to:', SUBMIT_API_URL);
+    console.log('[cmsSubmit] Task ID:', taskId);
+    console.log('[cmsSubmit] Language:', language);
+    console.log('[cmsSubmit] File name:', fileName);
 
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
 
-    // Example: formData.append("tarefa1.cpp", Blob, "tarefa1.cpp")
+    // Append the code file
     formData.append(fileNameField, codeBlob, fileName);
-
     formData.append("language", language);
 
     try {
         const response = await fetch(SUBMIT_API_URL, {
             method: 'POST',
             headers: window.CMS_API_HEADERS,
-            body: formData, // fetch automatically sets Content-Type: multipart/form-data
+            body: formData,
             redirect: 'manual' // Prevents fetch from following 302/303 redirects
         });
 
@@ -68,29 +86,31 @@ async function cmsSubmit(codeContent, language, languageExtension) {
         const contentType = response.headers.get('content-type');
 
         if (status === 302 || status === 303) {
-            // Success: CMS returned a redirect (302/303) to the status page.
+            // Success: CMS returned a redirect (302/303) to the status page
             const redirectLocation = response.headers.get('Location');
+            console.log('[cmsSubmit] Success! Redirect to:', redirectLocation);
             return { success: true, redirect: redirectLocation };
 
         } else if (status >= 200 && status < 300) {
-            // Success: 200 OK. Try to parse JSON or display text.
+            // Success: 200 OK. Try to parse JSON or display text
             let data = {};
             if (contentType && contentType.includes('application/json')) {
                 data = await response.json();
             } else {
                 data = await response.text();
             }
+            console.log('[cmsSubmit] Success!', data);
             return { success: true, data: data };
 
         } else {
-            // Failure: Non-success status code (4xx, 5xx).
+            // Failure: Non-success status code (4xx, 5xx)
             const errorText = await response.text();
-            console.error(`Submission failed with status code ${status}. Response text:`, errorText.substring(0, 500) + '...');
+            console.error(`[cmsSubmit] Failed with status ${status}. Response:`, errorText.substring(0, 500) + '...');
             return { success: false, status: status, error: errorText };
         }
 
     } catch (err) {
-        console.error("An error occurred during POST submission:", err);
+        console.error("[cmsSubmit] Error during submission:", err);
         return { success: false, error: err.message };
     }
 }
