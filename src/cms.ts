@@ -90,9 +90,10 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
     const fileName = `${taskId}${languageExtension}`;
 
     console.log('[cmsSubmit] Submitting to:', SUBMIT_API_URL);
-    console.log('[cmsSubmit] Task ID:', taskId);
-    console.log('[cmsSubmit] Language:', language);
-    console.log('[cmsSubmit] File name:', fileName);
+    console.log('[cmsSubmit] taskId:', taskId);
+    console.log('[cmsSubmit] language:', language);
+    console.log('[cmsSubmit] fileName:', fileName);
+    console.log('[cmsSubmit] fileNameField:', fileNameField);
 
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });

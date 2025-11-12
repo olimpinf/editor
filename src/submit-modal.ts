@@ -276,7 +276,7 @@ function createSubmitModalInstance(): void {
           // Update status with error
           if ((window as any).App?.Status) {
             (window as any).App.Status.setForCurrent(
-              `✗ Erro ao submeter ${taskName}`,
+              `Erro na submissão`,
               { spinning: false }
             );
           }
@@ -290,7 +290,7 @@ function createSubmitModalInstance(): void {
         // Update status with error
         if ((window as any).App?.Status) {
           (window as any).App.Status.setForCurrent(
-            `✗ Erro ao submeter ${taskName}`,
+            `Erro na submissão`,
             { spinning: false }
           );
         }
