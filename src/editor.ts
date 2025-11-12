@@ -448,6 +448,7 @@ function showExamGateMessage(message: string) {
         justify-content: center;
         z-index: 10000;
         font-size: 18px;
+	text-align: center;
     `;
     overlay.innerHTML = `
         <div class="loading-spinner"></div>
