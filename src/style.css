@@ -290,7 +290,7 @@ pre.error {
     width: auto;           /* override the fixed 36px width */
     height: 25px;          /* override the fixed 28px height */
     background-color: DodgerBlue;  /* reapply textButton background */
-    border: 1px solid #4169E1;
+    border: 1.5px solid #6495ED;
     padding: 2px 10px;
     font-size: 12px;
     color: white;
@@ -310,8 +310,8 @@ pre.error {
 .bar button.submitButton {
     width: auto;           /* override the fixed 36px width */
     height: 25px;          /* override the fixed 28px height */
-    background-color: #14a819;  /* reapply textButton background */
-    border: 1px solid #119115 ;
+    background-color: #139e17;  /* reapply textButton background */
+    border: 1.5px solid #15a81a ;
     padding: 2px 10px;
     font-size: 12px;
     color: white;
