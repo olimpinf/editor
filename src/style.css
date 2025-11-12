@@ -265,6 +265,7 @@ pre.error {
     gap:8px;
 }
 
+
 .bar button {
     appearance:none;
     border:0;
@@ -284,6 +285,48 @@ pre.error {
     background: rgba(255,255,255,0.1);
 }
 
+/* editor text buttons */
+.bar button.textButton {
+    width: auto;           /* override the fixed 36px width */
+    height: 25px;          /* override the fixed 28px height */
+    background-color: DodgerBlue;  /* reapply textButton background */
+    border: 1px solid #4169E1;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: white;
+    display: inline-block;  /* override inline-flex */
+}
+
+.bar button.textButton:hover {
+    background-color: #6495ED;
+}
+
+.bar button.textButton:active {
+    position: relative;
+    background-color: #5984d6ff;
+    top: 1px;
+}
+
+.bar button.submitButton {
+    width: auto;           /* override the fixed 36px width */
+    height: 25px;          /* override the fixed 28px height */
+    background-color: #14a819;  /* reapply textButton background */
+    border: 1px solid #119115 ;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: white;
+    display: inline-block;  /* override inline-flex */
+}
+
+.bar button.submitButton:hover {
+    background-color: #18c01e;
+}
+
+.bar button.submitButton:active {
+    position: relative;
+    background-color: #5abb29;
+    top: 1px;
+}
 /* Expanded (fullscreen) pane */
 .pane.expanded {
     position: fixed !important;
@@ -700,3 +743,4 @@ body.pane-expanded .pane:not(.expanded) {
     max-height: 98vh;  /* Almost full height on tiny screens */
   }
 }
+
