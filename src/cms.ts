@@ -82,6 +82,14 @@ export async function cmsTaskList(): Promise<Array<{ id: string; name: string }>
  * @param languageExtension - File extension (e.g., '.cpp', '.py', '.java')
  */
 export async function cmsSubmit(taskId: string, codeContent: string, language: string, languageExtension: string) {
+
+    let cmsLanguage = "C++20 / g++";
+    if (language == "python")
+        cmsLanguage = "Python 3 / PyPy";
+    else if (language == "java")
+        cmsLanguage = "Java / JDK";
+
+
     // Build the submit URL with the task ID
     const SUBMIT_API_URL = `/api/${taskId}/submit`;
     
@@ -91,7 +99,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
 
     console.log('[cmsSubmit] Submitting to:', SUBMIT_API_URL);
     console.log('[cmsSubmit] taskId:', taskId);
-    console.log('[cmsSubmit] language:', language);
+    console.log('[cmsSubmit] language:', cmsLanguage);
     console.log('[cmsSubmit] fileName:', fileName);
     console.log('[cmsSubmit] fileNameField:', fileNameField);
 
@@ -161,6 +169,10 @@ export async function cmsTestSend(runninTaskId, codeContent, inputContent, langu
     }
 
     console.log("[cmsTestSend] URL", TEST_API_URL);
+    console.log('[cmsTestSend] language:', language);
+    console.log('[cmsTestSend] fileName:', fileName);
+    console.log('[cmsTestSend] fileNameField:', fileNameField);
+
     const formData = new FormData();
     const codeBlob = new Blob([codeContent], { type: 'application/octet-stream' });
     const inputBlob = new Blob([inputContent], { type: 'application/octet-stream' });
