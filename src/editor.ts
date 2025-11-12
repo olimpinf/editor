@@ -1,9 +1,8 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, cmsTaskList } from './cms';
-import { initBackups } from './backups';
 import { initSubmitModalWithTasks } from './submit-modal';
-await initSubmitModalWithTasks();
+import { initBackups } from './backups';
 
 
 window.runningTaskId   = null;
@@ -187,12 +186,12 @@ public class tarefa {
 	// 1. Create the editor FIRST with a temporary blank model.
 	// We create it *before* initFirstTabIfNeeded so that window.editor exists.
 	window.editor = monaco.editor.create(document.getElementById('editor-container'), {
-	    model: monaco.editor.createModel("", "cpp"), // A temporary blank model
-	    theme: 'vs',
-	    automaticLayout: true,
-	    fontSize: 14,
-	    minimap: { enabled: false },
-	    padding: { top: 10 }  
+	  model: monaco.editor.createModel("", "cpp"), // A temporary blank model
+	  theme: 'vs',
+	  automaticLayout: true,
+	  fontSize: 14,
+	  minimap: { enabled: false },
+	  padding: { top: 10 }  
 	});
 
 	// 2. Now, set the theme and initialize the tab system.
@@ -829,7 +828,6 @@ public class tarefa {
 	    
 	    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	    try {
-        // just a test    const taskList = await cmsTaskList();
 		// Submit the code and get the test ID
 		const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
 		const testId = submissionResult.data.id;

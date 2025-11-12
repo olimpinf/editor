@@ -3,6 +3,8 @@
  * Handles the task selection modal when submitting code
  */
 
+import { cmsTaskList, cmsSubmit } from './cms';
+
 // Task names - modify this array to add/remove tasks dynamically
 // Each task should have an id and a name
 let TASK_NAMES: Array<{ id: string; name: string }> = [
@@ -187,103 +189,89 @@ class SubmitModal {
 export function initSubmitModal(): void {
   console.log('[SubmitModal] Initialization started');
   
-  // Ensure the editor and Monaco are fully initialized before creating the modal
-  const checkEditorReady = () => {
-    if ((window as any).editor && (window as any).monaco) {
-      console.log('[SubmitModal] Editor ready, creating modal instance');
-      // Editor is ready, now we can safely create the modal
-      createSubmitModalInstance();
-    } else {
-      console.log('[SubmitModal] Waiting for editor to be ready...');
-      // Editor not ready yet, check again in a bit
-      setTimeout(checkEditorReady, 50);
-    }
-  };
-  
-  checkEditorReady();
+  // Create the modal instance immediately
+  // The editor should already be initialized when this is called
+  createSubmitModalInstance();
 }
 
 /**
  * Internal function to create the actual modal instance
  */
 function createSubmitModalInstance(): void {
-  // Import the cms module dynamically
-  import('./cms').then(cms => {
-    console.log('[SubmitModal] CMS module loaded');
-    
-    // Create the modal instance
-    const submitModal = new SubmitModal({
-      onSubmit: async (taskId: string, taskName: string) => {
-        console.log('[SubmitModal] Submitting to task:', taskId, taskName);
+  console.log('[SubmitModal] Creating modal instance');
+  
+  // Create the modal instance
+  const submitModal = new SubmitModal({
+    onSubmit: async (taskId: string, taskName: string) => {
+      console.log('[SubmitModal] Submitting to task:', taskId, taskName);
+      
+      // Get current code from editor
+      const editor = (window as any).editor;
+      if (!editor) {
+        console.error('[SubmitModal] Editor not available!');
+        alert('Editor não está disponível. Por favor, recarregue a página.');
+        return;
+      }
+      
+      const code = editor.getValue() || '';
+      if (!code || code.trim().length === 0) {
+        console.warn('[SubmitModal] Code is empty');
+        alert('Por favor, escreva algum código antes de submeter.');
+        return;
+      }
+      
+      const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+      const language = languageSelect?.value || 'C++20 / g++';
+      
+      // Determine file extension based on language
+      let languageExtension = '.cpp';
+      if (language.includes('Python')) {
+        languageExtension = '.py';
+      } else if (language.includes('Java')) {
+        languageExtension = '.java';
+      } else if (language.includes('C++')) {
+        languageExtension = '.cpp';
+      }
+      
+      console.log('[SubmitModal] Submission details:', {
+        taskId,
+        taskName,
+        language,
+        languageExtension,
+        codeLength: code.length
+      });
+      
+      // Show status message
+      if ((window as any).App?.Status) {
+        (window as any).App.Status.setForCurrent(
+          `Submetendo ${taskName}...`,
+          { spinning: true }
+        );
+      }
+      
+      try {
+        // Call the CMS submit function
+        const result = await cmsSubmit(taskId, code, language, languageExtension);
         
-        // Get current code from editor
-        const code = (window as any).editor?.getValue() || '';
-        const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
-        const language = languageSelect?.value || 'C++20 / g++';
-        
-        // Determine file extension based on language
-        let languageExtension = '.cpp';
-        if (language.includes('Python')) {
-          languageExtension = '.py';
-        } else if (language.includes('Java')) {
-          languageExtension = '.java';
-        } else if (language.includes('C++')) {
-          languageExtension = '.cpp';
-        }
-        
-        console.log('[SubmitModal] Submission details:', {
-          taskId,
-          taskName,
-          language,
-          languageExtension,
-          codeLength: code.length
-        });
-        
-        // Show status message
-        if ((window as any).App?.Status) {
-          (window as any).App.Status.setForCurrent(
-            `Submetendo ${taskName}...`,
-            { spinning: true }
-          );
-        }
-        
-        try {
-          // Call the CMS submit function
-          const result = await cms.cmsSubmit(taskId, code, language, languageExtension);
+        if (result.success) {
+          console.log('[SubmitModal] Submission successful!', result);
           
-          if (result.success) {
-            console.log('[SubmitModal] Submission successful!', result);
-            
-            // Update status
-            if ((window as any).App?.Status) {
-              (window as any).App.Status.setForCurrent(
-                `✓ ${taskName} submetido com sucesso!`,
-                { spinning: false }
-              );
-            }
-            
-            // If there's a redirect, you might want to handle it
-            if (result.redirect) {
-              console.log('[SubmitModal] Redirect to:', result.redirect);
-              // Optionally navigate to the redirect location
-              // window.location.href = result.redirect;
-            }
-          } else {
-            console.error('[SubmitModal] Submission failed:', result);
-            
-            // Update status with error
-            if ((window as any).App?.Status) {
-              (window as any).App.Status.setForCurrent(
-                `✗ Erro ao submeter ${taskName}`,
-                { spinning: false }
-              );
-            }
-            
-            // Show error alert
-            alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
+          // Update status
+          if ((window as any).App?.Status) {
+            (window as any).App.Status.setForCurrent(
+              `✓ ${taskName} submetido com sucesso!`,
+              { spinning: false }
+            );
           }
-        } catch (error) {
-          console.error('[SubmitModal] Submission error:', error);
+          
+          // If there's a redirect, you might want to handle it
+          if (result.redirect) {
+            console.log('[SubmitModal] Redirect to:', result.redirect);
+            // Optionally navigate to the redirect location
+            // window.location.href = result.redirect;
+          }
+        } else {
+          console.error('[SubmitModal] Submission failed:', result);
           
           // Update status with error
           if ((window as any).App?.Status) {
@@ -293,28 +281,39 @@ function createSubmitModalInstance(): void {
             );
           }
           
-          alert(`Erro ao submeter: ${error.message}`);
+          // Show error alert
+          alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
         }
+      } catch (error) {
+        console.error('[SubmitModal] Submission error:', error);
+        
+        // Update status with error
+        if ((window as any).App?.Status) {
+          (window as any).App.Status.setForCurrent(
+            `✗ Erro ao submeter ${taskName}`,
+            { spinning: false }
+          );
+        }
+        
+        alert(`Erro ao submeter: ${error.message}`);
       }
-    });
-
-    // Attach to the submit button
-    const submitBtn = document.getElementById('submit-btn');
-    if (!submitBtn) {
-      console.error('[SubmitModal] Submit button not found');
-      return;
     }
-
-    submitBtn.addEventListener('click', (e: Event) => {
-      e.preventDefault();
-      console.log('[SubmitModal] Submit button clicked');
-      submitModal.show();
-    });
-
-    console.log('[SubmitModal] Initialized successfully');
-  }).catch(error => {
-    console.error('[SubmitModal] Failed to load CMS module:', error);
   });
+
+  // Attach to the submit button
+  const submitBtn = document.getElementById('submit-btn');
+  if (!submitBtn) {
+    console.error('[SubmitModal] Submit button not found');
+    return;
+  }
+
+  submitBtn.addEventListener('click', (e: Event) => {
+    e.preventDefault();
+    console.log('[SubmitModal] Submit button clicked');
+    submitModal.show();
+  });
+
+  console.log('[SubmitModal] Initialized successfully');
 }
 
 /**
@@ -342,10 +341,9 @@ export async function initSubmitModalWithTasks(): Promise<void> {
   
   await waitForAuth();
   
-  // Import CMS module and load tasks
+  // Load tasks from CMS API
   try {
-    const cms = await import('./cms');
-    const tasks = await cms.cmsTaskList();
+    const tasks = await cmsTaskList();
     
     if (tasks && tasks.length > 0) {
       console.log('[SubmitModal] Tasks loaded successfully:', tasks);

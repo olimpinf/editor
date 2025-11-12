@@ -27,13 +27,40 @@ export async function cmsTaskList(): Promise<Array<{ id: string; name: string }>
         console.log('[cmsTaskList] Raw data:', data);
         
         // Transform CMS task list into format expected by submit modal
-        // CMS returns: { "tasks": ["task1", "task2", ...] }
-        // We need: [{ id: "task1", name: "Task 1" }, ...]
+        // CMS can return different formats:
+        // Format 1: { "tasks": ["task1", "task2", ...] }
+        // Format 2: { "tasks": [{ "name": "task1", "short_name": "t1" }, ...] }
+        // Format 3: { "tasks": [{ "name": "task1" }, ...] }
+        
         if (data && data.tasks && Array.isArray(data.tasks)) {
-            const taskArray = data.tasks.map((taskName: string) => ({
-                id: taskName,
-                name: taskName // You can format the name here if needed
-            }));
+            const taskArray = data.tasks.map((task: any) => {
+                // If task is a string
+                if (typeof task === 'string') {
+                    console.log('[cmsTaskList] Task is string:', task);
+                    return {
+                        id: task,
+                        name: task
+                    };
+                }
+                // If task is an object with name property
+                else if (typeof task === 'object' && task !== null) {
+                    console.log('[cmsTaskList] Task is object:', task);
+                    const taskId = task.short_name || task.name || task.id || 'unknown';
+                    const taskName = task.name || task.short_name || task.id || 'Unknown Task';
+                    return {
+                        id: taskId,
+                        name: taskName
+                    };
+                }
+                // Fallback
+                else {
+                    console.warn('[cmsTaskList] Unexpected task format:', task);
+                    return {
+                        id: String(task),
+                        name: String(task)
+                    };
+                }
+            });
             console.log('[cmsTaskList] Formatted tasks:', taskArray);
             return taskArray;
         }
