@@ -1,7 +1,7 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
-import { initSubmitModalWithTasks } from './submit-modal';
+import { initSubmitModalWithTasks, initSubmitModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
 
 
@@ -207,15 +207,7 @@ public class tarefa {
 	// This is safe because window.editor is now defined.
 	switchLanguage(initialLang);
 
-	// Initialize submit modal with tasks from CMS (async)
-	(async () => {
-		try {
-			await initSubmitModalWithTasks();
-			console.log('[Editor] Submit modal initialized with tasks');
-		} catch (error) {
-			console.error('[Editor] Failed to initialize submit modal:', error);
-		}
-	})();
+	checkExamGateAndInitialize();
 	
 	initBackups();
 
@@ -362,200 +354,122 @@ public class tarefa {
 
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 
-	(function ExamGate() {
-	    if (!window.AppConfig?.examGate?.enabled) return; 
-	    
-	    const ENDPOINT = "https://olimpiada.ic.unicamp.br/can_start";
-	    const POLL_MS = 5000;     // poll every 5s (adjust if you like)
-	    const TIMEOUT_MS = 4000;  // fetch timeout
-	    let pollTimer = null;
-	    let lastState = null;     // 'ready' | 'not_ready' | null
+async function checkExamGateAndInitialize() {
+    if (!window.AppConfig.examGate?.enabled) {
+        // Development mode: no exam gate, just initialize normally
+        console.log('[ExamGate] Disabled - initializing normally');
+        await initSubmitModalWithTasks();
+        return;
+    }
 
-	    // --- DOM helpers ---
-	    function ensureModal() {
-		if (document.getElementById("exam-gate-overlay")) return;
-		const css = document.createElement("style");
-		css.id = "exam-gate-style";
-		css.textContent = `
-#exam-gate-overlay {
-  position: fixed; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55);
-  z-index: 9999;
+    console.log('[ExamGate] Enabled - checking if exam has started');
+    
+    // Block the editor initially
+	    console.log('[ExamGate] will call setEditorReadOnly(true)');
+
+    //setEditorReadOnly(true);
+		    console.log('[ExamGate] will call showExamGateMessage()');
+
+    showExamGateMessage('Aguardando você iniciar a prova.<br>Para iniciar a prova vá para a aba Prova<br/> e clique no botão Iniciar.');
+
+	console.log('[ExamGate] Will poll task list API');
+
+    // Poll the task list API
+    const pollInterval = 5000; // Check every 5 seconds
+    const checkExamStatus = async () => {
+        try {
+            const tasks = await cmsTaskList();
+            
+            if (tasks !== null && tasks.length > 0) {
+                // Exam has started! Task list is available
+                console.log('[ExamGate] Exam started - tasks available:', tasks);
+                
+                // Unlock the editor
+                //setEditorReadOnly(false);
+                hideExamGateMessage();
+                
+                // Initialize submit modal with the retrieved tasks
+                console.log('[ExamGate] will call initSubmitModalWithTaskList()');
+
+                initSubmitModalWithTaskList(tasks);
+
+                // Stop polling
+                return true;
+            } else {
+                console.log('[ExamGate] Exam not started yet - retrying...');
+                return false;
+            }
+        } catch (error) {
+            console.error('[ExamGate] Error checking exam status:', error);
+            return false;
+        }
+    };
+
+    // Initial check
+     console.log('[ExamGate] initial check, will call checkExamStatus()');
+    const started = await checkExamStatus();
+    console.log('[ExamGate] started =', started);
+
+    
+    // If not started, keep polling
+    if (!started) {
+        const intervalId = setInterval(async () => {
+            const started = await checkExamStatus();
+            if (started) {
+                clearInterval(intervalId);
+            }
+        }, pollInterval);
+    }
 }
-#exam-gate-dialog {
-  background: var(--gate-bg, #1e1e1e);
-  color: var(--gate-fg, #fff);
-  width: min(90vw, 540px);
-  border-radius: 14px;
-  padding: 20px 22px;
-  box-shadow: 0 10px 28px rgba(0,0,0,.45);
-}
-#exam-gate-dialog h2 { margin: 0 0 8px; font-size: 20px; }
-#exam-gate-dialog p { margin: 0 0 12px; line-height: 1.4; opacity: .9; }
-#exam-gate-spinner {
-  margin-top: 6px;
-  width: 24px; height: 24px; border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.25);
-  border-top-color: rgba(255,255,255,.9);
-  animation: egspin 1s linear infinite;
-}
-@keyframes egspin { to { transform: rotate(360deg); } }
-.hidden { display:none !important; }
-.locked-pointer { pointer-events: none !important; }
+
+// Helper function to set editor read-only state
+// function setEditorReadOnly(readonly: boolean) {
+//     const currentTab = tabsState.tabs.get(tabsState.activeTabId);
+//     if (currentTab?.editor) {
+//         currentTab.editor.updateOptions({ readOnly: readonly });
+//     }
+// }
+
+// Helper function to show exam gate message
+function showExamGateMessage(message: string) {
+    const overlay = document.createElement('div');
+    overlay.id = 'exam-gate-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(26, 60, 145, 0.9);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-size: 18px;
     `;
-		document.head.appendChild(css);
-
-		const overlay = document.createElement("div");
-		overlay.id = "exam-gate-overlay";
-		overlay.setAttribute("role", "dialog");
-		overlay.setAttribute("aria-modal", "true");
-		overlay.setAttribute("aria-live", "polite");
-		overlay.classList.add("hidden");
-
-		overlay.innerHTML = `
-      <div id="exam-gate-dialog">
-        <h2>Exame não iniciado</h2>
-        <p>Volte à aba do exame e clique no botão <em>Iniciar</em>. Esta página será liberada automaticamente quando o exame começar.</p>
-        <div id="exam-gate-spinner" aria-hidden="true"></div>
-      </div>
+    overlay.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div style="margin-top: 20px;">${message}</div>
     `;
-		document.body.appendChild(overlay);
-	    }
+    document.body.appendChild(overlay);
+}
 
-	    function showModal() {
-	    console.log("show modal");
-		ensureModal();
-		document.getElementById("exam-gate-overlay")?.classList.remove("hidden");
-	    }
-	    function hideModal() {
-	    console.log("hide modal");
-		document.getElementById("exam-gate-overlay")?.classList.add("hidden");
-	    }
+// Helper function to hide exam gate message
+function hideExamGateMessage() {
+    const overlay = document.getElementById('exam-gate-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
 
-	    function setAppInteractivity(enabled) {
-		// 1) Monaco
-		if (window.editor?.updateOptions) {
-		    window.editor.updateOptions({ readOnly: !enabled });
-		}
-
-		// 2) Textareas & inputs
-		const stdin = document.getElementById("stdin-input");
-		if (stdin) stdin.disabled = !enabled;
-
-		// 3) Buttons & selects
-		const disableSel = [
-		    "#run-btn", "#font-btn", "#global-style-toggle",
-		    "#download-btn", "#upload-btn", "#clear-btn",
-		    "#download-input-btn", "#upload-input-btn", "#clear-input-btn",
-		    "#download-output-btn", "#clear-output-btn",
-		    "#language-select", "#task-select",
-		    ".btn-expand"
-		];
-		disableSel.forEach(sel => {
-		    document.querySelectorAll(sel).forEach(el => {
-			if (el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
-			    el.disabled = !enabled;
-			} else {
-			    el.setAttribute("tabindex", enabled ? "0" : "-1");
-			    el.setAttribute("aria-disabled", String(!enabled));
-			    if ("disabled" in el) el.disabled = !enabled;
-			}
-		    });
-		});
-
-		// 4) Prevent accidental clicks through custom UI layers
-		const container = document.getElementById("container");
-		if (container) {
-		    if (!enabled) container.classList.add("locked-pointer");
-		    else container.classList.remove("locked-pointer");
-		}
-	    }
-
-	    // --- Fetch with timeout & CORS note ---
-	    async function fetchWithTimeout(url, ms) {
-		const ctrl = new AbortController();
-		const id = setTimeout(() => ctrl.abort(), ms);
-		try {
-		    const res = await fetch(url, {
-			method: "GET",
-			cache: "no-store",
-			credentials: "include", // adjust if you need cookies
-			headers: { "Accept": "application/json" },
-			signal: ctrl.signal
-		    });
-		    clearTimeout(id);
-		    return res;
-		} catch (e) {
-		    clearTimeout(id);
-		    throw e;
-		}
-	    }
-
-	    function parseReady(json) {
-		// Accept {status:"ready"} or {ready:true} or "ready"
-		if (typeof json === "string") return json.toLowerCase() === "ready";
-		if (json && typeof json === "object") {
-		    if ("status" in json) return String(json.status).toLowerCase() === "ready";
-		    if ("ready" in json) return !!json.ready;
-		}
-		return false;
-	    }
-
-	    async function checkGateOnce() {
-		try {
-		    const res = await fetchWithTimeout(ENDPOINT, TIMEOUT_MS);
-		    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		    const data = await res.json();
-		    const isReady = parseReady(data);
-
-		    if (isReady) {
-			if (lastState !== "ready") {
-			    lastState = "ready";
-			    hideModal();
-			    setAppInteractivity(true);
-			}
-		    } else {
-			if (lastState !== "not_ready") {
-			    lastState = "not_ready";
-			    showModal();
-			    setAppInteractivity(false);
-			}
-		    }
-		} catch (err) {
-		    // Network/CORS error: be conservative (lock UI) but keep polling
-		    if (lastState !== "not_ready") {
-			lastState = "not_ready";
-			showModal();
-			setAppInteractivity(false);
-		    }
-		    // console.warn("Exam gate poll failed:", err);
-		}
-	    }
-
-	    function startPolling() {
-		// initial lock until first response
-		lastState = null;
-		showModal();
-		setAppInteractivity(false);
-
-		// kick off immediately, then poll
-		checkGateOnce();
-		clearInterval(pollTimer);
-		pollTimer = setInterval(checkGateOnce, POLL_MS);
-	    }
-
-	    // Start once DOM and Monaco are ready enough
-	    if (document.readyState === "complete" || document.readyState === "interactive") {
-		ensureModal();
-		startPolling();
-	    } else {
-		window.addEventListener("DOMContentLoaded", () => {
-		    ensureModal();
-		    startPolling();
-		});
-	    }
-	})();
+// // New function to initialize submit modal with already-fetched task list
+// function initSubmitModalWithTaskList(tasks: Array<{ id: string; name: string }>) {
+//     console.log('[SubmitModal] Initializing with tasks:', tasks);
+//     // Your existing submit modal initialization code here
+//     // but using the tasks parameter instead of fetching again
+// }
 	
 	// 1) Editor content changes
 	if (window.editor?.onDidChangeModelContent) {

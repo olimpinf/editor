@@ -14,6 +14,9 @@ let TASK_NAMES: Array<{ id: string; name: string }> = [
   { id: "task4", name: "Tarefa 4" }
 ];
 
+// Store the modal instance globally
+let submitModalInstance: SubmitModal | null = null;
+
 /**
  * Set the task names dynamically
  * Call this function before showing the modal if you want to change the tasks
@@ -22,6 +25,11 @@ let TASK_NAMES: Array<{ id: string; name: string }> = [
 export function setTaskNames(tasks: Array<{ id: string; name: string }>): void {
   TASK_NAMES = tasks;
   console.log('[SubmitModal] Task names updated:', TASK_NAMES);
+  
+  // If modal already exists, recreate it with new tasks
+  if (submitModalInstance) {
+    submitModalInstance.updateTasks(tasks);
+  }
 }
 
 interface SubmitModalOptions {
@@ -36,6 +44,33 @@ class SubmitModal {
     this.options = options;
     this.createModal();
     this.attachEventListeners();
+  }
+
+  /**
+   * Update the task list in an existing modal
+   */
+  public updateTasks(tasks: Array<{ id: string; name: string }>): void {
+    console.log('[SubmitModal] Updating tasks in existing modal:', tasks);
+    
+    const selectElement = document.getElementById('task-select') as HTMLSelectElement;
+    if (!selectElement) {
+      console.warn('[SubmitModal] Select element not found, recreating modal');
+      this.destroyModal();
+      this.createModal();
+      this.attachEventListeners();
+      return;
+    }
+    
+    // Clear existing options
+    selectElement.innerHTML = '';
+    
+    // Add new options
+    tasks.forEach(task => {
+      const option = document.createElement('option');
+      option.value = task.id;
+      option.textContent = task.name;
+      selectElement.appendChild(option);
+    });
   }
 
   /**
@@ -80,38 +115,52 @@ class SubmitModal {
   }
 
   /**
+   * Destroy the modal element
+   */
+  private destroyModal(): void {
+    if (this.modal) {
+      this.modal.remove();
+      this.modal = null;
+    }
+  }
+
+  /**
    * Show the modal
    */
   public show(): void {
     console.log('[SubmitModal] show() called');
-    console.log('[SubmitModal] Modal element:', this.modal);
-    
+    console.log('[SubmitModal] Modal exists:', !!this.modal);
+    console.log('[SubmitModal] Modal ID:', this.modal?.id);
+
     if (!this.modal) {
-      console.error('[SubmitModal] Modal element is null!');
-      return;
+      console.error('[SubmitModal] Modal element is null! Recreating...');
+      this.createModal();
+      this.attachEventListeners();
+      if (!this.modal) {
+        console.error('[SubmitModal] Failed to create modal!');
+        return;
+      }
     }
-    
-    console.log('[SubmitModal] Setting aria-hidden to false');
+
+    console.log('[SubmitModal] Setting modal visible');
     this.modal.setAttribute('aria-hidden', 'false');
-    
-    console.log('[SubmitModal] Setting display to block');
     this.modal.style.display = 'block';
-    
-    console.log('[SubmitModal] Modal computed style:', window.getComputedStyle(this.modal));
-    console.log('[SubmitModal] Modal offsetParent:', this.modal.offsetParent);
-    console.log('[SubmitModal] Modal offsetWidth:', this.modal.offsetWidth);
-    console.log('[SubmitModal] Modal offsetHeight:', this.modal.offsetHeight);
-    
+
+    // Verify it's actually visible
+    const computedStyle = window.getComputedStyle(this.modal);
+    console.log('[SubmitModal] Modal display:', computedStyle.display);
+    console.log('[SubmitModal] Modal visibility:', computedStyle.visibility);
+    console.log('[SubmitModal] Modal z-index:', computedStyle.zIndex);
+
     // Prevent body scroll
     document.body.style.overflow = 'hidden';
-    
+
     // Focus on the select element
     setTimeout(() => {
-      console.log('[SubmitModal] Setting focus on select');
       const selectElement = document.getElementById('task-select') as HTMLSelectElement;
       if (selectElement) {
         selectElement.focus();
-        console.log('[SubmitModal] Focus set successfully');
+        console.log('[SubmitModal] Focus set on select');
       } else {
         console.error('[SubmitModal] Select element not found!');
       }
@@ -131,8 +180,6 @@ class SubmitModal {
     
     // Restore body scroll
     document.body.style.overflow = '';
-    
-    console.log('[SubmitModal] Modal hidden');
   }
 
   /**
@@ -183,109 +230,79 @@ class SubmitModal {
 }
 
 /**
- * Initialize the submit modal functionality
- * Call this function from your editor.ts after DOM is ready
+ * Get the submit callback handler
  */
-export function initSubmitModal(): void {
-  console.log('[SubmitModal] Initialization started');
-  
-  // Create the modal instance immediately
-  // The editor should already be initialized when this is called
-  createSubmitModalInstance();
-}
-
-/**
- * Internal function to create the actual modal instance
- */
-function createSubmitModalInstance(): void {
-  console.log('[SubmitModal] Creating modal instance');
-  
-  // Create the modal instance
-  const submitModal = new SubmitModal({
-    onSubmit: async (taskId: string, taskName: string) => {
-      console.log('[SubmitModal] Submitting to task:', taskId, taskName);
+function getSubmitHandler() {
+  return async (taskId: string, taskName: string) => {
+    console.log('[SubmitModal] Submitting to task:', taskId, taskName);
+    
+    // Get current code from editor
+    const editor = (window as any).editor;
+    if (!editor) {
+      console.error('[SubmitModal] Editor not available!');
+      alert('Editor não está disponível. Por favor, recarregue a página.');
+      return;
+    }
+    
+    const code = editor.getValue() || '';
+    if (!code || code.trim().length === 0) {
+      console.warn('[SubmitModal] Code is empty');
+      alert('Por favor, escreva algum código antes de submeter.');
+      return;
+    }
+    
+    const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+    const language = languageSelect?.value || 'cpp';
+    
+    // Determine file extension based on language
+    let languageExtension = '.cpp';
+    if (language === 'python') {
+      languageExtension = '.py';
+    } else if (language === 'java') {
+      languageExtension = '.java';
+    } else if (language === 'cpp') {
+      languageExtension = '.cpp';
+    }
+    
+    console.log('[SubmitModal] Submission details:', {
+      taskId,
+      taskName,
+      language,
+      languageExtension,
+      codeLength: code.length
+    });
+    
+    // Show status message
+    if ((window as any).App?.Status) {
+      (window as any).App.Status.setForCurrent(
+        `Submetendo ${taskName}...`,
+        { spinning: true }
+      );
+    }
+    
+    try {
+      // Call the CMS submit function
+      const result = await cmsSubmit(taskId, code, language, languageExtension);
       
-      // Get current code from editor
-      const editor = (window as any).editor;
-      if (!editor) {
-        console.error('[SubmitModal] Editor not available!');
-        alert('Editor não está disponível. Por favor, recarregue a página.');
-        return;
-      }
-      
-      const code = editor.getValue() || '';
-      if (!code || code.trim().length === 0) {
-        console.warn('[SubmitModal] Code is empty');
-        alert('Por favor, escreva algum código antes de submeter.');
-        return;
-      }
-      
-      const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
-      const language = languageSelect?.value || 'C++20 / g++';
-      
-      // Determine file extension based on language
-      let languageExtension = '.cpp';
-      if (language.includes('Python')) {
-        languageExtension = '.py';
-      } else if (language.includes('Java')) {
-        languageExtension = '.java';
-      } else if (language.includes('C++')) {
-        languageExtension = '.cpp';
-      }
-      
-      console.log('[SubmitModal] Submission details:', {
-        taskId,
-        taskName,
-        language,
-        languageExtension,
-        codeLength: code.length
-      });
-      
-      // Show status message
-      if ((window as any).App?.Status) {
-        (window as any).App.Status.setForCurrent(
-          `Submetendo ${taskName}...`,
-          { spinning: true }
-        );
-      }
-      
-      try {
-        // Call the CMS submit function
-        const result = await cmsSubmit(taskId, code, language, languageExtension);
+      if (result.success) {
+        console.log('[SubmitModal] Submission successful!', result);
         
-        if (result.success) {
-          console.log('[SubmitModal] Submission successful!', result);
-          
-          // Update status
-          if ((window as any).App?.Status) {
-            (window as any).App.Status.setForCurrent(
-              `✓ ${taskName} submetido com sucesso!`,
-              { spinning: false }
-            );
-          }
-          
-          // If there's a redirect, you might want to handle it
-          if (result.redirect) {
-            console.log('[SubmitModal] Redirect to:', result.redirect);
-            // Optionally navigate to the redirect location
-            // window.location.href = result.redirect;
-          }
-        } else {
-          console.error('[SubmitModal] Submission failed:', result);
-          
-          // Update status with error
-          if ((window as any).App?.Status) {
-            (window as any).App.Status.setForCurrent(
-              `Erro na submissão`,
-              { spinning: false }
-            );
-          }
-          
-          // Show error alert
-          alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
+        // Update status
+        if ((window as any).App?.Status) {
+          (window as any).App.Status.setForCurrent(
+            `✓ ${taskName} submetido com sucesso!`,
+            { spinning: false }
+          );
         }
-      } catch (error) {
-        console.error('[SubmitModal] Submission error:', error);
+        
+        // If there's a redirect, you might want to handle it
+        if (result.redirect) {
+          console.log('[SubmitModal] Redirect to:', result.redirect);
+          // Optionally navigate to the redirect location
+          // window.location.href = result.redirect;
+        }
+      } else {
+        console.error('[SubmitModal] Submission failed:', result);
         
         // Update status with error
         if ((window as any).App?.Status) {
@@ -295,76 +312,133 @@ function createSubmitModalInstance(): void {
           );
         }
         
-        alert(`Erro ao submeter: ${error.message}`);
+        // Show error alert
+        alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
       }
+    } catch (error) {
+      console.error('[SubmitModal] Submission error:', error);
+      
+      // Update status with error
+      if ((window as any).App?.Status) {
+        (window as any).App.Status.setForCurrent(
+          `Erro na submissão`,
+          { spinning: false }
+        );
+      }
+      
+      alert(`Erro ao submeter: ${error.message}`);
     }
-  });
-
-  // Attach to the submit button
-  const submitBtn = document.getElementById('submit-btn');
-  if (!submitBtn) {
-    console.error('[SubmitModal] Submit button not found');
-    return;
-  }
-
-  submitBtn.addEventListener('click', (e: Event) => {
-    e.preventDefault();
-    console.log('[SubmitModal] Submit button clicked');
-    submitModal.show();
-  });
-
-  console.log('[SubmitModal] Initialized successfully');
+  };
 }
 
 /**
- * Load task list from CMS and initialize the submit modal
- * Call this function after the CMS authentication is ready
+ * Internal function to create the actual modal instance
  */
-export async function initSubmitModalWithTasks(): Promise<void> {
-  console.log('[SubmitModal] Loading tasks from CMS...');
+function createSubmitModalInstance(): void {
+  console.log('[SubmitModal] Creating modal instance');
   
-  // Wait for CMS authentication to be ready
-  const waitForAuth = (): Promise<void> => {
-    return new Promise((resolve) => {
-      if ((window as any).CMS_AUTH_TOKEN) {
-        console.log('[SubmitModal] Auth token already available');
-        resolve();
+  // Create the modal instance
+  submitModalInstance = new SubmitModal({
+    onSubmit: getSubmitHandler()
+  });
+
+  // Attach to the submit button with retry logic
+  const attachSubmitListener = () => {
+    const submitBtn = document.getElementById('submit-btn');
+    if (!submitBtn) {
+      console.error('[SubmitModal] Submit button not found in DOM');
+      console.log('[SubmitModal] Available buttons:', 
+        Array.from(document.querySelectorAll('button')).map(b => b.id || b.className)
+      );
+      return false;
+    }
+
+    console.log('[SubmitModal] Attaching listener to submit button');
+    submitBtn.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      console.log('[SubmitModal] Submit button clicked');
+      if (submitModalInstance) {
+        submitModalInstance.show();
       } else {
-        console.log('[SubmitModal] Waiting for auth token...');
-        window.addEventListener('cms-auth-ready', () => {
-          console.log('[SubmitModal] Auth token received');
-          resolve();
-        });
+        console.error('[SubmitModal] Modal instance is null!');
       }
     });
+
+    console.log('[SubmitModal] Initialized successfully');
+    return true;
   };
+
+  // Try to attach immediately
+  if (!attachSubmitListener()) {
+    // If button not found, wait for DOM to be ready
+    console.log('[SubmitModal] Waiting for DOM to be ready...');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachSubmitListener);
+    } else {
+      // DOM is ready but button still not found - try one more time after a delay
+      setTimeout(attachSubmitListener, 100);
+    }
+  }
+}
+
+/**
+ * Initialize the submit modal with a pre-fetched task list
+ * This is the RECOMMENDED way to initialize when you already have tasks
+ * (e.g., from exam gate polling)
+ * 
+ * @param tasks - Array of task objects with id and name
+ */
+export function initSubmitModalWithTaskList(tasks: Array<{ id: string; name: string }>): void {
+  console.log('[SubmitModal] initSubmitModalWithTaskList called with tasks:', tasks);
   
-  await waitForAuth();
+  // Validate tasks
+  if (!tasks || tasks.length === 0) {
+    console.error('[SubmitModal] No tasks provided!');
+    return;
+  }
   
-  // Load tasks from CMS API
+  // Set the task names
+  setTaskNames(tasks);
+  console.log('[SubmitModal] Task names set, creating modal instance...');
+  
+  // Create the modal instance
+  createSubmitModalInstance();
+}
+
+/**
+ * Initialize the submit modal by fetching tasks from CMS
+ * This is used for development mode (when exam gate is disabled)
+ * 
+ * For exam mode, use initSubmitModalWithTaskList() instead
+ */
+export async function initSubmitModalWithTasks(): Promise<void> {
+  console.log('[SubmitModal] Loading tasks from CMS API...');
+  
   try {
     const tasks = await cmsTaskList();
     
     if (tasks && tasks.length > 0) {
       console.log('[SubmitModal] Tasks loaded successfully:', tasks);
-      
-      // Set the tasks in the modal
-      setTaskNames(tasks);
-      
-      // Initialize the modal with the loaded tasks
-      initSubmitModal();
+      initSubmitModalWithTaskList(tasks);
     } else {
-      console.error('[SubmitModal] No tasks returned from API');
-      
+      console.warn('[SubmitModal] No tasks returned from API, using defaults');
       // Initialize with default tasks as fallback
-      console.warn('[SubmitModal] Using default tasks as fallback');
-      initSubmitModal();
+      createSubmitModalInstance();
     }
   } catch (error) {
     console.error('[SubmitModal] Error loading tasks:', error);
     
     // Initialize with default tasks as fallback
     console.warn('[SubmitModal] Using default tasks as fallback');
-    initSubmitModal();
+    createSubmitModalInstance();
   }
+}
+
+/**
+ * Basic initialization without task fetching
+ * Use this if you want to initialize with the default tasks
+ */
+export function initSubmitModal(): void {
+  console.log('[SubmitModal] Initializing with default tasks');
+  createSubmitModalInstance();
 }

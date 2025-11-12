@@ -331,15 +331,11 @@ async function showSaveBackupModal(
     }
   }
 
-  console.log('Tab name retrieved:', tabName);
-  
   // Build the complete title BEFORE the modalHTML
   const titleText = 'Salvar Backup ' + 
                     (type === 'code' ? 'de Código' : 'de Entrada') + 
                     (tabName ? ' de ' + tabName : '');
 
-
-  console.log('titleText', titleText);
   const modalHTML = `
     <div id="${modalId}" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="save-backup-title-${type}" aria-hidden="false" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
       <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
@@ -433,9 +429,7 @@ export function initBackups(): void {
 
   // Replace download-btn functionality with save backup
   const downloadBtn = document.getElementById('download-btn');
-  console.log('remove listeners download');
   if (downloadBtn) {
-    console.log('found download button');
     // Remove existing click listeners by cloning the node
     const newDownloadBtn = downloadBtn.cloneNode(true) as HTMLElement;
     // Remove any download-related attributes
@@ -484,7 +478,6 @@ export function initBackups(): void {
   console.log('remove listeners download-input-btn');
   const downloadInputBtn = document.getElementById('download-input-btn');
   if (downloadInputBtn) {
-    console.log('remove listeners download-input-btn');
     const newDownloadInputBtn = downloadInputBtn.cloneNode(true) as HTMLElement;
     downloadInputBtn.parentNode?.replaceChild(newDownloadInputBtn, downloadInputBtn);
 
@@ -504,7 +497,6 @@ export function initBackups(): void {
   console.log('remove listeners upload-input-button');
   const uploadInputBtn = document.getElementById('upload-input-btn');
   if (uploadInputBtn) {
-    console.log('fount upload-input-button');
     const newUploadInputBtn = uploadInputBtn.cloneNode(true) as HTMLElement;
     uploadInputBtn.parentNode?.replaceChild(newUploadInputBtn, uploadInputBtn);
 
