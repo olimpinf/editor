@@ -108,7 +108,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
 
     // Append the code file
     formData.append(fileNameField, codeBlob, fileName);
-    formData.append("language", language);
+    formData.append("language", cmsLanguage);
 
     try {
         const response = await fetch(SUBMIT_API_URL, {
