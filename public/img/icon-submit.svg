@@ -4,13 +4,9 @@
   <defs>
     <style>
       .st0 {
-        fill: none;
-        stroke: #f1f0f0;
-        stroke-linejoin: round;
-        stroke-width: 3.5px;
+        fill: #f1f0f0;
       }
     </style>
   </defs>
-  <circle class="st0" cx="19.7" cy="20" r="17.3"/>
-  <polyline class="st0" points="10.6 18.4 16.8 25.1 28.9 16.1"/>
+  <path class="st0" d="M2.4,38.8c0-11.2,9.7-15.5,17.2-16.1v9.5l19.9-15.5L19.5,1.2v8.3c-4.8.2-9.3,2.2-12.6,5.7C-.5,23.4.6,37.2.7,38.8h1.7Z"/>
 </svg>
