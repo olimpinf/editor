@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   //base: '/static/editor/',
-  base: '/',
+  base: '/editor/',
 
   build: {
     target: 'ES2022',

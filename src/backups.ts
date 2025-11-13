@@ -23,10 +23,10 @@ interface BackupData {
 
 // API endpoints
 const ENDPOINTS = {
-  retrieveBackups: '/api/retrieve_backups',
-  retrieveBackup: '/api/retrieve_a_backup',
-  deleteBackup: '/api/delete_a_backup',
-  addBackup: '/api/add_a_backup'
+  retrieveBackups: 'https://olimpiada.ic.unicamp.br/api/retrieve_backups',
+  retrieveBackup: 'https://olimpiada.ic.unicamp.br/api/retrieve_a_backup',
+  deleteBackup: 'https://olimpiada.ic.unicamp.br/api/delete_a_backup',
+  addBackup: 'https://olimpiada.ic.unicamp.br/api/add_a_backup'
 };
 
 /**
@@ -134,6 +134,7 @@ export async function deleteBackup(id: number, type: 'code' | 'input'): Promise<
  * Save a new backup
  */
 export async function saveBackup(backupData: BackupData): Promise<void> {
+  console.log('[Editor] saveBackup() using',ENDPOINTS.addBackup);
   try {
     const response = await fetch(ENDPOINTS.addBackup, {
       method: 'POST',
