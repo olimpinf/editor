@@ -39,25 +39,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (isOpenExamUrlEnabled()) {
 		window.currentUserId = "anonymous";
 
-	// 	try {
-    //     const resp = await fetch("/editor/editor_user", {
-    //         method: "GET",
-    //         credentials: "include",           // include session cookies
-    //         headers: { "Accept": "application/json" }
-    //     });
-
-    //     if (!resp.ok) {
-    //         throw new Error("Failed to get user id: HTTP " + resp.status);
-    //     }
-
-    //     const data = await resp.json();       // { "username": "00000-A" }
-    //     window.currentUserId = data.username; // <- store globally
-    //     console.log("[Init] currentUserId =", window.currentUserId);
-    // } catch (err) {
-    //     console.error("[Init] Could not load user id:", err);
-    //     // Hard fallback if you want:
-    //     window.currentUserId = "anonymous";
-    // }
 } else {
         window.currentUserId = "anonymous";
 } 

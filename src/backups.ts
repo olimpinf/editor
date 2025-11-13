@@ -23,10 +23,10 @@ interface BackupData {
 
 // API endpoints
 const ENDPOINTS = {
-  retrieveBackups: 'https://olimpiada.ic.unicamp.br/api/retrieve_backups',
-  retrieveBackup: 'https://olimpiada.ic.unicamp.br/api/retrieve_a_backup',
-  deleteBackup: 'https://olimpiada.ic.unicamp.br/api/delete_a_backup',
-  addBackup: 'https://olimpiada.ic.unicamp.br/api/add_a_backup'
+  retrieveBackups: '/api/backups/retrieve_backups',
+  retrieveBackup: '/api/backups/retrieve_a_backup',
+  deleteBackup: '/api/backups/delete_a_backup',
+  addBackup: '/api/backups/add_a_backup'
 };
 
 /**
