@@ -378,6 +378,7 @@ async function checkExamGateAndInitialize() {
     const pollInterval = 5000; // Check every 5 seconds
     const checkExamStatus = async () => {
         try {
+	    console.log('[ExamGate] Will call cmsTaskList()');
             const tasks = await cmsTaskList();
             
             if (tasks !== null && tasks.length > 0) {
@@ -1793,30 +1794,111 @@ function makeTabIdFromTitle(title) {
   return `${base}-${Date.now().toString(36)}`;
 }
 
-function newTab(initialTitle = "") {
-    const title = initialTitle || prompt("Nome da nova aba:", "Tarefa");
-    if (!title) return;
+/**
+ * Show a prompt modal dialog (replacement for window.prompt in Electron)
+ * @param message - The message/title to show
+ * @param defaultValue - Default value for the input
+ * @returns Promise that resolves to the input value or null if cancelled
+ */
+function showPromptModal(message: string, defaultValue: string = ""): Promise<string | null> {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('prompt-modal');
+    const input = document.getElementById('prompt-input') as HTMLInputElement;
+    const title = document.getElementById('prompt-title');
+    const okBtn = document.getElementById('prompt-ok-btn');
+    const cancelBtn = document.getElementById('prompt-cancel-btn');
+    const closeBtn = document.getElementById('prompt-close-btn');
+    const backdrop = modal?.querySelector('.obi-modal__backdrop');
 
-    const tabId = makeTabIdFromTitle(title);
-    const tabs = readTabsIndex();
-    tabs.push(tabId);
-    writeTabsIndex(tabs);
+    if (!modal || !input || !title || !okBtn || !cancelBtn) {
+      console.error('[Prompt] Modal elements not found');
+      resolve(null);
+      return;
+    }
 
-    const lang = document.getElementById("language-select")?.value || "cpp";
-    const initSnap = {
-	id: tabId,
-	title: title,
-	language: lang,
-	code: window.templates?.[lang] || "",
-	input: "",
-	output: ""
+    // Set title and default value
+    title.textContent = message;
+    input.value = defaultValue;
+
+    // Show modal
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // Focus input and select text
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+
+    // Handle OK
+    const handleOk = () => {
+      const value = input.value.trim();
+      hideModal();
+      resolve(value || null);
     };
-    saveTabSnapshot(tabId, initSnap);
 
-    renderTabs(tabId);       // selects new tab
-    loadTabIntoUI(tabId);    // sets editor/input/output
+    // Handle Cancel
+    const handleCancel = () => {
+      hideModal();
+      resolve(null);
+    };
 
+    // Hide modal helper
+    const hideModal = () => {
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      
+      // Remove event listeners
+      okBtn.removeEventListener('click', handleOk);
+      cancelBtn.removeEventListener('click', handleCancel);
+      closeBtn?.removeEventListener('click', handleCancel);
+      backdrop?.removeEventListener('click', handleCancel);
+      input.removeEventListener('keydown', handleKeydown);
+    };
 
+    // Handle Enter and Escape keys
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleOk();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancel();
+      }
+    };
+
+    // Attach event listeners
+    okBtn.addEventListener('click', handleOk);
+    cancelBtn.addEventListener('click', handleCancel);
+    closeBtn?.addEventListener('click', handleCancel);
+    backdrop?.addEventListener('click', handleCancel);
+    input.addEventListener('keydown', handleKeydown);
+  });
+}
+
+async function newTab(initialTitle = "") {
+  const title = initialTitle || await showPromptModal("Nome da nova aba:", "Tarefa");
+  
+  if (!title) return;
+  
+  const tabId = makeTabIdFromTitle(title);
+  const tabs = readTabsIndex();
+  tabs.push(tabId);
+  writeTabsIndex(tabs);
+  
+  const lang = document.getElementById("language-select")?.value || "cpp";
+  const initSnap = {
+    id: tabId,
+    title: title,
+    language: lang,
+    code: window.templates?.[lang] || "",
+    input: "",
+    output: ""
+  };
+  
+  saveTabSnapshot(tabId, initSnap);
+  renderTabs(tabId);       // selects new tab
+  loadTabIntoUI(tabId);    // sets editor/input/output
 }
 
 function renameTab(tabId) {

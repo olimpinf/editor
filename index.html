@@ -163,6 +163,28 @@
       </div>
     </div>
 
+	<!-- Prompt Modal for new tab name -->
+	<div id="prompt-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-title"
+		aria-hidden="true">
+		<div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+		<div class="obi-modal__dialog" role="document" style="max-width: 400px;">
+			<div class="obi-modal__header">
+				<h2 id="prompt-title">Nome da nova aba</h2>
+				<button id="prompt-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
+			</div>
+			<div class="obi-modal__body">
+				<input type="text" id="prompt-input"
+					style="width: 95%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;"
+					placeholder="Digite o nome da aba">
+			</div>
+			<div class="obi-modal__footer">
+				<button id="prompt-cancel-btn" class="obi-modal__action" style="background: #6c757d;">Cancelar</button>
+				<button id="prompt-ok-btn" class="obi-modal__action">OK</button>
+			</div>
+		</div>
+		<span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+	</div>
+
     <!-- Info Modal -->
     <div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title"
 	 aria-hidden="true">
@@ -173,23 +195,33 @@
 	  <button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
 	</div>
 	<div id="info-content" class="obi-modal__body">
+	<p>Você pode criar novas abas e trabalhar nelas de maneira independente, em linguagens diferentes. 
+		Para criar uma nova aba, clique no botão <em>Nova Aba</em>
+	    ( <img src="img/icon-new-tab-blue.svg" height="16pt" alt="Executar"> ) na barra de ferramentas.
+
+	  <h4>Função Testar</h4>
 	  <p>Edite seu código no painel <strong>Código</strong>, digite a entrada a ser usada na execução no
 	    painel <strong>Entrada</strong>.
-
-	  <p>Para executar, clique no botão <em>Executar</em> ( <img src="img/icon-play-blue.svg"
-								     height="16pt" alt="Executar"> ) na barra de ferramentas.
-	    O resultado da execução será mostrado no painel <strong>Saída</strong>.
-	  <p>Você pode criar novas abas e trabalhar nelas de maneira independente. Para criar uma nova aba, clique no botão <em>Nova Aba</em>
-	    ( <img src="img/icon-new-tab-blue.svg" height="16pt" alt="Executar"> ) na barra de ferramentas.											Na execução, os arquivos de programa têm o mesmo dado à aba, com exceção
+	  <p>Para testar seu código, clique no botão <strong>Testar</strong> na barra de ferramentas do painel <strong>Código</strong>.
+		O código submetido será o conteúdo do painel <strong>Código</strong>, e a entrada para o teste será o conteúdo do painel <strong>Entrada</strong>.
+	    O resultado da execução do teste será mostrado no painel <strong>Saída</strong>.
+		<!--p>Na função <em>Testar</em>, os arquivos de programa têm o mesmo dado à aba, com exceção
 	    de programas em Java, que têm sempre o mesmo nome: 
 	    <span class="monospaced-regular">tarefa.java</span>. 
 	    Note que para Java, portanto, sua classe principal pública deve ser chamada
-	    <span class="monospaced-regular">tarefa</span> (em minúsculas).
-	  <p>Você pode enviar para execução um único programa por vez, mas pode continuar editando em outras abas
+	    <span class="monospaced-regular">tarefa</span> (em minúsculas).</p-->
+	  <p>Você pode testar um único programa por vez, mas pode continuar editando em outras abas
 	    enquanto a execução não termina. Há também
-	    um intervalo mínimo de 30 segundos entre duas execuções consecutivas.
-	  <p>Cada execução tem um tempo limite de processamento de 2 segundos, e pode utilizar no máximo 1GB de
+	    um intervalo mínimo de 30 segundos entre dois testes consecutivos.
+	  <p>Cada execução de teste tem um tempo limite de processamento de 2 segundos, e pode utilizar no máximo 1GB de
 	    memória. Se exceder esses limites, a execução será interrompida.
+	  <h4>Função Submeter</h4>
+	  <p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção.</p>
+	  <p>Para submeter uma solução para correção, clique no botão <em>Submeter</em> na barra de ferramentas do painel <em>Código</em>
+			e escolha a tarefa da prova para a qual deseja submeter. O código submetido será o conteúdo do painel <strong>Código</strong>.
+	    O resultado da correção será mostrado na aba <strong>Prova</strong>, na tarefa escolhida para submissão.
+	   <p>Os limites de tempo e memória são os especificados nos enunciados das tarefas.</p>
+
 	</div>
 	<div class="obi-modal__footer">
 	  <button id="info-ok-btn" class="obi-modal__action">OK</button>
@@ -200,7 +232,7 @@
 
     <script>
       window.AppConfig = {
-	  examGate: { enabled: false },
+	  examGate: { enabled: true },
 	  openExamUrl: true,
 	  useLSP: false
       };

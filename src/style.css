@@ -366,6 +366,22 @@ body.pane-expanded .pane:not(.expanded) {
   #pane-footer{ grid-column: 1; grid-row: 5; }
 }
 
+/* === Prompt Modal === */
+#prompt-modal[aria-hidden="true"] { 
+  display: none; 
+}
+
+#prompt-modal[aria-hidden="false"] {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 1rem;
+  box-sizing: border-box;
+  overflow: auto;
+}
 
 /* Custom select (accessible: native select is still present) */
 .custom-select {

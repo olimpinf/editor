@@ -290,7 +290,7 @@ function getSubmitHandler() {
         // Update status
         if ((window as any).App?.Status) {
           (window as any).App.Status.setForCurrent(
-            `✓ ${taskName} submetido com sucesso!`,
+            'submissão enviada',
             { spinning: false }
           );
         }
@@ -415,6 +415,7 @@ export async function initSubmitModalWithTasks(): Promise<void> {
   console.log('[SubmitModal] Loading tasks from CMS API...');
   
   try {
+    console.log('[SubmitModal] will call cmsTaskList()');
     const tasks = await cmsTaskList();
     
     if (tasks && tasks.length > 0) {
