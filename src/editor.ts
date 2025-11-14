@@ -19,7 +19,6 @@ window.currentLspClient = null;
 
 initGlobalTheme();
 
-
 // Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
     return !!(window as any).AppConfig?.useLSP;
@@ -36,12 +35,34 @@ function isOpenExamUrlEnabled(): boolean {
 
 window.addEventListener('DOMContentLoaded', async () => {
     // 1. Fetch the logged-in username (this is our userId / workspace owner)
-    if (isOpenExamUrlEnabled()) {
-		window.currentUserId = "anonymous";
+//     if (isOpenExamUrlEnabled()) {
+// 		window.serId = "anonymous";
 
-} else {
-        window.currentUserId = "anonymous";
-} 
+// } else {
+//         window.currentUserId = "anonymous";
+// }
+
+    // Wait for window.username to be injected
+    async function waitForUsername(timeout = 5000) {
+        const startTime = Date.now();
+        while (!window.username) {
+            if (Date.now() - startTime > timeout) {
+                console.error("Timeout waiting for username");
+                return null;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+        }
+        return window.username;
+    }
+    window.username = await waitForUsername();
+
+   if (window.username) {
+      window.currentUserId = window.username;
+   }
+   else {
+       console.log("[Editor] ********** no username!");
+       window.currentUser = 'anonymous'
+   }
 
     // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
@@ -422,7 +443,7 @@ function showExamGateMessage(message: string) {
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(26, 60, 145, 0.9);
+        background: rgba(20, 20, 20, 0.8);
         color: white;
         display: flex;
         flex-direction: column;
@@ -524,7 +545,7 @@ function hideExamGateMessage() {
 		const userId = window.currentUserId; 
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		//const host = window.location.host;
-		const host = "https://olimpiada.ic.unicamp.br";
+		const host = "olimpiada.ic.unicamp.br";
 
         // 4. Connect new LSP client based on the language
 		if (lang === 'cpp' || lang === 'c') {

@@ -290,7 +290,7 @@ function getSubmitHandler() {
         // Update status
         if ((window as any).App?.Status) {
           (window as any).App.Status.setForCurrent(
-            'submissão enviada',
+            'submissão enviada com sucesso',
             { spinning: false }
           );
         }
