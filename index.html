@@ -165,7 +165,7 @@
 
 	<!-- Prompt Modal for new tab name -->
 	<div id="prompt-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-title"
-		aria-hidden="true">
+		aria-hidden="true" style="display: none;">
 		<div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
 		<div class="obi-modal__dialog" role="document" style="max-width: 400px;">
 			<div class="obi-modal__header">
@@ -184,6 +184,7 @@
 		</div>
 		<span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
 	</div>
+
 
     <!-- Info Modal -->
     <div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title"
@@ -230,9 +231,46 @@
       <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
     </div>
 
+	<!-- Alert Modal -->
+	<div id="alert-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="alert-title" aria-hidden="true"
+		style="display: none;">
+		<div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+		<div class="obi-modal__dialog" role="document">
+			<div class="obi-modal__header">
+				<h2 id="alert-title">Aviso</h2>
+			</div>
+			<div id="alert-content" class="obi-modal__body">
+				<!-- Message will be inserted here -->
+			</div>
+			<div class="obi-modal__footer">
+				<button id="alert-ok-btn" class="obi-modal__action">OK</button>
+			</div>
+		</div>
+		<span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+	</div>
+
+    <!-- Confirm Modal -->
+	<div id="confirm-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title"
+		aria-hidden="true" style="display: none;">
+		<div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+		<div class="obi-modal__dialog" role="document">
+			<div class="obi-modal__header">
+				<h2 id="confirm-title">Confirmação</h2>
+			</div>
+			<div id="confirm-content" class="obi-modal__body">
+				<!-- Message will be inserted here -->
+			</div>
+			<div class="obi-modal__footer">
+				<button id="confirm-cancel-btn" class="obi-modal__action obi-modal__action--secondary">Cancelar</button>
+				<button id="confirm-ok-btn" class="obi-modal__action">OK</button>
+			</div>
+		</div>
+		<span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+	</div>
+
     <script>
       window.AppConfig = {
-	  examGate: { enabled: false },
+	  examGate: { enabled: true },
 	  openExamUrl: true,
 	  useLSP: true
       };

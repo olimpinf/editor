@@ -2261,3 +2261,146 @@ function applyGlobalTheme(mode) {
     clear, clearForCurrent, clearAll
   };
 })(window, document);
+
+// Custom Alert and Confirm implementation
+(function () {
+    // Helper to show modal
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.setAttribute('aria-hidden', 'false');
+            modal.style.display = 'block';
+            // Focus the first button
+            setTimeout(() => {
+                const btn = modal.querySelector('button.obi-modal__action');
+                if (btn) btn.focus();
+            }, 100);
+        }
+    }
+
+    // Helper to hide modal
+    function hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.setAttribute('aria-hidden', 'true');
+            modal.style.display = 'none';
+        }
+    }
+
+    // Custom alert
+    window.customAlert = function (message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('alert-modal');
+            const content = document.getElementById('alert-content');
+            const okBtn = document.getElementById('alert-ok-btn');
+
+            if (!modal || !content || !okBtn) {
+                console.error('Alert modal not found');
+                resolve();
+                return;
+            }
+
+            // Set message (preserve line breaks)
+            content.textContent = message;
+            content.style.whiteSpace = 'pre-line';
+
+            // Show modal
+            showModal('alert-modal');
+
+            // Handler for OK button
+            const handleOk = () => {
+                hideModal('alert-modal');
+                okBtn.removeEventListener('click', handleOk);
+                resolve();
+            };
+
+            okBtn.addEventListener('click', handleOk);
+
+            // Handler for backdrop click
+            const backdrop = modal.querySelector('.obi-modal__backdrop');
+            const handleBackdrop = () => {
+                hideModal('alert-modal');
+                backdrop.removeEventListener('click', handleBackdrop);
+                resolve();
+            };
+            backdrop.addEventListener('click', handleBackdrop);
+
+            // Handler for Escape key
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    hideModal('alert-modal');
+                    document.removeEventListener('keydown', handleEscape);
+                    resolve();
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+        });
+    };
+
+    // Custom confirm
+    window.customConfirm = function (message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirm-modal');
+            const content = document.getElementById('confirm-content');
+            const okBtn = document.getElementById('confirm-ok-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            if (!modal || !content || !okBtn || !cancelBtn) {
+                console.error('Confirm modal not found');
+                resolve(false);
+                return;
+            }
+
+            // Set message (preserve line breaks)
+            content.textContent = message;
+            content.style.whiteSpace = 'pre-line';
+
+            // Show modal
+            showModal('confirm-modal');
+
+            // Handler for OK button
+            const handleOk = () => {
+                hideModal('confirm-modal');
+                okBtn.removeEventListener('click', handleOk);
+                cancelBtn.removeEventListener('click', handleCancel);
+                resolve(true);
+            };
+
+            // Handler for Cancel button
+            const handleCancel = () => {
+                hideModal('confirm-modal');
+                okBtn.removeEventListener('click', handleOk);
+                cancelBtn.removeEventListener('click', handleCancel);
+                resolve(false);
+            };
+
+            okBtn.addEventListener('click', handleOk);
+            cancelBtn.addEventListener('click', handleCancel);
+
+            // Handler for backdrop click (acts as cancel)
+            const backdrop = modal.querySelector('.obi-modal__backdrop');
+            const handleBackdrop = () => {
+                hideModal('confirm-modal');
+                backdrop.removeEventListener('click', handleBackdrop);
+                resolve(false);
+            };
+            backdrop.addEventListener('click', handleBackdrop);
+
+            // Handler for Escape key (acts as cancel)
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    hideModal('confirm-modal');
+                    document.removeEventListener('keydown', handleEscape);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+        });
+    };
+
+    // Override native alert and confirm
+    window.alert = window.customAlert;
+    window.confirm = window.customConfirm;
+
+    console.log('[Custom Dialogs] Alert and Confirm overridden with custom modals');
+})();
