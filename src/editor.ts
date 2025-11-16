@@ -661,7 +661,7 @@ function hideExamGateMessage() {
 	    if (!select || select.__wiredManual) return;
 	    select.__wiredManual = true;
 
-	    select.addEventListener('change', (e) => {
+	    select.addEventListener('change', async (e) => {
 		const lang = e.target.value;
 
 		// Check if current code is non-empty or custom before replacing
@@ -671,7 +671,7 @@ function hideExamGateMessage() {
 		);
 
 		if (currentCode && !isTemplate) {
-		    const proceed = confirm(
+		    const proceed = await confirm(
 			"Ao alterar a linguagem seu código atual será perdido. Continuar?"
 		    );
 		    if (!proceed) {
@@ -772,8 +772,9 @@ function hideExamGateMessage() {
 	});
 
 	// Clear button
-	document.getElementById('clear-btn').addEventListener('click', () => {
-	    if (confirm("Tem certeza que deseja limpar a área de código??")) {
+	document.getElementById('clear-btn').addEventListener('click', async () => {
+        const conf = await confirm("Tem certeza de que deseja limpar a área de código??");
+	    if (conf) {
 		window.editor.setValue("");
 	    }
 	    scheduleSaveSnapshot();	
@@ -1184,7 +1185,8 @@ function initializeFileUploader(btn) {
 
                     // Confirm before overwriting input
                     if (inputEl.value.trim() !== "") {
-                        if (!confirm(`Replace current input with contents of "${file.name}"?`)) return;
+                        const conf = confirm(`Substituir a entrada atual pelo conteúdo de "${file.name}"?`)
+                        if (!conf) return;
                     }
                     
                     inputEl.value = text;
@@ -1824,6 +1826,7 @@ function showPromptModal(message: string, defaultValue: string = ""): Promise<st
 
     // Show modal
     modal.setAttribute('aria-hidden', 'false');
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
     // Focus input and select text
@@ -1913,11 +1916,12 @@ function renameTab(tabId) {
     renderTabs(tabId);
 }
 
-function closeTab(tabId) {
+async function closeTab(tabId) {
     const tabs = readTabsIndex();
     const idx = tabs.indexOf(tabId);
     if (idx < 0) return;
-    if (!confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.")) return;
+    const conf = confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.");
+    if (!conf) return;
 
     if (tabId === runningTaskId) setRunningTab(null);
     
