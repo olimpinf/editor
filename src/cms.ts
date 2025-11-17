@@ -156,17 +156,17 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
  * @param {string} codeContent - The raw source code string from the editor.
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
-export async function cmsTestSend(runninTaskId, codeContent, inputContent, language, languageExtension) {
+export async function cmsTestSend(taskId:string, codeContent: string, inputContent: string, language: string, languageExtension: string) {
     // --- Configuration ---
-    let TEST_API_URL = "/api/hashedName-d8724aa0b88f985f11/test";
-    let fileNameField = "hashedName-d8724aa0b88f985f11.%l";
-    let fileName = "hashedName-d8724aa0b88f985f11." + languageExtension;
+    let TEST_API_URL = `/api/${taskId}/test`;
+    let fileNameField = `${taskId}.%l`;
+    let fileName = `${taskId}.${languageExtension}`;
 
-    if (languageExtension == "java") {
-        TEST_API_URL = "/api/tarefa/test";
-        fileNameField = "tarefa.%l";
-        fileName = "tarefa.java";
-    }
+    // if (languageExtension == "java") {
+    //     TEST_API_URL = "/api/tarefa/test";
+    //     fileNameField = "tarefa.%l";
+    //     fileName = "tarefa.java";
+    // }
 
     console.log("[cmsTestSend] URL", TEST_API_URL);
     console.log('[cmsTestSend] language:', language);
@@ -224,12 +224,14 @@ export async function cmsTestSend(runninTaskId, codeContent, inputContent, langu
 /**
  * Get status of a test submission
  */
-export async function cmsTestStatus(theTaskId: string, id: string, language: string) {
+export async function cmsTestStatus(taskId: string, id: string, language: string) {
     console.log("cmsTestStatus, language:", language);
-    let url = "/api/hashedName-d8724aa0b88f985f11/test/" + id;
-    if (language == "Java / JDK") {
-        url = "/api/tarefa/test/" + id;
-    }
+    let url = `/api/${taskId}/test/${id}`;
+    // if (language == "Java / JDK") {
+    //     url = "/api/tarefa/test/" + id;
+    // }
+    console.log("Test Status for taskId", taskId);
+    console.log("url", url);
 
     let data = "";
     try {

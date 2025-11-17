@@ -327,12 +327,21 @@ function getSubmitHandler() {
             { spinning: false }
           );
         }
-        
+        console.error('[SubmitModal] O erro:', result.error);
+        console.error('[SubmitModal] O erro:', result.error["error"]);
+
         // Show error alert
-        alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
+        if (result.error.includes("Submissions too frequent!"))
+          alert("Submissões muito frequentes. Considerando todas as tarefas, você pode submeter novamente 60 segundos após sua última submissão.");
+        else 
+          alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
       }
     } catch (error) {
+        console.error('[SubmitModal] In exception,  erro:', result.error);
+        console.error('[SubmitModal] In exception, erro:', result.error["error"]);
       console.error('[SubmitModal] Submission error:', error);
+      // Show error alert
+          alert(`Erro ao submeter: ${error || 'Erro desconhecido'}`);
       
       // Update status with error
       if ((window as any).App?.Status) {

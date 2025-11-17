@@ -5,7 +5,7 @@ import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWit
 import { initBackups } from './backups';
 
 
-window.runningTaskId   = null;
+window.runningTabId   = null;
 window.runningLanguage = null;
 window.lastRunStartMs  = 0;     // <— from click time
 window.cooldownTimerId = null;
@@ -718,7 +718,7 @@ function hideExamGateMessage() {
 	// Run button
 	// document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
 	//     // Clear any previous running tests
-	//     if (runningTaskId != null) {
+	//     if (runningTabId != null) {
 	// 	alert(
 	// 	    `Há uma execução em andamento, aguarde.`
 	// 	);
@@ -743,10 +743,10 @@ function hideExamGateMessage() {
 	//     const language = cmsLanguage[selectedLanguage];
 	//     const languageExtension = cmsExtension[selectedLanguage];
 
-	//     runningTaskId = getCurrentTaskId()
-	// 	console.log("will show spinner on tab", runningTaskId);
-	//     setRunningTab(runningTaskId);             // show spinner on that tab
-	//     setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
+	//     runningTabId = getCurrentTaskId()
+	// 	console.log("will show spinner on tab", runningTabId);
+	//     setRunningTab(runningTabId);             // show spinner on that tab
+	//     setStatusLabel('Preparando…', { spinning: false, tabId: runningTabId });
 	//     runningLanguage = selectedLanguage;
 
 	//     const theme = getGlobalTheme();
@@ -756,15 +756,12 @@ function hideExamGateMessage() {
 	//     displayProgramOutput(formatOutput(initMessage, colorEmphasis));
 	//     try {
 	// 	// Submit the code and get the test ID
-	// 	const submissionResult = await cmsTestSend(runningTaskId, code, input, language, languageExtension);
+	// 	const submissionResult = await cmsTestSend(runningTabId, code, input, language, languageExtension);
 	// 	const testId = submissionResult.data.id;
 
 	// 	console.log("testId", testId);
 		
 	// 	// Start polling for the status
-	// 	await pollTestStatus(testId, runningTaskId, language);
-
-	//     } catch (error) {
 	// 	console.warn("CMS Test Submission Failed:", error);
 	// 	setStatusLabel("Execução falhou", { spinning: false });
 	// 	displayProgramOutput(formatOutput("Execução falhou.", "red"));
@@ -1323,11 +1320,12 @@ function displayStderr(head, str) {
     }
 }
 
-async function pollTestStatus(testId: string, runningTaskId: string, language: string) {
+async function pollTestStatus(runningTabId: string, testId: string, taskId: string, language: string) {
+    
     // Reference the output pane container
     const outputContainer = document.getElementById('stdout-output');
 
-    const label = getTabTitle(runningTaskId);
+    const label = getTabTitle(runningTabId);
     const theme = getGlobalTheme();
     const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
     
@@ -1339,7 +1337,8 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
 	const EVALUATED = 4;
 
         try {
-            const result = await cmsTestStatus(runningTaskId, testId, language);
+            console.log('Will call cmstTestStatus', taskId, testId, language);
+            const result = await cmsTestStatus(taskId, testId, language);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 	    let theOutput = output?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
 	    let theExecution_stderr = execution_stderr?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
@@ -1356,33 +1355,33 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
 		    displayStdout(initMessage + "Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTaskId });
+		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
 		    displayStdout(initMessage + "Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Memory limit exceeded") {
 		    displayStdout(initMessage + "Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
 		    displayStderr(initMessage + "Execução interrompida por erro de execução. ", theExecution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		}
 		else {
 		    displayStderr("initMessage + Execução interrompida por erro de execução. ", execution_stderr);
 		    displayStdout("", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
-		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		} 
 		markRunComplete();
 
@@ -1397,11 +1396,11 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
 		if (theCompilation_stderr != "")
 		program_output += '<pre class="error">'  + theCompilation_stderr + "</pre>", "red";
                 displayProgramOutput(program_output);
-		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTaskId });
+		setStatusLabel(`${ status_text }`, { spinning: false, tabId: runningTabId });
 		markRunComplete();
             } else if (status == 1|| status == 3) {
                 // CONTINUE POLLING (Interval handles the next call)
-		setStatusLabel(`${ status_text }`, { spinning: true, tabId: runningTaskId });
+		setStatusLabel(`${ status_text }`, { spinning: true, tabId: runningTabId });
             } else { 
                 // 1. STOP POLLING
                 clearInterval(window.currentTestInterval);
@@ -1410,7 +1409,7 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
 		displayStdout("", theOutput);
 		program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                 displayProgramOutput(program_output);
-		setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+		setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		markRunComplete();
             }
 
@@ -1420,7 +1419,7 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr(initMessage + "Erro de processamento. ", "");
-	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTaskId });
+	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 	    markRunComplete();
         }
     };
@@ -1432,7 +1431,7 @@ async function pollTestStatus(testId: string, runningTaskId: string, language: s
 }
 
 function displayProgramOutput(programOutputText) {
-    setOutputForTab(runningTaskId, programOutputText, { append: true });
+    setOutputForTab(runningTabId, programOutputText, { append: true });
 }
 
 function formatOutput(str, textColor="") {
@@ -1674,7 +1673,7 @@ function renderTabs(activeId) {
 	btn.dataset.tabId = tid;
 	btn.innerHTML = `
   <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
-  ${runningTaskId === tid ? `<span class="tab-spinner" aria-hidden="true"></span>` : ''}
+  ${runningTabId === tid ? `<span class="tab-spinner" aria-hidden="true"></span>` : ''}
   <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
 `;
 	btn.addEventListener("click", (e) => {
@@ -1724,7 +1723,7 @@ function markRunComplete() {
     localStorage.removeItem(LS_STATUS);
     scheduleSaveSnapshot();
     setRunningTab(null);                      // remove spinner
-    runningTaskId = null;		    
+    runningTabId = null;		    
     // keep LS_LAST so cooldown check can still apply if you want
 }
 
@@ -1924,7 +1923,7 @@ async function closeTab(tabId) {
     const conf = confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.");
     if (!conf) return;
 
-    if (tabId === runningTaskId) setRunningTab(null);
+    if (tabId === runningTabId) setRunningTab(null);
     
     // Remove snapshot and id
     try { localStorage.removeItem(tabStorageKey(tabId)); } catch {}
@@ -2090,13 +2089,13 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// runningTaskId already exists in your code; we’ll just manipulate it.
+// runningTabId already exists in your code; we’ll just manipulate it.
 function setRunningTab(tabIdOrNull) {
-  const prev = runningTaskId || null;
-  runningTaskId = tabIdOrNull || null;
+  const prev = runningTabId || null;
+  runningTabId = tabIdOrNull || null;
   // Update the previous and the new tab buttons
   updateTabSpinnerFor(prev);
-  updateTabSpinnerFor(runningTaskId);
+  updateTabSpinnerFor(runningTabId);
 }
 
 function updateTabSpinnerFor(tabId) {
@@ -2106,7 +2105,7 @@ function updateTabSpinnerFor(tabId) {
 
   let sp = btn.querySelector('.tab-spinner');
 
-  if (runningTaskId === tabId) {
+  if (runningTabId === tabId) {
     // ensure spinner exists
     if (!sp) {
       sp = document.createElement('span');
@@ -2224,7 +2223,7 @@ function applyGlobalTheme(mode) {
     if (!taskId) return;
     map.delete(taskId);
     removeFromStorage(taskId);
-    if (runningTaskId === window.currentTask) renderFor(taskId);
+    if (runningTabId === window.currentTask) renderFor(taskId);
   }
 
   function clearAll() {
@@ -2416,7 +2415,7 @@ function applyGlobalTheme(mode) {
  */
 async function executeTestRun(taskId: string): Promise<void> {
     // Clear any previous running tests
-    if (runningTaskId != null) {
+    if (runningTabId != null) {
         await alert(`Há uma execução em andamento, aguarde.`);
         return;
     }
@@ -2440,11 +2439,11 @@ async function executeTestRun(taskId: string): Promise<void> {
     const language = cmsLanguage[selectedLanguage];
     const languageExtension = cmsExtension[selectedLanguage];
     
-    runningTaskId = getCurrentTaskId();
-    console.log("will show spinner on tab", runningTaskId);
+    runningTabId = getCurrentTaskId();
+    console.log("will show spinner on tab", runningTabId);
     
-    setRunningTab(runningTaskId);  // show spinner on that tab
-    setStatusLabel('Preparando…', { spinning: false, tabId: runningTaskId });
+    setRunningTab(runningTabId);  // show spinner on that tab
+    setStatusLabel('Preparando…', { spinning: false, tabId: runningTabId });
     runningLanguage = selectedLanguage;
     
     const theme = getGlobalTheme();
@@ -2459,7 +2458,8 @@ async function executeTestRun(taskId: string): Promise<void> {
         console.log("testId", testId);
         
         // Start polling for the status
-        await pollTestStatus(testId, taskId, language);
+        await pollTestStatus(runningTabId, testId, taskId, language);
+
     } catch (error) {
         console.warn("CMS Test Submission Failed:", error);
         setStatusLabel("Execução falhou", { spinning: false });
