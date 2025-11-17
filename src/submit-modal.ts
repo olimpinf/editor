@@ -16,6 +16,8 @@ let TASK_NAMES: Array<{ id: string; name: string }> = [
 
 // Store the modal instance globally
 let submitModalInstance: SubmitModal | null = null;
+let testModalInstance: SubmitModal | null = null;
+
 
 /**
  * Set the task names dynamically
@@ -30,18 +32,32 @@ export function setTaskNames(tasks: Array<{ id: string; name: string }>): void {
   if (submitModalInstance) {
     submitModalInstance.updateTasks(tasks);
   }
+  if (testModalInstance) {
+    testModalInstance.updateTasks(tasks);
+  }
+
 }
 
 interface SubmitModalOptions {
   onSubmit: (taskId: string, taskName: string) => void;
+  title?: string;  
+  confirmButtonText?: string; 
+  modalId?: string;
 }
 
 class SubmitModal {
   private modal: HTMLElement | null = null;
   private options: SubmitModalOptions;
+  private title: string;  
+  private confirmButtonText: string; 
+  private modalId: string;  
+
 
   constructor(options: SubmitModalOptions) {
     this.options = options;
+    this.title = options.title || 'Submeter Solução';  
+    this.confirmButtonText = options.confirmButtonText || 'Submeter';
+    this.modalId = options.modalId || 'submit-modal';
     this.createModal();
     this.attachEventListeners();
   }
@@ -51,8 +67,8 @@ class SubmitModal {
    */
   public updateTasks(tasks: Array<{ id: string; name: string }>): void {
     console.log('[SubmitModal] Updating tasks in existing modal:', tasks);
-    
-    const selectElement = document.getElementById('task-select') as HTMLSelectElement;
+
+    const selectElement = document.getElementById(`${this.modalId}-task-select`) as HTMLSelectElement;
     if (!selectElement) {
       console.warn('[SubmitModal] Select element not found, recreating modal');
       this.destroyModal();
@@ -60,10 +76,10 @@ class SubmitModal {
       this.attachEventListeners();
       return;
     }
-    
+
     // Clear existing options
     selectElement.innerHTML = '';
-    
+
     // Add new options
     tasks.forEach(task => {
       const option = document.createElement('option');
@@ -83,33 +99,33 @@ class SubmitModal {
     ).join('');
     
     const modalHTML = `
-      <div id="submit-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="submit-title" aria-hidden="true" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
-        <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
-        <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 300px; width: auto; max-width: 90%;">
-          <div class="obi-modal__header" style="margin-bottom: 20px; position: relative;">
-            <h2 id="submit-title" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px;">Submeter Solução</h2>
-            <button id="submit-close-btn" class="obi-modal__close" aria-label="Fechar" style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; color: #666; line-height: 1;">✕</button>
-          </div>
-          <div class="obi-modal__body">
-            <div style="margin-bottom: 20px;">
-              <label for="task-select" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Tarefa:</label>
-              <select id="task-select" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; background-color: white; color: #333; appearance: auto; -webkit-appearance: menulist; -moz-appearance: menulist; cursor: pointer; height: auto; min-height: 40px; display: block;">
-                ${optionsHTML}
-              </select>
-            </div>
-          </div>
-          <div class="obi-modal__footer" style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button id="submit-cancel-btn" class="obi-modal__action" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">Cancelar</button>
-            <button id="submit-confirm-btn" class="obi-modal__action" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">Submeter</button>
+    <div id="${this.modalId}" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="${this.modalId}-title" aria-hidden="true" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000;">
+      <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001;"></div>
+      <div class="obi-modal__dialog" role="document" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 300px; width: auto; max-width: 90%;">
+        <div class="obi-modal__header" style="margin-bottom: 20px; position: relative;">
+          <h2 id="${this.modalId}-title" style="margin: 0; font-size: 1.5rem; color: #333; padding-right: 30px;">${this.title}</h2>
+          <button id="${this.modalId}-close-btn" class="obi-modal__close" aria-label="Fechar" style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; color: #666; line-height: 1;">✕</button>
+        </div>
+        <div class="obi-modal__body">
+          <div style="margin-bottom: 20px;">
+            <label for="${this.modalId}-task-select" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Tarefa:</label>
+            <select id="${this.modalId}-task-select" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; background-color: white; color: #333; appearance: auto; -webkit-appearance: menulist; -moz-appearance: menulist; cursor: pointer; height: auto; min-height: 40px; display: block;">
+              ${optionsHTML}
+            </select>
           </div>
         </div>
-        <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+        <div class="obi-modal__footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="${this.modalId}-cancel-btn" class="obi-modal__action" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">Cancelar</button>
+          <button id="${this.modalId}-confirm-btn" class="obi-modal__action" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">${this.confirmButtonText}</button>
+        </div>
       </div>
-    `;
+      <span class="obi-modal__sentry" tabindex="0" aria-hidden="true"></span>
+    </div>
+  `;
 
-    // Insert modal into the page
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    this.modal = document.getElementById('submit-modal');
+  // Insert modal into the page
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  this.modal = document.getElementById(this.modalId);
     
     console.log('[SubmitModal] Modal element created with', TASK_NAMES.length, 'tasks');
   }
@@ -157,7 +173,7 @@ class SubmitModal {
 
     // Focus on the select element
     setTimeout(() => {
-      const selectElement = document.getElementById('task-select') as HTMLSelectElement;
+      const selectElement = document.getElementById(`${this.modalId}-task-select`) as HTMLSelectElement;  // Use this.modalId
       if (selectElement) {
         selectElement.focus();
         console.log('[SubmitModal] Focus set on select');
@@ -186,7 +202,7 @@ class SubmitModal {
    * Handle submit confirmation
    */
   private handleSubmitConfirm(): void {
-    const selectElement = document.getElementById('task-select') as HTMLSelectElement;
+    const selectElement = document.getElementById(`${this.modalId}-task-select`) as HTMLSelectElement; 
     if (!selectElement) return;
 
     const selectedTask = selectElement.value;
@@ -205,17 +221,17 @@ class SubmitModal {
    */
   private attachEventListeners(): void {
     // Close button
-    const closeBtn = document.getElementById('submit-close-btn');
+    const closeBtn = document.getElementById(`${this.modalId}-close-btn`);  // Use this.modalId
     closeBtn?.addEventListener('click', () => this.hide());
-    
+
     // Cancel button
-    const cancelBtn = document.getElementById('submit-cancel-btn');
+    const cancelBtn = document.getElementById(`${this.modalId}-cancel-btn`);  // Use this.modalId
     cancelBtn?.addEventListener('click', () => this.hide());
-    
+
     // Confirm button
-    const confirmBtn = document.getElementById('submit-confirm-btn');
+    const confirmBtn = document.getElementById(`${this.modalId}-confirm-btn`);  // Use this.modalId
     confirmBtn?.addEventListener('click', () => this.handleSubmitConfirm());
-    
+
     // Backdrop click to close
     const backdrop = this.modal?.querySelector('.obi-modal__backdrop');
     backdrop?.addEventListener('click', () => this.hide());
@@ -442,4 +458,118 @@ export async function initSubmitModalWithTasks(): Promise<void> {
 export function initSubmitModal(): void {
   console.log('[SubmitModal] Initializing with default tasks');
   createSubmitModalInstance();
+}
+
+/**
+ * Get the test callback handler
+ */
+function getTestHandler() {
+  return async (taskId: string, taskName: string) => {
+    console.log('[TestModal] Testing task:', taskId, taskName);
+    
+    // Get current code from editor
+    // const editor = (window as any).editor;
+    // if (!editor) {
+    //   console.error('[TestModal] Editor not available!');
+    //   alert('Editor não está disponível. Por favor, recarregue a página.');
+    //   return;
+    // }
+    
+    // const code = editor.getValue() || '';
+    // if (!code || code.trim().length === 0) {
+    //   console.warn('[TestModal] Code is empty');
+    //   alert('Por favor, escreva algum código antes de testar.');
+    //   return;
+    // }
+    
+    console.log('[TestModal] Executing test for task:', taskId, taskName);
+    
+    // Import and call the test execution function
+    // You'll need to import it at the top of submit-modal.ts:
+    // import { executeTestRun } from './editor';
+    
+    // try {
+    //   await (window as any).executeTestRun(taskId);
+    // } catch (error) {
+    //   console.error('[TestModal] Test execution error:', error);
+    //   alert(`Erro ao executar teste: ${error.message}`);
+    // }
+    try {
+      if (typeof (window as any).executeTestRun === 'function') {
+        await (window as any).executeTestRun(taskId);
+      } else {
+        console.error('[TestModal] executeTestRun function not found');
+        alert('Função de teste não disponível. Recarregue a página.');
+      }
+    } catch (error) {
+      console.error('[TestModal] Test execution error:', error);
+      alert(`Erro ao executar teste: ${error.message}`);
+}
+  };
+}
+
+/**
+ * Create the test modal instance
+ */
+function createTestModalInstance(): void {
+  console.log('[TestModal] Creating modal instance');
+  
+  // Create the modal instance with custom title and button text
+  testModalInstance = new SubmitModal({
+    onSubmit: getTestHandler(),
+    title: 'Escolha a tarefa para testar',
+    confirmButtonText: 'Testar',
+    modalId: 'test-modal'
+  });
+
+  // Attach to the run button
+  const attachRunListener = () => {
+    const runBtn = document.getElementById('run-btn');
+    if (!runBtn) {
+      console.error('[TestModal] Run button not found in DOM');
+      return false;
+    }
+
+    console.log('[TestModal] Attaching listener to run button');
+    runBtn.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      console.log('[TestModal] Run button clicked');
+      if (testModalInstance) {
+        testModalInstance.show();
+      } else {
+        console.error('[TestModal] Modal instance is null!');
+      }
+    });
+
+    console.log('[TestModal] Initialized successfully');
+    return true;
+  };
+
+  // Try to attach immediately
+  if (!attachRunListener()) {
+    // If button not found, wait for DOM to be ready
+    console.log('[TestModal] Waiting for DOM to be ready...');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachRunListener);
+    } else {
+      setTimeout(attachRunListener, 100);
+    }
+  }
+}
+
+/**
+ * Initialize the test modal with a pre-fetched task list
+ */
+export function initTestModalWithTaskList(tasks: Array<{ id: string; name: string }>): void {
+  console.log('[TestModal] initTestModalWithTaskList called with tasks:', tasks);
+  
+  if (!tasks || tasks.length === 0) {
+    console.error('[TestModal] No tasks provided!');
+    return;
+  }
+
+  console.log('[TestModal] Creating modal instance...');
+  
+  // Create the test modal instance
+  createTestModalInstance();
 }
