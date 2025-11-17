@@ -588,7 +588,7 @@ function hideExamGateMessage() {
 		}
 	}
 	
-	function getSanitizedTabName() {
+	async function getSanitizedTabName() {
 	    const tabId = window.currentTask;
 	    const snap = tabId && loadTabSnapshot(tabId);
 	    const raw = snap?.title || tabId || "programa";
@@ -1170,7 +1170,7 @@ function initializeFileUploader(btn) {
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const text = e.target.result ?? "";
                 const targetPane = btn.closest('#left-pane') ? 'editor' : 
                       btn.closest('#pane-rtop') ? 'input' : null;
@@ -1183,7 +1183,7 @@ function initializeFileUploader(btn) {
 
                     // Confirm before overwriting input
                     if (inputEl.value.trim() !== "") {
-                        const conf = confirm(`Substituir a entrada atual pelo conteúdo de "${file.name}"?`)
+                        const conf = await confirm(`Substituir a entrada atual pelo conteúdo de "${file.name}"?`)
                         if (!conf) return;
                     }
                     
@@ -1197,7 +1197,7 @@ function initializeFileUploader(btn) {
                 // Confirm before overwriting existing code
                 const current = (window.editor?.getValue() || "").trim();
                 if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
-                    if (!confirm(`Replace current code with contents of "${file.name}"?`)) return;
+                    if (!await confirm(`Replace current code with contents of "${file.name}"?`)) return;
                 }
 
                 // Detect language by extension 
@@ -1658,6 +1658,7 @@ const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 // Render tabs
 
 function renderTabs(activeId) {
+    console.log("in renderTabs, activeId", activeId);
     const tabs = readTabsIndex();
     const bar = document.getElementById('tabs-bar');
     if (!bar) return;
@@ -1850,7 +1851,9 @@ function showPromptModal(message: string, defaultValue: string = ""): Promise<st
 
     // Hide modal helper
     const hideModal = () => {
+        console.log("in hideModal");
       modal.setAttribute('aria-hidden', 'true');
+      modal.style.display = 'none';
       document.body.style.overflow = '';
       
       // Remove event listeners
@@ -1906,12 +1909,22 @@ async function newTab(initialTitle = "") {
   loadTabIntoUI(tabId);    // sets editor/input/output
 }
 
-function renameTab(tabId) {
+async function renameTab(tabId) {
+    console.log("in renameTab, tabId =", tabId);
     const snap = loadTabSnapshot(tabId);
-    if (!snap) return;
-    const next = prompt("Renomear aba:", snap.title || "");
+
+    if (!snap) {
+        console.log("in renameTab, returning noTabSnapshot", tabId);
+        return;
+    }
+    console.log("will call showPromptModal(), snap.title =", snap.title);
+    const next = await showPromptModal("Renomear aba:", snap.title || "");
+        console.log("showPromptModal()returned next", next);
+
     if (!next || next === snap.title) return;
     snap.title = next;
+    console.log("will save snapshot", tabId, snap);
+
     saveTabSnapshot(tabId, snap);
     renderTabs(tabId);
 }
@@ -1920,7 +1933,7 @@ async function closeTab(tabId) {
     const tabs = readTabsIndex();
     const idx = tabs.indexOf(tabId);
     if (idx < 0) return;
-    const conf = confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.");
+    const conf = await confirm("Fechar esta aba? O código, a entrada e a saída serão descartados e não será possível recuperá-los.");
     if (!conf) return;
 
     if (tabId === runningTabId) setRunningTab(null);
