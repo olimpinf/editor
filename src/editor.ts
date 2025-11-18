@@ -546,7 +546,7 @@ function hideExamGateMessage() {
 		const userId = window.currentUserId; 
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		//const host = window.location.host;
-		const host = "olimpiada.ic.unicamp.br";
+		const host = "editor.provas.ic.unicamp.br";
 
         // 4. Connect new LSP client based on the language
 		if (lang === 'cpp' || lang === 'c') {
