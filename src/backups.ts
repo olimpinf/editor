@@ -459,7 +459,7 @@ export function initBackups(): void {
     newUploadBtn.addEventListener('click', async () => {
       const current = ((window as any).editor?.getValue() || '').trim();
       if (current) {
-        if (!confirm('Deseja substituir o código atual?')) {
+        if (!await confirm('Deseja substituir o código atual?')) {
           return;
         }
       }
@@ -506,7 +506,7 @@ export function initBackups(): void {
       e.stopPropagation();     // Stops event bubbling
       const inputEl = document.getElementById('stdin-input') as HTMLTextAreaElement;
       if (inputEl?.value.trim()) {
-        if (!confirm('Deseja substituir a entrada atual?')) {
+        if (!await confirm('Deseja substituir a entrada atual?')) {
           return;
         }
       }

@@ -1155,87 +1155,88 @@ window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
  * Handles file selection and routes content to the correct pane based on the button clicked.
  * @param {HTMLElement} btn The button that was clicked.
  */
-function initializeFileUploader(btn) {
-    if (!btn) return;
 
-    btn.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        // Allow all file types (code or text)
-	input.accept = '.cpp,.cc,.cxx,.java,.py,.txt,.in';
-        input.style.display = 'none';
+// function initializeFileUploader(btn) {
+//     if (!btn) return;
 
-        input.addEventListener('change', (event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
+//     btn.addEventListener('click', () => {
+//         const input = document.createElement('input');
+//         input.type = 'file';
+//         // Allow all file types (code or text)
+// 	input.accept = '.cpp,.cc,.cxx,.java,.py,.txt,.in';
+//         input.style.display = 'none';
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const text = e.target.result ?? "";
-                const targetPane = btn.closest('#left-pane') ? 'editor' : 
-                      btn.closest('#pane-rtop') ? 'input' : null;
+//         input.addEventListener('change', (event) => {
+//             const file = event.target.files?.[0];
+//             if (!file) return;
 
-                if (!targetPane) return; // Safety check
+//             const reader = new FileReader();
+//             reader.onload = async (e) => {
+//                 const text = e.target.result ?? "";
+//                 const targetPane = btn.closest('#left-pane') ? 'editor' : 
+//                       btn.closest('#pane-rtop') ? 'input' : null;
 
-                // --- 1. HANDLE INPUT PANE UPLOAD ---
-                if (targetPane === 'input') {
-                    const inputEl = document.getElementById('stdin-input');
+//                 if (!targetPane) return; // Safety check
 
-                    // Confirm before overwriting input
-                    if (inputEl.value.trim() !== "") {
-                        const conf = await confirm(`Substituir a entrada atual pelo conteúdo de "${file.name}"?`)
-                        if (!conf) return;
-                    }
+//                 // --- 1. HANDLE INPUT PANE UPLOAD ---
+//                 if (targetPane === 'input') {
+//                     const inputEl = document.getElementById('stdin-input');
+
+//                     // Confirm before overwriting input
+//                     if (inputEl.value.trim() !== "") {
+//                         const conf = await confirm(`Substituir a entrada atual pelo conteúdo de "${file.name}"?`)
+//                         if (!conf) return;
+//                     }
                     
-                    inputEl.value = text;
-		    scheduleSaveSnapshot();	
-                    return;
-                }
+//                     inputEl.value = text;
+// 		    scheduleSaveSnapshot();	
+//                     return;
+//                 }
 
-                // --- 2. HANDLE EDITOR PANE UPLOAD (Existing Logic) ---
+//                 // --- 2. HANDLE EDITOR PANE UPLOAD  ---
                 
-                // Confirm before overwriting existing code
-                const current = (window.editor?.getValue() || "").trim();
-                if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
-                    if (!await confirm(`Replace current code with contents of "${file.name}"?`)) return;
-                }
+//                 // Confirm before overwriting existing code
+//                 const current = (window.editor?.getValue() || "").trim();
+//                 if (current && !Object.values(templates).map(v=>v.trim()).includes(current)) {
+//                     if (!await confirm(`Replace current code with contents of "${file.name}"?`)) return;
+//                 }
 
-                // Detect language by extension 
-                const ext = file.name.split('.').pop().toLowerCase();
-                let lang = null;
-                if (['cpp','cc','cxx'].includes(ext)) lang = 'cpp';
-                else if (ext === 'java') lang = 'java';
-                else if (ext === 'py') lang = 'python';
+//                 // Detect language by extension 
+//                 const ext = file.name.split('.').pop().toLowerCase();
+//                 let lang = null;
+//                 if (['cpp','cc','cxx'].includes(ext)) lang = 'cpp';
+//                 else if (ext === 'java') lang = 'java';
+//                 else if (ext === 'py') lang = 'python';
 
-                // Programmatic language change (from upload): do NOT inject template (keep uploaded code)
-                if (lang) {
-                    window.setLanguageProgrammatic?.(lang, { injectTemplate: false });
-                }
+//                 // Programmatic language change (from upload): do NOT inject template (keep uploaded code)
+//                 if (lang) {
+//                     window.setLanguageProgrammatic?.(lang, { injectTemplate: false });
+//                 }
 
-                // Now safely set the uploaded text (template won’t overwrite it)
-                window.editor.setValue(text || "" );
-		scheduleSaveSnapshot();	
-            };
+//                 // Now safely set the uploaded text (template won’t overwrite it)
+//                 window.editor.setValue(text || "" );
+// 		scheduleSaveSnapshot();	
+//             };
 
-            reader.readAsText(file);
-        });
+//             reader.readAsText(file);
+//         });
 
-        document.body.appendChild(input);
-        input.click();
-        input.remove();
-    });
-}
+//         document.body.appendChild(input);
+//         input.click();
+//         input.remove();
+//     });
+// }
 
-// === Initialize both buttons ===
-(function initUpload() {
-    // Editor Pane Button
-    const editorBtn = document.getElementById('upload-btn');
-    initializeFileUploader(editorBtn);
+// // === Initialize both buttons ===
+// (function initUpload() {
+//     // Editor Pane Button
+//     const editorBtn = document.getElementById('upload-btn');
+//     initializeFileUploader(editorBtn);
 
-    // Input Pane Button
-    const inputBtn = document.getElementById('upload-input-btn');
-    initializeFileUploader(inputBtn);
-})();
+//     // Input Pane Button
+//     const inputBtn = document.getElementById('upload-input-btn');
+//     initializeFileUploader(inputBtn);
+// })();
 
 // Deprecated wrapper kept for compatibility; route to programmatic API
 function setLanguage(lang, { skipTemplate = true } = {}) {
