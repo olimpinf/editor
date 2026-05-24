@@ -374,10 +374,10 @@ async function checkExamGateAndInitialize() {
 
     showExamGateMessage('Aguardando você iniciar a prova.<br>Para iniciar a prova vá para a aba Prova<br/> e clique no botão Iniciar.');
 
-	console.log('[ExamGate] Will poll task list API');
+    console.log('[ExamGate] Will poll exam status using cmsTaskList()');
 
     // Poll the task list API
-    const pollInterval = 5000; // Check every 5 seconds
+    const pollInterval = 3000; // Check every 3 seconds
     const checkExamStatus = async () => {
         try {
 	    console.log('[ExamGate] Will call cmsTaskList()');

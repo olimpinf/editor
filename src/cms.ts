@@ -8,8 +8,9 @@ export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
  * Returns an array of tasks formatted for the submit modal
  */
 export async function cmsTaskList(): Promise<Array<{ id: string; name: string }> | null> {
-    const url = "/api/task_list"
+    const url = "https://pj.provas.ic.unicamp.br/api/task_list"
 
+    console.log("[cmsTaskList] *****************************");
     console.log("[cmsTaskList] url:", url);
     console.log("[cmsTaskList] window.CMS_API_HEADERS:", window.CMS_API_HEADERS)
     try {
