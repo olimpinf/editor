@@ -14,7 +14,12 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
     debounceDelay = 300,
     maxConcurrentRequests = 2,
     requestTimeout = 5000,
+    waitForReady = false,       // if true, block completions until language/status Ready
+    readyTimeoutMs = 120000,    // fallback: assume ready after 2 minutes
   } = options;
+
+  // Readiness tracking (used when waitForReady is true, e.g. jdtls)
+  let lspServerReady = !waitForReady;
 
   let messageId = 1;
   let initialized = false;
@@ -62,6 +67,31 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
 
   console.log('[LSP] Connecting to', socketUrl);
   (webSocket as any).isExplicitlyClosed = false;
+
+  // Listen for language/status notifications (jdtls sends these during startup)
+  if (waitForReady) {
+    const readyFallback = setTimeout(() => {
+      if (!lspServerReady) {
+        console.log('[LSP] Readiness timeout — assuming server is ready');
+        lspServerReady = true;
+      }
+    }, readyTimeoutMs);
+
+    webSocket.addEventListener('message', (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.method === 'language/status') {
+          const type: string = msg.params?.type || '';
+          console.log('[LSP] language/status type:', type);
+          if (/ready/i.test(type)) {
+            lspServerReady = true;
+            clearTimeout(readyFallback);
+            console.log('[LSP] Server is ready — completions enabled');
+          }
+        }
+      } catch {}
+    });
+  }
 
   webSocket.onopen = () => {
     console.log('[LSP] WebSocket connected');
@@ -263,6 +293,10 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
       languages.forEach(lang => {
         monaco.languages.registerCompletionItemProvider(lang, {
           provideCompletionItems: async (model, position) => {
+            if (!lspServerReady) {
+              console.log('[LSP] Server not ready yet — skipping completion');
+              return { suggestions: [] };
+            }
             const result = await debounceAndLimitRequest('textDocument/completion', {
               textDocument: { uri: documentUri },
               position: {

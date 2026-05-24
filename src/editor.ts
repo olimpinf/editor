@@ -580,7 +580,8 @@ function hideExamGateMessage() {
 				languages: ['java'],
 				workspaceRoot: workspaceRoot,
 				documentUri: newModelUri,
-				requestTimeout: 15000,  // jdtls needs more time, especially during init
+				requestTimeout: 15000,
+				waitForReady: true,
 			});
         // ================================================================
 
