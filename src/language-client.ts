@@ -10,9 +10,10 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
     socketUrl, // Dynamic (e.g., /ws/lsp/cpp/ or /ws/lsp/python/)
     languages = ['cpp', 'c'], // This will be overriden for Python
     workspaceRoot, // Dynamic (e.g., /.../clangd_workspaces/ or /.../python_workspaces/)
-    documentUri, 
+    documentUri,
     debounceDelay = 300,
     maxConcurrentRequests = 2,
+    requestTimeout = 5000,
   } = options;
 
   let messageId = 1;
@@ -212,7 +213,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
             console.log(`[LSP] ${method} request timed out`);
             webSocket.removeEventListener('message', listener);
             resolve(null);
-          }, 2000);
+          }, requestTimeout);
 
           const listener = (event) => {
             try {

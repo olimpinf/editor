@@ -244,8 +244,7 @@ export async function cmsTestStatus(taskId: string, id: string, language: string
 
         if (!resp.ok) {
             console.error("Test Status failed with status", resp.status);
-            data = { status: 0, status_text: "Erro" };
-            return;
+            return { status: 0, status_text: "Erro" };
         }
 
         data = await resp.json();

@@ -579,7 +579,8 @@ function hideExamGateMessage() {
 				socketUrl: `${proto}//${host}/ws/lsp/java/`,
 				languages: ['java'],
 				workspaceRoot: workspaceRoot,
-				documentUri: newModelUri
+				documentUri: newModelUri,
+				requestTimeout: 15000,  // jdtls needs more time, especially during init
 			});
         // ================================================================
 
