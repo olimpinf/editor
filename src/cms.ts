@@ -1,14 +1,15 @@
-import { stat } from "fs";
-
 export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
+function examBaseUrl(): string {
+    return (window as any).CMS_EXAM_URL || 'https://pj.provas.ic.unicamp.br';
+}
 
 /**
  * Get the task list from CMS API
  * Returns an array of tasks formatted for the submit modal
  */
 export async function cmsTaskList(): Promise<Array<{ id: string; name: string }> | null> {
-    const url = "https://pj.provas.ic.unicamp.br/api/task_list"
+    const url = `${examBaseUrl()}/api/task_list`;
 
     console.log("[cmsTaskList] *****************************");
     console.log("[cmsTaskList] url:", url);
@@ -92,7 +93,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
 
 
     // Build the submit URL with the task ID
-    const SUBMIT_API_URL = `/api/${taskId}/submit`;
+    const SUBMIT_API_URL = `${examBaseUrl()}/api/${taskId}/submit`;
     
     // Build the file name field and file name
     const fileNameField = `${taskId}.%l`;
@@ -159,7 +160,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
  */
 export async function cmsTestSend(taskId:string, codeContent: string, inputContent: string, language: string, languageExtension: string) {
     // --- Configuration ---
-    let TEST_API_URL = `/api/${taskId}/test`;
+    let TEST_API_URL = `${examBaseUrl()}/api/${taskId}/test`;
     let fileNameField = `${taskId}.%l`;
     let fileName = `${taskId}.${languageExtension}`;
 
@@ -227,7 +228,7 @@ export async function cmsTestSend(taskId:string, codeContent: string, inputConte
  */
 export async function cmsTestStatus(taskId: string, id: string, language: string) {
     console.log("cmsTestStatus, language:", language);
-    let url = `/api/${taskId}/test/${id}`;
+    let url = `${examBaseUrl()}/api/${taskId}/test/${id}`;
     // if (language == "Java / JDK") {
     //     url = "/api/tarefa/test/" + id;
     // }
