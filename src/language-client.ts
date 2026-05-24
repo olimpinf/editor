@@ -101,32 +101,43 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
     const writer = new WebSocketMessageWriter(socket);
 
     // Send initialize request
+    const initId = messageId++;
     const initRequest = {
       jsonrpc: '2.0',
-      id: messageId++,
+      id: initId,
       method: 'initialize',
       params: {
         processId: null,
-        rootPath: null,
         rootUri: workspaceRoot,
+        workspaceFolders: [{ uri: workspaceRoot, name: 'workspace' }],
         capabilities: {
+          workspace: { workspaceFolders: true },
           textDocument: {
-            synchronization: { didChange: { syncKind: 1 } },
-            completion: { completionItem: { snippetSupport: true } }
+            synchronization: { didChange: 2 /* incremental */ },
+            completion: {
+              completionItem: { snippetSupport: true },
+              contextSupport: true,
+            },
           }
         }
       }
     };
 
+    // LSP spec: must wait for initialize response before sending initialized
+    const waitForInitResponse = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.id === initId) {
+          webSocket.removeEventListener('message', waitForInitResponse);
+          afterInitialized();
+        }
+      } catch {}
+    };
+    webSocket.addEventListener('message', waitForInitResponse);
     writer.write(initRequest);
 
-    // Send initialized notification
-    setTimeout(() => {
-      writer.write({
-        jsonrpc: '2.0',
-        method: 'initialized',
-        params: {}
-      });
+    const afterInitialized = () => {
+      writer.write({ jsonrpc: '2.0', method: 'initialized', params: {} });
       initialized = true;
       console.log('[LSP] Initialized');
 
@@ -388,7 +399,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
       });
 
       console.log('[LSP] Providers registered');
-    }, 100);
+    }; // end afterInitialized
   };
 
   webSocket.onerror = (error) => {
