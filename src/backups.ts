@@ -21,12 +21,13 @@ interface BackupData {
   the_type: 'code' | 'input';
 }
 
-// API endpoints
+// API endpoints — served from the OBI server which holds the session and backup data
+const OBI_SERVER = 'https://olimpiada.ic.unicamp.br';
 const ENDPOINTS = {
-  retrieveBackups: '/api/backups/retrieve_backups',
-  retrieveBackup: '/api/backups/retrieve_a_backup',
-  deleteBackup: '/api/backups/delete_a_backup',
-  addBackup: '/api/backups/add_a_backup'
+  retrieveBackups: `${OBI_SERVER}/api/backups/retrieve_backups`,
+  retrieveBackup:  `${OBI_SERVER}/api/backups/retrieve_a_backup`,
+  deleteBackup:    `${OBI_SERVER}/api/backups/delete_a_backup`,
+  addBackup:       `${OBI_SERVER}/api/backups/add_a_backup`,
 };
 
 /**
