@@ -2211,7 +2211,8 @@ function applyGlobalTheme(mode) {
 (function (window) {
   window.App = window.App || {};
   window.App.Output = {
-    display: displayProgramOutput,
+    // Display into the currently active task's output pane
+    display: (html: string) => setOutputForTab(getCurrentTaskId(), html, { append: true }),
     format: formatOutput,
     time: getLocalizedTime,
   };
@@ -2309,17 +2310,16 @@ function applyGlobalTheme(mode) {
 
 // Custom Alert and Confirm implementation
 (function () {
-    // Helper to show modal
+    // Helper to show modal — let CSS handle display via aria-hidden attribute selector
     function showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
+            modal.style.display = '';  // clear any inline override
             modal.setAttribute('aria-hidden', 'false');
-            modal.style.display = 'block';
-            // Focus the first button
             setTimeout(() => {
                 const btn = modal.querySelector('button.obi-modal__action');
-                if (btn) btn.focus();
-            }, 100);
+                if (btn) (btn as HTMLElement).focus();
+            }, 50);
         }
     }
 
@@ -2328,7 +2328,7 @@ function applyGlobalTheme(mode) {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.setAttribute('aria-hidden', 'true');
-            modal.style.display = 'none';
+            modal.style.display = '';  // let CSS take over (display: none via selector)
         }
     }
 
