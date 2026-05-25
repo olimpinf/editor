@@ -302,7 +302,14 @@ function getSubmitHandler() {
       
       if (result.success) {
         console.log('[SubmitModal] Submission successful!', result);
-        
+
+        // Write confirmation to the output pane
+        const out = (window as any).App?.Output;
+        if (out) {
+          const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso. Consulte o resultado da submissão na aba Prova.\n`;
+          out.display(out.format(msg));
+        }
+
         // Update status
         if ((window as any).App?.Status) {
           (window as any).App.Status.setForCurrent(

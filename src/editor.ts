@@ -2208,6 +2208,15 @@ function applyGlobalTheme(mode) {
   window.App.Theme = { get, set, toggle };
 })(window, document);
 
+(function (window) {
+  window.App = window.App || {};
+  window.App.Output = {
+    display: displayProgramOutput,
+    format: formatOutput,
+    time: getLocalizedTime,
+  };
+})(window);
+
 
 (function (window, document) {
   "use strict";
@@ -2457,7 +2466,13 @@ async function executeTestRun(taskId: string): Promise<void> {
         await alert(`Aguarde ${left}s para executar novamente.`);
         return;
     }
-    
+
+    const inputValue = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || "";
+    if (inputValue.trim() === "") {
+        await alert(`O campo de entrada está vazio. Preencha a entrada antes de executar o teste.`);
+        return;
+    }
+
     // Start cooldown
     markRunStart();
     startCooldownTicker();
