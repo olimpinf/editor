@@ -555,7 +555,7 @@ function hideExamGateMessage() {
 			console.log('[LSP] Initializing clangd...');
 			console.log('[LSP] workspace:', workspaceRoot);
 			window.currentLspClient = initLanguageClient(monaco, window.editor, {
-				socketUrl: `${proto}//${host}/ws/lsp/cpp/`,
+				socketUrl: `${proto}//${host}/ws/lsp/cpp/${userId}/`,
 				languages: ['cpp', 'c'],
 				workspaceRoot: workspaceRoot,
 				documentUri: newModelUri
@@ -566,7 +566,7 @@ function hideExamGateMessage() {
 
 			console.log('[LSP] Initializing pylsp...');
 			window.currentLspClient = initLanguageClient(monaco, window.editor, {
-				socketUrl: `${proto}//${host}/ws/lsp/python/`,
+				socketUrl: `${proto}//${host}/ws/lsp/python/${userId}/`,
 				languages: ['python'],
 				workspaceRoot: workspaceRoot,
 				documentUri: newModelUri
@@ -576,7 +576,7 @@ function hideExamGateMessage() {
 
 			console.log('[LSP] Initializing jdt.ls...');
 			window.currentLspClient = initLanguageClient(monaco, window.editor, {
-				socketUrl: `${proto}//${host}/ws/lsp/java/`,
+				socketUrl: `${proto}//${host}/ws/lsp/java/${userId}/`,
 				languages: ['java'],
 				workspaceRoot: workspaceRoot,
 				documentUri: newModelUri,
