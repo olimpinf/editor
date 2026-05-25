@@ -195,19 +195,22 @@ export async function cmsTestSend(taskId:string, codeContent: string, inputConte
         const contentType = response.headers.get('content-type');
         console.log("[cmsTestSend] POST status:", status);
 
-        if (status === 302 || status === 303) {
-            // Success: CMS returned a redirect (302/303) to the status page.
-            const redirectLocation = response.headers.get('Location');
+        if (status === 302 || status === 303 || status === 0) {
+            // Success: CMS returned a redirect to the status page.
+            // (cross-origin redirect: 'manual' gives status 0 with type 'opaqueredirect')
+            const redirectLocation = response.headers.get('Location') || response.url;
+            console.log("[cmsTestSend] Redirect to:", redirectLocation);
             return { success: true, redirect: redirectLocation };
 
         } else if (status >= 200 && status < 300) {
             // Success: 200 OK. Try to parse JSON or display text.
-            let data = {};
+            let data: any = {};
             if (contentType && contentType.includes('application/json')) {
                 data = await response.json();
             } else {
                 data = await response.text();
             }
+            console.log("[cmsTestSend] Response data:", JSON.stringify(data));
             return { success: true, data: data };
 
         } else {

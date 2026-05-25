@@ -2486,7 +2486,18 @@ async function executeTestRun(taskId: string): Promise<void> {
     try {
         // Submit the code and get the test ID
         const submissionResult = await cmsTestSend(taskId, code, input, language, languageExtension);
-        const testId = submissionResult.data.id;
+        console.log("submissionResult", JSON.stringify(submissionResult));
+
+        let testId: string | number | undefined;
+        if (submissionResult.redirect) {
+            // Extract ID from redirect URL: /api/{task}/test/{id}
+            const match = submissionResult.redirect.match(/\/test\/(\d+)/);
+            testId = match ? match[1] : undefined;
+        } else if (submissionResult.data !== undefined) {
+            const d = submissionResult.data;
+            // Try common CMS response shapes
+            testId = d?.id ?? d?.num ?? d?.data ?? (typeof d === 'number' || typeof d === 'string' ? d : undefined);
+        }
         console.log("testId", testId);
         
         // Start polling for the status
