@@ -16,6 +16,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
     requestTimeout = 5000,
     waitForReady = false,       // if true, block completions until language/status Ready
     readyTimeoutMs = 120000,    // fallback: assume ready after 2 minutes
+    initializationOptions = undefined,
   } = options;
 
   // Readiness tracking (used when waitForReady is true, e.g. jdtls)
@@ -110,6 +111,7 @@ export function initLanguageClient(monaco: any, editorInstance: any, options: an
         processId: null,
         rootUri: workspaceRoot,
         workspaceFolders: [{ uri: workspaceRoot, name: 'workspace' }],
+        ...(initializationOptions !== undefined ? { initializationOptions } : {}),
         capabilities: {
           workspace: { workspaceFolders: true },
           textDocument: {

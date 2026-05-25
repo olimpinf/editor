@@ -582,6 +582,16 @@ function hideExamGateMessage() {
 				documentUri: newModelUri,
 				requestTimeout: 15000,
 				waitForReady: true,
+				initializationOptions: {
+					"java.home": "/usr/lib/jvm/java-21-openjdk-amd64",
+					"java.configuration.runtimes": [
+						{
+							"name": "JavaSE-21",
+							"path": "/usr/lib/jvm/java-21-openjdk-amd64",
+							"default": true
+						}
+					]
+				}
 			});
         // ================================================================
 
