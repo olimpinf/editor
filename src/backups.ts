@@ -546,16 +546,12 @@ export function initBackups(): void {
       e.preventDefault();       // Stops default browser action
       e.stopPropagation();     // Stops event bubbling
       const inputEl = document.getElementById('stdin-input') as HTMLTextAreaElement;
-      if (inputEl?.value.trim()) {
-        if (!await confirm('Deseja substituir a entrada atual?')) {
-          return;
-        }
-      }
-
       const data = await showLoadBackupModal('input');
       if (data !== null && inputEl) {
+        if (inputEl.value.trim() && !await confirm('Deseja substituir a entrada atual?')) {
+          return;
+        }
         inputEl.value = data;
-        // Trigger snapshot save
         if ((window as any).scheduleSaveSnapshot) {
           (window as any).scheduleSaveSnapshot();
         }
