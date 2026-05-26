@@ -495,17 +495,13 @@ export function initBackups(): void {
     uploadBtn.parentNode?.replaceChild(newUploadBtn, uploadBtn);
 
     newUploadBtn.addEventListener('click', async () => {
-      const current = ((window as any).editor?.getValue() || '').trim();
-      if (current) {
-        if (!await confirm('Deseja substituir o código atual?')) {
-          return;
-        }
-      }
-
       const data = await showLoadBackupModal('code');
       if (data !== null) {
+        const current = ((window as any).editor?.getValue() || '').trim();
+        if (current && !await confirm('Deseja substituir o código atual?')) {
+          return;
+        }
         (window as any).editor?.setValue(data);
-        // Trigger snapshot save
         if ((window as any).scheduleSaveSnapshot) {
           (window as any).scheduleSaveSnapshot();
         }
