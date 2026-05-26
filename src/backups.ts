@@ -21,6 +21,8 @@ interface BackupData {
   the_type: 'code' | 'input';
 }
 
+const MAX_BACKUPS_PER_TYPE = 15;
+
 // API endpoints — served from the OBI server which holds the session and backup data
 const OBI_SERVER = 'https://olimpiada.ic.unicamp.br';
 const ENDPOINTS = {
@@ -195,9 +197,12 @@ async function showLoadBackupModal(type: 'code' | 'input'): Promise<string | nul
         const date = new Date(backup.timestamp);
         const dateStr = date.toLocaleString('pt-BR');
         return `
-          <div class="backup-item" data-backup-id="${backup.id}" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; cursor: pointer; background: white;">
-            <div style="font-weight: 600; color: #333;">${backup.comment || 'Sem descrição'}</div>
-            <div style="font-size: 12px; color: #666; margin-top: 4px;">${dateStr}</div>
+          <div class="backup-item" data-backup-id="${backup.id}" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; background: white; display: flex; align-items: center; gap: 8px;">
+            <div class="backup-item-content" style="flex: 1; cursor: pointer;">
+              <div style="font-weight: 600; color: #333;">${backup.comment || 'Sem descrição'}</div>
+              <div style="font-size: 12px; color: #666; margin-top: 4px;">${dateStr}</div>
+            </div>
+            <button class="delete-backup-btn" data-backup-id="${backup.id}" title="Remover backup" style="background: none; border: none; cursor: pointer; color: #dc3545; font-size: 18px; padding: 4px 8px; border-radius: 4px; flex-shrink: 0; line-height: 1;">🗑</button>
           </div>
         `;
       })
@@ -265,13 +270,38 @@ async function showLoadBackupModal(type: 'code' | 'input'): Promise<string | nul
       document.getElementById(`load-backup-cancel-${type}`)?.addEventListener('click', closeModal);
       modal.querySelector('.obi-modal__backdrop')?.addEventListener('click', closeModal);
 
+      // Delete button handlers
+      const deleteButtons = modal.querySelectorAll('.delete-backup-btn');
+      deleteButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const backupId = parseInt(btn.getAttribute('data-backup-id') || '0');
+          if (!backupId) return;
+          if (!await confirm('Tem certeza que deseja remover este backup?')) return;
+          try {
+            await deleteBackup(backupId, type);
+            const item = modal.querySelector(`.backup-item[data-backup-id="${backupId}"]`);
+            item?.remove();
+            const remaining = modal.querySelectorAll('.backup-item').length;
+            if (remaining === 0) {
+              const list = document.getElementById(`backup-list-${type}`);
+              if (list) list.innerHTML = `<p style="color:#666;text-align:center;padding:20px 0;">Nenhum backup encontrado.</p>`;
+            }
+          } catch (error) {
+            alert('Erro ao remover backup. Tente novamente.');
+          }
+        });
+      });
+
       // Backup item click handlers
-      const backupItems = modal.querySelectorAll('.backup-item');
+      const backupItems = modal.querySelectorAll('.backup-item-content');
       backupItems.forEach(item => {
         item.addEventListener('click', async (e) => {
-      	  e.preventDefault();       // Stops default browser action
-      	  e.stopPropagation();     // Stops event bubbling
-          const backupId = parseInt(item.getAttribute('data-backup-id') || '0');
+          e.preventDefault();
+          e.stopPropagation();
+          const parentItem = item.closest('.backup-item');
+          const backupId = parseInt(parentItem?.getAttribute('data-backup-id') || '0');
           if (!backupId) return;
 
           try {
@@ -447,6 +477,13 @@ export function initBackups(): void {
         alert('Não há código para salvar.');
         return;
       }
+      try {
+        const existing = await fetchBackups('code');
+        if (existing.length >= MAX_BACKUPS_PER_TYPE) {
+          alert(`Limite de ${MAX_BACKUPS_PER_TYPE} backups de código atingido. Remova backups antigos antes de salvar um novo.`);
+          return;
+        }
+      } catch (_) { /* proceed if check fails */ }
       await showSaveBackupModal('code', code);
     });
   }
@@ -491,6 +528,13 @@ export function initBackups(): void {
         alert('Não há entrada para salvar.');
         return;
       }
+      try {
+        const existing = await fetchBackups('input');
+        if (existing.length >= MAX_BACKUPS_PER_TYPE) {
+          alert(`Limite de ${MAX_BACKUPS_PER_TYPE} backups de entrada atingido. Remova backups antigos antes de salvar um novo.`);
+          return;
+        }
+      } catch (_) { /* proceed if check fails */ }
       await showSaveBackupModal('input', input);
     });
   }
