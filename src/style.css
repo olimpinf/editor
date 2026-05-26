@@ -146,6 +146,17 @@ pre.error {
   opacity: 1;
 }
 
+.tabs-bar .tab-add {
+  padding: 6px 12px;
+  font-size: 16px;
+  font-weight: 400;
+  color: #888;
+  flex-shrink: 0;
+}
+.tabs-bar .tab-add:hover {
+  color: #fff;
+}
+
 /* Left and right cover the two middle rows */
 .left {
   grid-column: 1;

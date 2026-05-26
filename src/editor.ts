@@ -506,8 +506,7 @@ function hideExamGateMessage() {
 	    setGlobalTheme(next);
 	});
 
-	// --- Handle Tab creation ---
-	document.getElementById("new-tab-btn")?.addEventListener("click", () => newTab(""));
+	// Tab creation is handled by the "+" tab rendered in renderTabs().
 	
 	// --- Handle Task Switch ---
 	document.getElementById('task-select')?.addEventListener('change', function(e) {
@@ -1682,6 +1681,15 @@ function renderTabs(activeId) {
     const bar = document.getElementById('tabs-bar');
     if (!bar) return;
     bar.innerHTML = "";
+
+    // Fixed "+" tab always at the left
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "tab tab-add";
+    addBtn.title = "Nova aba";
+    addBtn.textContent = "+";
+    addBtn.addEventListener("click", () => newTab(""));
+    bar.appendChild(addBtn);
 
     tabs.forEach((tid) => {
 	const snap = loadTabSnapshot(tid) || { id: tid, title: tid };
