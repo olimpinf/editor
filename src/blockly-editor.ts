@@ -1,9 +1,13 @@
 import * as Blockly from 'blockly/core';
 import 'blockly/blocks';
 import { pythonGenerator } from 'blockly/python';
+import { registerSaciBlocks } from './saci-blocks';
+
+registerSaciBlocks();
 
 let workspace: Blockly.WorkspaceSvg | null = null;
 let changeCallback: (() => void) | null = null;
+let activeContainerId: string | null = null;
 
 export function setBlocklyChangeCallback(cb: () => void): void {
   changeCallback = cb;
@@ -14,10 +18,42 @@ const TOOLBOX = {
   contents: [
     {
       kind: 'category',
+      name: 'E/S',
+      colour: '#bb6622',
+      contents: [
+        { kind: 'block', type: 'saci_text_print' },
+        { kind: 'block', type: 'saci_text_print_with_end' },
+        { kind: 'block', type: 'saci_input_int' },
+        { kind: 'block', type: 'saci_input_str' },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Matemática',
+      colour: '230',
+      contents: [
+        { kind: 'block', type: 'saci_math_number' },
+        { kind: 'block', type: 'saci_math_arithmetic' },
+        { kind: 'block', type: 'saci_math_remainder' },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Texto',
+      colour: '160',
+      contents: [
+        { kind: 'block', type: 'text' },
+        { kind: 'block', type: 'saci_text_split_into_int' },
+        { kind: 'block', type: 'saci_text_split' },
+      ],
+    },
+    {
+      kind: 'category',
       name: 'Lógica',
-      colour: '%{BKY_LOGIC_HUE}',
+      colour: '210',
       contents: [
         { kind: 'block', type: 'controls_if' },
+        { kind: 'block', type: 'controls_if', extraState: { elseCount: 1 } },
         { kind: 'block', type: 'logic_compare' },
         { kind: 'block', type: 'logic_operation' },
         { kind: 'block', type: 'logic_negate' },
@@ -27,88 +63,91 @@ const TOOLBOX = {
     {
       kind: 'category',
       name: 'Laços',
-      colour: '%{BKY_LOOPS_HUE}',
+      colour: '120',
       contents: [
-        { kind: 'block', type: 'controls_repeat_ext' },
-        { kind: 'block', type: 'controls_whileUntil' },
-        { kind: 'block', type: 'controls_for' },
-        { kind: 'block', type: 'controls_forEach' },
-        { kind: 'block', type: 'controls_flow_statements' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Matemática',
-      colour: '%{BKY_MATH_HUE}',
-      contents: [
-        { kind: 'block', type: 'math_number' },
-        { kind: 'block', type: 'math_arithmetic' },
-        { kind: 'block', type: 'math_single' },
-        { kind: 'block', type: 'math_number_property' },
-        { kind: 'block', type: 'math_round' },
-        { kind: 'block', type: 'math_modulo' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Texto',
-      colour: '%{BKY_TEXTS_HUE}',
-      contents: [
-        { kind: 'block', type: 'text' },
-        { kind: 'block', type: 'text_join' },
-        { kind: 'block', type: 'text_length' },
-        { kind: 'block', type: 'text_isEmpty' },
-        { kind: 'block', type: 'text_indexOf' },
-        { kind: 'block', type: 'text_charAt' },
-        { kind: 'block', type: 'text_getSubstring' },
-        { kind: 'block', type: 'text_changeCase' },
-        { kind: 'block', type: 'text_trim' },
-        { kind: 'block', type: 'text_print' },
+        { kind: 'block', type: 'saci_controls_repeat_ext' },
+        { kind: 'block', type: 'saci_controls_for' },
+        { kind: 'block', type: 'saci_controls_flow_statements' },
+        { kind: 'block', type: 'saci_controls_while' },
       ],
     },
     {
       kind: 'category',
       name: 'Listas',
-      colour: '%{BKY_LISTS_HUE}',
+      colour: '260',
       contents: [
         { kind: 'block', type: 'lists_create_empty' },
-        { kind: 'block', type: 'lists_create_with' },
-        { kind: 'block', type: 'lists_repeat' },
-        { kind: 'block', type: 'lists_length' },
-        { kind: 'block', type: 'lists_isEmpty' },
-        { kind: 'block', type: 'lists_indexOf' },
-        { kind: 'block', type: 'lists_getIndex' },
-        { kind: 'block', type: 'lists_setIndex' },
-        { kind: 'block', type: 'lists_sort' },
+        { kind: 'block', type: 'saci_lists_append' },
+        { kind: 'block', type: 'saci_lists_getIndex' },
+        { kind: 'block', type: 'saci_lists_setIndex' },
       ],
     },
+    { kind: 'sep' },
     {
       kind: 'category',
       name: 'Variáveis',
-      colour: '%{BKY_VARIABLES_HUE}',
+      colour: '330',
       custom: 'VARIABLE',
-    },
-    {
-      kind: 'category',
-      name: 'Funções',
-      colour: '%{BKY_PROCEDURES_HUE}',
-      custom: 'PROCEDURE',
     },
   ],
 };
 
-export function initBlockly(containerId: string): void {
-  if (workspace) {
-    resizeBlockly();
-    return;
+function variablesFlyout(workspace: Blockly.WorkspaceSvg): Element[] {
+  const xmlList: Element[] = [];
+
+  const button = document.createElement('button');
+  button.setAttribute('text', 'Crie variável...');
+  button.setAttribute('callbackKey', 'CREATE_VARIABLE');
+  workspace.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
+    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
+  });
+  xmlList.push(button);
+
+  const variables = workspace.getAllVariables()
+    .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+  for (const v of variables) {
+    const setBlock = document.createElement('block');
+    setBlock.setAttribute('type', 'variables_set');
+    const setField = document.createElement('field');
+    setField.setAttribute('name', 'VAR');
+    setField.setAttribute('id', v.getId());
+    setField.textContent = v.name;
+    setBlock.appendChild(setField);
+    xmlList.push(setBlock);
+
+    const getBlock = document.createElement('block');
+    getBlock.setAttribute('type', 'variables_get');
+    const getField = document.createElement('field');
+    getField.setAttribute('name', 'VAR');
+    getField.setAttribute('id', v.getId());
+    getField.textContent = v.name;
+    getBlock.appendChild(getField);
+    xmlList.push(getBlock);
   }
-  workspace = Blockly.inject(containerId, {
+
+  return xmlList;
+}
+
+function injectWorkspace(containerId: string): Blockly.WorkspaceSvg {
+  const ws = Blockly.inject(containerId, {
     toolbox: TOOLBOX,
     scrollbars: true,
     trashcan: true,
     zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3 },
   });
-  workspace.addChangeListener(() => changeCallback?.());
+  ws.registerToolboxCategoryCallback('VARIABLE', variablesFlyout);
+  ws.addChangeListener(() => changeCallback?.());
+  return ws;
+}
+
+export function initBlockly(containerId: string): void {
+  activeContainerId = containerId;
+  if (!workspace) {
+    workspace = injectWorkspace(containerId);
+  } else {
+    Blockly.svgResize(workspace);
+  }
 }
 
 export function getBlocklyPython(): string {
@@ -118,27 +157,40 @@ export function getBlocklyPython(): string {
 
 export function getBlocklyXml(): string {
   if (!workspace) return '';
-  const xml = Blockly.Xml.workspaceToDom(workspace);
-  return Blockly.Xml.domToText(xml);
+  return JSON.stringify(Blockly.serialization.workspaces.save(workspace));
 }
 
-export function loadBlocklyXml(xmlText: string): void {
-  if (!workspace) return;
-  // Suppress the change callback during programmatic load so the debounced
-  // save doesn't fire with a half-loaded (or empty) workspace.
+export function loadBlocklyXml(serialized: string): void {
+  if (!activeContainerId) return;
+
+  // Dispose the old workspace and inject a fresh one — workspace.clear() leaves
+  // Blockly v12 internal state (focus manager, flyout) in a broken condition.
   const saved = changeCallback;
   changeCallback = null;
-  try {
-    workspace.clear();
-    if (xmlText) {
-      const xml = Blockly.Xml.textToDom(xmlText);
-      Blockly.Xml.domToWorkspace(xml, workspace);
-    }
-  } catch (e) {
-    console.error('[Blockly] Failed to load XML:', e);
-  } finally {
-    changeCallback = saved;
+
+  if (workspace) {
+    workspace.dispose();
+    workspace = null;
   }
+  workspace = injectWorkspace(activeContainerId);
+
+  if (serialized) {
+    try {
+      // Try new JSON serialization first (Blockly v10+)
+      const state = JSON.parse(serialized);
+      Blockly.serialization.workspaces.load(state, workspace);
+    } catch (_) {
+      // Fall back to legacy XML format
+      try {
+        const xml = Blockly.Xml.textToDom(serialized);
+        Blockly.Xml.domToWorkspace(xml, workspace);
+      } catch (e) {
+        console.error('[Blockly] Failed to restore workspace:', e);
+      }
+    }
+  }
+
+  changeCallback = saved;
 }
 
 export function resizeBlockly(): void {

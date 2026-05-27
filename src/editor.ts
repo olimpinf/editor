@@ -69,6 +69,16 @@ window.addEventListener('DOMContentLoaded', async () => {
        window.currentUser = 'anonymous'
    }
 
+   // Always start clean — no state carried over between runs.
+   (function clearObiState() {
+       const toDelete: string[] = [];
+       for (let i = 0; i < localStorage.length; i++) {
+           const k = localStorage.key(i);
+           if (k && k.startsWith('obi:')) toDelete.push(k);
+       }
+       toDelete.forEach(k => localStorage.removeItem(k));
+   })();
+
     // 2. Now that we KNOW currentUserId, we can safely init Monaco/etc.
     window.require(['vs/editor/editor.main'], () => {
 
