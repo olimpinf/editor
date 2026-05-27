@@ -2555,6 +2555,8 @@ async function executeTestRun(taskId: string): Promise<void> {
     const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java', 'blockly': "py"};
     
     const code = (window as any).getEditorCode?.() || window.editor?.getValue() || '';
+    console.log('[run] selectedLanguage:', (document.getElementById('language-select') as HTMLSelectElement)?.value, '| blocklyMode:', blocklyMode, '| code length:', code.length, '| code preview:', code.slice(0, 120));
+    if (code.trim() === '') displayProgramOutput(formatOutput(`[debug] getEditorCode() returned empty — blocklyMode=${blocklyMode}\n`, 'orange'));
     const input = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || "";
     const selectedLanguage = (document.getElementById('language-select') as HTMLSelectElement)?.value || "cpp";
     const language = cmsLanguage[selectedLanguage];
