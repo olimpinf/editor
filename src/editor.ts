@@ -108,6 +108,7 @@ int main() {
 // Compilador online da OBI
 // ========================
 
+// Ajuste o nome da classe pública para o especificado na prova
 public class tarefa {
     public static void main(String[] args) {
         // Digite seu código aqui, por exemplo:
