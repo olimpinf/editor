@@ -95,10 +95,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 using namespace std;
 
 int main() {
+    // comandos para agilizar entrada/saída
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    // Digite seu código aqui
+    // Digite seu código aqui, por exemplo:
+    // cout << "resposta" << endl;
 
     return 0;
 }`,
@@ -108,7 +110,8 @@ int main() {
 
 public class tarefa {
     public static void main(String[] args) {
-        // Digite seu código aqui
+        // Digite seu código aqui, por exemplo:
+        // System.out.println("resposta");
 
     }
 }`,
@@ -116,7 +119,8 @@ public class tarefa {
 # Compilador online da OBI
 # ========================
 
-# Digite seu código aqui
+# Digite seu código aqui, por exemplo:
+# print("resposta")
 
 `
 	};
