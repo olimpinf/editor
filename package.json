@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "blockly": "^12.5.1",
     "monaco-editor": "^0.54.0",
     "vscode-ws-jsonrpc": "^3.5.0"
   },

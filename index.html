@@ -39,6 +39,7 @@
 		<option value="cpp">C++</option>
 		<option value="java">Java</option>
 		<option value="python">Python</option>
+		<option value="blockly">Blockly</option>
 	      </select>
 	    </div>
 	    <span style="margin-left:10px"></span>
@@ -91,6 +92,7 @@
 	    </div>
 	  </div>
 	  <div id="editor-container" style="height: calc(100% - 30px);"></div>
+	  <div id="blockly-div" style="height: calc(100% - 30px); display: none;"></div>
 	</div>
       </div>
 
@@ -263,7 +265,7 @@
 
     <script>
       window.AppConfig = {
-	  examGate: { enabled: true },
+	  examGate: { enabled: false },
 	  openExamUrl: true,
 	  useLSP: true
       };

@@ -3,10 +3,15 @@ import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
 import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
+import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
 
 
 window.runningTabId   = null;
 window.runningLanguage = null;
+
+let blocklyMode = false;
+(window as any).getEditorCode = () =>
+  blocklyMode ? getBlocklyPython() : (window.editor?.getValue() || '');
 window.lastRunStartMs  = 0;     // <— from click time
 window.cooldownTimerId = null;
 window.colorInfoTextLight = "Blue";
@@ -490,21 +495,17 @@ function hideExamGateMessage() {
 	    stdin.__wiredSnapshot = true;
 	}
 	
-	// 3) Language changes (if you want them persisted too)
-	const langSel = document.getElementById("language-select");
-	if (langSel && !langSel.__wiredSnapshot) {
-	    langSel.addEventListener("change", scheduleSaveSnapshot);
-	    langSel.__wiredSnapshot = true;
-	}
 
 
 	const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
 	document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
-            const now = getGlobalTheme(); 
+            const now = getGlobalTheme();
 	    const next = now === 'light' ? 'dark' : 'light';
 	    setGlobalTheme(next);
+	    setBlocklyTheme(next === 'dark');
 	});
+
 
 	// Tab creation is handled by the "+" tab rendered in renderTabs().
 	
@@ -518,6 +519,7 @@ function hideExamGateMessage() {
 	});
 
 	function switchLanguage(lang) {
+	    if (lang === 'blockly') return;
         // 1. Get the new model
 		const newModel = getOrCreateEditorModel(lang);
 		const newModelUri = newModel.uri.toString();
@@ -682,6 +684,31 @@ function hideExamGateMessage() {
 	    select.addEventListener('change', async (e) => {
 		const lang = e.target.value;
 
+		// --- Entering Blockly mode ---
+		if (lang === 'blockly') {
+		    const currentCode = (window.editor?.getValue() || "").trim();
+		    const isTemplate = Object.values(window.templates || {}).some(t => t.trim() === currentCode);
+		    if (currentCode && !isTemplate) {
+			const proceed = await confirm("Ao alterar para Blockly seu código atual será perdido. Continuar?");
+			if (!proceed) { window.syncLanguageSelectorUI?.(); return; }
+		    }
+		    blocklyMode = true;
+		    document.getElementById('editor-container')!.style.display = 'none';
+		    document.getElementById('blockly-div')!.style.display = 'block';
+		    initBlockly('blockly-div');
+		    resizeBlockly();
+		    window.syncLanguageSelectorUI?.();
+		    window.scheduleSaveSnapshot?.();
+		    return;
+		}
+
+		// --- Leaving Blockly mode (if active) ---
+		if (blocklyMode) {
+		    blocklyMode = false;
+		    document.getElementById('blockly-div')!.style.display = 'none';
+		    document.getElementById('editor-container')!.style.display = 'block';
+		}
+
 		// Check if current code is non-empty or custom before replacing
 		const currentCode = (window.editor?.getValue() || "").trim();
 		const isTemplate = Object.values(window.templates || {}).some(
@@ -719,12 +746,24 @@ function hideExamGateMessage() {
 	    if (idx < 0) return false;
 	    // sync <select>
 	    select.selectedIndex = idx;
-	    // update Monaco mode immediately
-	    switchLanguage(lang);
-	    // optional template injection
-	    if (injectTemplate) {
-		const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
-		window.editor?.setValue?.(tmpl);
+	    // handle blockly mode toggle
+	    if (lang === 'blockly') {
+		blocklyMode = true;
+		document.getElementById('editor-container')!.style.display = 'none';
+		document.getElementById('blockly-div')!.style.display = 'block';
+		initBlockly('blockly-div');
+		resizeBlockly();
+	    } else {
+		if (blocklyMode) {
+		    blocklyMode = false;
+		    document.getElementById('blockly-div')!.style.display = 'none';
+		    document.getElementById('editor-container')!.style.display = 'block';
+		}
+		switchLanguage(lang);
+		if (injectTemplate) {
+		    const tmpl = (window.templates && window.templates[lang]) || "// Start coding here";
+		    window.editor?.setValue?.(tmpl);
+		}
 	    }
 	    // Sync visible custom select face and save
 	    window.syncLanguageSelectorUI?.();
@@ -1475,7 +1514,7 @@ function getLocalizedTime(locale = 'pt-BR') {
 
 function readCurrentPanes() {
     return {
-	code: window.editor?.getValue?.() || "",
+	code: blocklyMode ? getBlocklyXml() : ((window as any).getEditorCode?.() ?? ""),
 	input: document.getElementById("stdin-input")?.value || "",
 	output: document.getElementById("stdout-output")?.innerHTML || "",
 	language: document.getElementById("language-select")?.value || ""
@@ -1504,6 +1543,7 @@ function scheduleSaveSnapshot() {
 
 // Debounced saver
 window._saveTimer = null;
+window.scheduleSaveSnapshot = scheduleSaveSnapshot;
 
 // Editor changes
 if (window.editor?.onDidChangeModelContent) {
@@ -1514,10 +1554,22 @@ if (window.editor?.onDidChangeModelContent) {
 const _stdin = document.getElementById("stdin-input");
 if (_stdin) _stdin.addEventListener("input", scheduleSaveSnapshot);
 
+// Blockly workspace changes
+setBlocklyChangeCallback(scheduleSaveSnapshot);
+
 
 window._suppressSnapshot = false;
 
 function loadTabIntoUI(tabId) {
+    // Flush current tab state before switching (debounce may not have fired yet)
+    const prevId = window.currentTask;
+    if (prevId && prevId !== tabId) {
+        try {
+            const prevOld = loadTabSnapshot(prevId) || { id: prevId, title: prevId };
+            saveTabSnapshot(prevId, { ...prevOld, ...readCurrentPanes() });
+        } catch (_) {}
+    }
+
     const snap = loadTabSnapshot(tabId);
     if (!snap) return;
 
@@ -1548,7 +1600,11 @@ function loadTabIntoUI(tabId) {
 
     
     // code
-    window.editor?.setValue?.(snap.code || "");
+    if (snap.language === 'blockly') {
+	loadBlocklyXml(snap.code || '');
+    } else {
+	window.editor?.setValue?.(snap.code || "");
+    }
 
     // input
     const stdin = document.getElementById("stdin-input");
@@ -2485,10 +2541,10 @@ async function executeTestRun(taskId: string): Promise<void> {
     markRunStart();
     startCooldownTicker();
     
-    const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
-    const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
+    const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK', 'blockly': "Python 3 / PyPy"};
+    const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java', 'blockly': "py"};
     
-    const code = window.editor?.getValue() || '';
+    const code = (window as any).getEditorCode?.() || window.editor?.getValue() || '';
     const input = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || "";
     const selectedLanguage = (document.getElementById('language-select') as HTMLSelectElement)?.value || "cpp";
     const language = cmsLanguage[selectedLanguage];

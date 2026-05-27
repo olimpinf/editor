@@ -260,7 +260,7 @@ function getSubmitHandler() {
       return;
     }
     
-    const code = editor.getValue() || '';
+    const code = (window as any).getEditorCode?.() || editor.getValue() || '';
     if (!code || code.trim().length === 0) {
       console.warn('[SubmitModal] Code is empty');
       alert('Por favor, escreva algum código antes de submeter.');

@@ -157,6 +157,12 @@ pre.error {
   color: #fff;
 }
 
+/* Blockly workspace */
+#blockly-div {
+  width: 100%;
+  overflow: hidden;
+}
+
 /* Left and right cover the two middle rows */
 .left {
   grid-column: 1;
