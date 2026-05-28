@@ -429,8 +429,33 @@ body.pane-expanded .pane:not(.expanded) {
     display: block; 
 }
 
-.bar .custom-select { 
-    margin-left: 0; 
+.bar .custom-select {
+    margin-left: 0;
+    width: auto;
+    height: 25px;
+    font-size: 12px;
+}
+
+.bar .custom-select .select-selected {
+    height: 25px;
+    line-height: 25px;
+    font-size: 12px;
+    padding: 0 28px 0 10px;
+    background-color: DodgerBlue;
+    border: 1.5px solid #6495ED;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.bar .custom-select .select-selected::after {
+    right: 8px;
+    border-left-width: 5px;
+    border-right-width: 5px;
+    border-top-width: 5px;
+}
+
+.bar .custom-select .select-items {
+    font-size: 12px;
 }
 
 /* --- Base Pane-Container Styling (Light Mode Default) --- */
