@@ -138,8 +138,12 @@ function variablesFlyout(workspace: Blockly.WorkspaceSvg): object[] {
       if (!toolbox) return;
       const varItem = toolbox.getToolboxItems().find(
         (item: any) => item.toolboxItemDef_?.custom === 'VARIABLE'
+          || (typeof item.getName === 'function' && item.getName() === 'Variáveis')
       );
-      if (varItem) toolbox.setSelectedItem(varItem);
+      if (varItem) {
+        toolbox.setSelectedItem(null);   // oldItem → null so next call sees oldItem !== newItem
+        toolbox.setSelectedItem(varItem);
+      }
     });
   });
 
