@@ -86,7 +86,7 @@ export async function cmsTaskList(): Promise<Array<{ id: string; name: string }>
 export async function cmsSubmit(taskId: string, codeContent: string, language: string, languageExtension: string) {
 
     let cmsLanguage = "C++20 / g++";
-    if (language == "python")
+    if (language == "python" || language == "blockly")
         cmsLanguage = "Python 3 / PyPy";
     else if (language == "java")
         cmsLanguage = "Java / JDK";

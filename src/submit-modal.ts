@@ -272,7 +272,7 @@ function getSubmitHandler() {
     
     // Determine file extension based on language
     let languageExtension = '.cpp';
-    if (language === 'python') {
+    if (language === 'python' || language === 'blockly') {
       languageExtension = '.py';
     } else if (language === 'java') {
       languageExtension = '.java';
