@@ -5,6 +5,40 @@ import { registerSaciBlocks } from './saci-blocks';
 
 registerSaciBlocks();
 
+// Override Blockly's window.prompt-based dialog with a custom HTML modal,
+// because window.prompt is suppressed in Electron webviews.
+Blockly.dialog.setPrompt((message, defaultValue, callback) => {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;padding:24px;border-radius:8px;min-width:300px;font-family:sans-serif';
+  const label = document.createElement('p');
+  label.style.cssText = 'margin:0 0 12px;font-size:14px';
+  label.textContent = message;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = defaultValue ?? '';
+  input.style.cssText = 'width:100%;padding:8px;box-sizing:border-box;font-size:14px;border:1px solid #ccc;border-radius:4px';
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:16px';
+  const btnOk = document.createElement('button');
+  btnOk.textContent = 'OK';
+  btnOk.style.cssText = 'padding:6px 16px;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer';
+  const btnCancel = document.createElement('button');
+  btnCancel.textContent = 'Cancelar';
+  btnCancel.style.cssText = 'padding:6px 16px;border:1px solid #ccc;border-radius:4px;cursor:pointer';
+  btnRow.append(btnCancel, btnOk);
+  box.append(label, input, btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  const finish = (value: string | null) => { document.body.removeChild(overlay); callback(value); };
+  btnOk.addEventListener('click', () => finish(input.value));
+  btnCancel.addEventListener('click', () => finish(null));
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') finish(input.value); if (e.key === 'Escape') finish(null); });
+  input.focus();
+  input.select();
+});
+
 let workspace: Blockly.WorkspaceSvg | null = null;
 let changeCallback: (() => void) | null = null;
 let activeContainerId: string | null = null;
@@ -92,38 +126,24 @@ const TOOLBOX = {
   ],
 };
 
-function variablesFlyout(workspace: Blockly.WorkspaceSvg): Element[] {
-  const xmlList: Element[] = [];
+function variablesFlyout(workspace: Blockly.WorkspaceSvg): object[] {
+  workspace.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
+    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
+  });
 
-  const button = document.createElement('button');
-  button.setAttribute('text', 'Crie variável...');
-  button.setAttribute('callbackKey', 'CREATE_VARIABLE');
-  xmlList.push(button);
+  const items: object[] = [
+    { kind: 'button', text: 'Crie variável...', callbackKey: 'CREATE_VARIABLE' },
+  ];
 
   const variables = workspace.getAllVariables()
     .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   for (const v of variables) {
-    const setBlock = document.createElement('block');
-    setBlock.setAttribute('type', 'variables_set');
-    const setField = document.createElement('field');
-    setField.setAttribute('name', 'VAR');
-    setField.setAttribute('id', v.getId());
-    setField.textContent = v.name;
-    setBlock.appendChild(setField);
-    xmlList.push(setBlock);
-
-    const getBlock = document.createElement('block');
-    getBlock.setAttribute('type', 'variables_get');
-    const getField = document.createElement('field');
-    getField.setAttribute('name', 'VAR');
-    getField.setAttribute('id', v.getId());
-    getField.textContent = v.name;
-    getBlock.appendChild(getField);
-    xmlList.push(getBlock);
+    items.push({ kind: 'block', type: 'variables_set', fields: { VAR: { name: v.name, type: v.type } } });
+    items.push({ kind: 'block', type: 'variables_get', fields: { VAR: { name: v.name, type: v.type } } });
   }
 
-  return xmlList;
+  return items;
 }
 
 function injectWorkspace(containerId: string): Blockly.WorkspaceSvg {
@@ -132,9 +152,6 @@ function injectWorkspace(containerId: string): Blockly.WorkspaceSvg {
     scrollbars: true,
     trashcan: true,
     zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3 },
-  });
-  ws.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
-    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
   });
   ws.registerToolboxCategoryCallback('VARIABLE', variablesFlyout);
   ws.addChangeListener(() => changeCallback?.());
