@@ -132,8 +132,14 @@ const TOOLBOX = {
 function variablesFlyout(workspace: Blockly.WorkspaceSvg): object[] {
   workspace.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
     const targetWs = btn.getTargetWorkspace();
-    Blockly.Variables.createVariableButtonHandler(targetWs, () => {
-      targetWs.getToolbox()?.refreshSelection();
+    Blockly.Variables.createVariableButtonHandler(targetWs, (varName) => {
+      if (!varName) return;
+      const toolbox = targetWs.getToolbox() as any;
+      if (!toolbox) return;
+      const varItem = toolbox.getToolboxItems().find(
+        (item: any) => item.toolboxItemDef_?.custom === 'VARIABLE'
+      );
+      if (varItem) toolbox.setSelectedItem(varItem);
     });
   });
 
