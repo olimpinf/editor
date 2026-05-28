@@ -95,7 +95,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 using namespace std;
 
 int main() {
-    // comandos padrão para agilizar entrada/saída
+    // comandos para agilizar entrada/saída
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
@@ -108,11 +108,12 @@ int main() {
 // Compilador online da OBI
 // ========================
 
-// altere o nome da classe pública para o nome correto da tarefa especificado no enunciado
+// Ajuste o nome da classe pública para o especificado na prova
 public class tarefa {
     public static void main(String[] args) {
         // Digite seu código aqui, por exemplo:
-	// System.out.println("resposta");
+        // System.out.println("resposta");
+
     }
 }`,
 	    python: `# ========================
@@ -120,7 +121,6 @@ public class tarefa {
 # ========================
 
 # Digite seu código aqui, por exemplo:
-# entrada = input();
 # print("resposta")
 
 `
@@ -2595,16 +2595,7 @@ async function executeTestRun(taskId: string): Promise<void> {
             testId = d?.id ?? d?.num ?? d?.data ?? (typeof d === 'number' || typeof d === 'string' ? d : undefined);
         }
         console.log("testId", testId);
-
-        if (!testId && testId !== 0) {
-            setStatusLabel("Erro de submissão", { spinning: false });
-            displayProgramOutput(formatOutput(
-                `Erro: CMS não retornou ID de teste. A linguagem "${language}" pode não estar habilitada para esta tarefa no CMS.\n`, 'red'
-            ));
-            runningTabId = null;
-            return;
-        }
-
+        
         // Start polling for the status
         await pollTestStatus(runningTabId, testId, taskId, language);
 
