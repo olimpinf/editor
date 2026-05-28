@@ -936,6 +936,7 @@ var outputBuffer = "";
 	    // restore scroll lock
 	    document.documentElement.style.overflow = '';
 	    document.body.style.overflow = '';
+	    requestAnimationFrame(() => resizeBlockly());
 	}
     }
 
@@ -955,6 +956,7 @@ var outputBuffer = "";
 	    // prevent page behind from scrolling (optional)
 	    document.documentElement.style.overflow = 'hidden';
 	    document.body.style.overflow = 'hidden';
+	    requestAnimationFrame(() => resizeBlockly());
 	    // focus first focusable element in pane (if any) for a11y
 	    const focusable = pane.querySelector('button, a, input, textarea');
 	    if (focusable) focusable.focus();
