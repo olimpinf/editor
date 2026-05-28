@@ -25,6 +25,7 @@ export function registerSaciBlocks(): void {
     VARIABLES_DEFAULT_NAME:     'item',
     RENAME_VARIABLE:            'Renomear variável...',
     DELETE_VARIABLE:            'Excluir variável "%1"',
+    TEXT_TEXT_TOOLTIP:          'Um texto (cadeia de caracteres).',
   });
 
   // Redefine variables_set: inline layout, Portuguese label

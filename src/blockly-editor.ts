@@ -98,9 +98,6 @@ function variablesFlyout(workspace: Blockly.WorkspaceSvg): Element[] {
   const button = document.createElement('button');
   button.setAttribute('text', 'Crie variável...');
   button.setAttribute('callbackKey', 'CREATE_VARIABLE');
-  workspace.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
-    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
-  });
   xmlList.push(button);
 
   const variables = workspace.getAllVariables()
@@ -135,6 +132,9 @@ function injectWorkspace(containerId: string): Blockly.WorkspaceSvg {
     scrollbars: true,
     trashcan: true,
     zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3 },
+  });
+  ws.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
+    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
   });
   ws.registerToolboxCategoryCallback('VARIABLE', variablesFlyout);
   ws.addChangeListener(() => changeCallback?.());
