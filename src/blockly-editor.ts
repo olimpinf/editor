@@ -12,8 +12,11 @@ Blockly.dialog.setPrompt((message, defaultValue, callback) => {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
   const box = document.createElement('div');
   box.style.cssText = 'background:#fff;padding:24px;border-radius:8px;min-width:300px;font-family:sans-serif';
+  const title = document.createElement('h3');
+  title.style.cssText = 'margin:0 0 16px;font-size:16px;color:#333';
+  title.textContent = 'Dê um nome para a variável';
   const label = document.createElement('p');
-  label.style.cssText = 'margin:0 0 12px;font-size:14px';
+  label.style.cssText = 'margin:0 0 8px;font-size:13px;color:#666';
   label.textContent = message;
   const input = document.createElement('input');
   input.type = 'text';
@@ -28,7 +31,7 @@ Blockly.dialog.setPrompt((message, defaultValue, callback) => {
   btnCancel.textContent = 'Cancelar';
   btnCancel.style.cssText = 'padding:6px 16px;border:1px solid #ccc;border-radius:4px;cursor:pointer';
   btnRow.append(btnCancel, btnOk);
-  box.append(label, input, btnRow);
+  box.append(title, label, input, btnRow);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   const finish = (value: string | null) => { document.body.removeChild(overlay); callback(value); };
@@ -128,7 +131,10 @@ const TOOLBOX = {
 
 function variablesFlyout(workspace: Blockly.WorkspaceSvg): object[] {
   workspace.registerButtonCallback('CREATE_VARIABLE', (btn: any) => {
-    Blockly.Variables.createVariableButtonHandler(btn.getTargetWorkspace());
+    const targetWs = btn.getTargetWorkspace();
+    Blockly.Variables.createVariableButtonHandler(targetWs, () => {
+      targetWs.getToolbox()?.refreshSelection();
+    });
   });
 
   const items: object[] = [

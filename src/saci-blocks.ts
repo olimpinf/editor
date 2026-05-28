@@ -23,6 +23,7 @@ export function registerSaciBlocks(): void {
     LOGIC_BOOLEAN_FALSE:        'falso',
     LOGIC_BOOLEAN_TOOLTIP:      'Retorna verdadeiro ou falso.',
     VARIABLES_DEFAULT_NAME:     'item',
+    NEW_VARIABLE_TITLE:         'Nome:',
     RENAME_VARIABLE:            'Renomear variável...',
     DELETE_VARIABLE:            'Excluir variável "%1"',
     TEXT_TEXT_TOOLTIP:          'Um texto (cadeia de caracteres).',
