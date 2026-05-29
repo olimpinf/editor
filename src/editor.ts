@@ -9,9 +9,26 @@ import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlo
 window.runningTabId   = null;
 window.runningLanguage = null;
 
+const BLOCKLY_BACKUP_PREFIX = 'BLOCKLY_XML:';
+
 let blocklyMode = false;
 (window as any).getEditorCode = () =>
   blocklyMode ? getBlocklyPython() : (window.editor?.getValue() || '');
+
+// Returns saveable content: Blockly JSON (prefixed) or plain editor text.
+(window as any).getEditorSaveContent = () =>
+  blocklyMode ? BLOCKLY_BACKUP_PREFIX + getBlocklyXml() : (window.editor?.getValue() || '');
+
+// Loads content saved by getEditorSaveContent, switching to Blockly mode if needed.
+(window as any).loadEditorContent = (content: string) => {
+  if (content.startsWith(BLOCKLY_BACKUP_PREFIX)) {
+    const xml = content.slice(BLOCKLY_BACKUP_PREFIX.length);
+    window.setLanguageProgrammatic?.('blockly');
+    loadBlocklyXml(xml);
+  } else {
+    window.editor?.setValue(content);
+  }
+};
 window.lastRunStartMs  = 0;     // <— from click time
 window.cooldownTimerId = null;
 window.colorInfoTextLight = "Blue";
@@ -416,6 +433,7 @@ async function checkExamGateAndInitialize() {
 
                 initSubmitModalWithTaskList(tasks);
                 initTestModalWithTaskList(tasks);
+                (window as any).taskCount = tasks.length;
 
                 // Stop polling
                 return true;

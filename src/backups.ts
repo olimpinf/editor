@@ -21,7 +21,12 @@ interface BackupData {
   the_type: 'code' | 'input';
 }
 
-const MAX_BACKUPS_PER_TYPE = 15;
+const MAX_BACKUPS_PER_TYPE = 5;
+
+function maxBackups(): number {
+  const taskCount = (window as any).taskCount || 1;
+  return MAX_BACKUPS_PER_TYPE * taskCount;
+}
 
 // API endpoints — served from the OBI server which holds the session and backup data
 const OBI_SERVER = 'https://olimpiada.ic.unicamp.br';
@@ -472,15 +477,16 @@ export function initBackups(): void {
     newDownloadBtn.addEventListener('click', async (e) => {
       e.preventDefault();       // Stops default browser action
       e.stopPropagation();     // Stops event bubbling
-      const code = (window as any).editor?.getValue() || '';
+      const code = (window as any).getEditorSaveContent?.() ?? (window as any).editor?.getValue() ?? '';
       if (!code.trim()) {
         alert('Não há código para salvar.');
         return;
       }
       try {
         const existing = await fetchBackups('code');
-        if (existing.length >= MAX_BACKUPS_PER_TYPE) {
-          alert(`Limite de ${MAX_BACKUPS_PER_TYPE} backups de código atingido. Remova backups antigos antes de salvar um novo.`);
+        const limit = maxBackups();
+        if (existing.length >= limit) {
+          alert(`Limite de ${limit} backups de código atingido. Remova backups antigos antes de salvar um novo.`);
           return;
         }
       } catch (_) { /* proceed if check fails */ }
@@ -497,11 +503,15 @@ export function initBackups(): void {
     newUploadBtn.addEventListener('click', async () => {
       const data = await showLoadBackupModal('code');
       if (data !== null) {
-        const current = ((window as any).editor?.getValue() || '').trim();
+        const current = ((window as any).getEditorSaveContent?.() ?? (window as any).editor?.getValue() ?? '').trim();
         if (current && !await confirm('Deseja substituir o código atual?')) {
           return;
         }
-        (window as any).editor?.setValue(data);
+        if ((window as any).loadEditorContent) {
+          (window as any).loadEditorContent(data);
+        } else {
+          (window as any).editor?.setValue(data);
+        }
         if ((window as any).scheduleSaveSnapshot) {
           (window as any).scheduleSaveSnapshot();
         }
@@ -526,8 +536,9 @@ export function initBackups(): void {
       }
       try {
         const existing = await fetchBackups('input');
-        if (existing.length >= MAX_BACKUPS_PER_TYPE) {
-          alert(`Limite de ${MAX_BACKUPS_PER_TYPE} backups de entrada atingido. Remova backups antigos antes de salvar um novo.`);
+        const limit = maxBackups();
+        if (existing.length >= limit) {
+          alert(`Limite de ${limit} backups de entrada atingido. Remova backups antigos antes de salvar um novo.`);
           return;
         }
       } catch (_) { /* proceed if check fails */ }
