@@ -191,32 +191,82 @@
 	  <button id="info-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
 	</div>
 	<div id="info-content" class="obi-modal__body">
-	<p>Você pode criar novas abas e trabalhar nelas de maneira independente, em linguagens diferentes. 
-		Para criar uma nova aba, clique no botão <em>Nova Aba</em>
-	    ( "+" ).
+<p>Com o EditorOBI você codifica, testa e submete para correção a sua solução para as tarefas da prova da OBI.
 
-	  <h4>Função Testar</h4>
-	  <p>Edite seu código no painel <strong>Código</strong>, digite a entrada a ser usada na execução no
-	    painel <strong>Entrada</strong>.
-	  <p>Para testar seu código, clique no botão <strong>Testar</strong> na barra de ferramentas do painel <strong>Código</strong>.
-		O código submetido será o conteúdo do painel <strong>Código</strong>, e a entrada para o teste será o conteúdo do painel <strong>Entrada</strong>.
-	    O resultado da execução do teste será mostrado no painel <strong>Saída</strong>.
-		<!--p>Na função <em>Testar</em>, os arquivos de programa têm o mesmo dado à aba, com exceção
-	    de programas em Java, que têm sempre o mesmo nome: 
-	    <span class="monospaced-regular">tarefa.java</span>. 
-	    Note que para Java, portanto, sua classe principal pública deve ser chamada
-	    <span class="monospaced-regular">tarefa</span> (em minúsculas).</p-->
-	  <p>Você pode testar um único programa por vez, mas pode continuar editando em outras abas
-	    enquanto a execução não termina. Há também
-	    um intervalo mínimo de 30 segundos entre dois testes consecutivos.
-	  <p>Cada execução de teste tem o mesmo tempo limite de processamento e de limite de memória especificados na tarefa selecionada para execução. Se exceder esses limites, a execução será interrompida.
-	  <h4>Função Submeter</h4>
-	  <p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção.</p>
-	  <p>Para submeter uma solução para correção, clique no botão <em>Submeter</em> na barra de ferramentas do painel <em>Código</em>
-			e escolha a tarefa da prova para a qual deseja submeter. O código submetido será o conteúdo do painel <strong>Código</strong>.
-	    O resultado da correção será mostrado na aba <strong>Prova</strong>, na tarefa escolhida para submissão.
-	   <p>Os limites de tempo e memória são os especificados nos enunciados das tarefas.</p>
+<p>Há dois botões na barra de ferramentas principal: 
+<ul>
+<li><img src=""/> aumenta ou diminue o tamanho do fonte utilizado
+<li><img src=""/> coloca o editor no modo escuro ou claro
+</ul>
 
+<p>Abaixo da barra de ferramentas principal há três painéis:
+<ul>
+<li>Painel Código (à esquerda)
+<li>Painel Entrada (acima, à direita)
+<li>Painel Saída (abaixo, à esquerda)
+</ul>
+
+<p>Cada um desses três painéis possui uma barra de ferramentas própria, que serão descritas mais adiante.
+
+<p>Abaixo dos painéis há ainda uma barra de status, com um indicador de status mostrado à direita da barra de status.
+
+<h2>Painel Código</h2>
+<p>O Painel Código é onde você escreve o código de suas soluções. Você pode trabalhar em mais de uma solução, criando novas abas no Painel Código.
+
+<h3>Nova Aba</h3>
+<p>Para criar uma nova aba, clique na aba marcada com "+" (a aba mais à esquerda). Você deve dar um nome para a nova aba. Pode ser qualquer nome: o nome da tarefa, o nome da tarefa seguido de um número de versão, por exemplo.
+
+<p>O nome da aba corrente é destacado em relação às outras abas existentes. Para trabalhar em uma outra aba, clique no nome da aba.
+
+<p>Você pode também editar o nome de uma aba existente, clicando duas vezes no nome da aba.
+
+
+<p>A barra de ferramentas do Painel Código contém sete botões. Da esquerda para a direita, os botões são
+<ul>
+<li>Testar
+<li>Submeter
+<li>Seletor de Linguagem
+<li>Salvar
+<li>Carregar
+<li>Limpar
+<li>Expandir (<img src=""/>)
+</ul>
+
+
+<h3>Seleção de Linguagem</h3>
+<p>Em cada aba do Painel Código você pode trabalhar em uma linguagem de programação diferente. Para escolher a linguagem usada na aba, use o Seletor de Linguagem; você pode escolher entre C++, Java, Python ou Blockly).
+
+<h3>Testar</h3>
+<p>Antes de submeter sua solução para correção, você deve testá-la com diversas entradas, para certificar-se de que está correta. Algumas entradas são mostradas nos exemplos dos enunciados das tarefas. Além dessas, você deve também testar com outras entradas que você mesmo crie. Procure testar entradas que constituam situações representativas dos limites definidos na tarefa.
+
+<p>Para testar uma solução, escreva a entrada no Painel Entrada e pressione o botão Testar. Você deve informar qual tarefa é o teste, pois os limites de tempo de processamento e de memória utilizados no teste serão os definidos no enunciado da tarefa.
+Se a execução de seu programa exceder esses limites ela será interrompida.
+
+<p>O código submetido será o conteúdo do Painel Código, e a entrada para o teste será o conteúdo do Painel Entrada. O resultado da execução do teste será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).
+
+<h3>Submeter</h3>
+<p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção, utilizando o botão Submeter.
+<p>A barra de status mostra o status da submissão. Para consultar o resultado da submissão, você deve utilizar a aba Prova do Ambiente de Prova. Na aba Prova, no menu à esquerda, clique em Submissões para a tarefa em que a solução foi submetida.
+
+<h3>Salvar</h3>
+<p>Você pode salvar até 5 cópias para cada tarefa da prova (ou seja, se o número de tarefas da prova é três, você pode salvar 15 cópias de código). Você deve fornecer um nome para a cópia (pode ser qualquer nome). Se o número de cópias exceder o limite, você deve remover uma das cópias antes de salvar uma nova. Para remover uma cópia, use o botão Carretar, descrito a seguir.
+
+<h3>Carregar</h3>
+<p>Para carregar o Painel Código com uma cópia, pressione o botão Carregar. Será mostrada a lista de cópias disponíveis. Clique numa cópia para restaurar-la. Você pode também remover uma cópia clicando na lixeira que aparece à direita do nome da cópia na lista de cópias disponíveis.
+
+<h3>Limpar<h3>
+<p>Utilize para remover todo o conteúdo do painel código para a aba corrente.
+
+<h4>Expandir (<img src=""/>)
+<p>Utilize este botão para expandir o Painel de Código de forma a utilizar toda a área disponível, escondendo os outros painéis. Para desfazer a expansão, clique novamente no botão Expandir.
+
+<h2>Painel Entrada</h2>
+<p>Utilize este painel para definir a entrada de seu teste. Este painel não é utilizado quando você submete uma solução para correção (nesse caso os casos de testes são escondidos!).
+<p>Similar ao Painel de Código, o Painel de Entrada possui os botões Salvar, Carregar, Limpar e Expandir, com funções similares.
+
+<h2>Painel Saída</h2>
+<p>Este painel mostra o resultado de seus testes. 
+<p>Similar ao Painel de Código, o Painel de Saída possui os botões Limpar e Expandir, com funções similares.
 	</div>
 	<div class="obi-modal__footer">
 	  <button id="info-ok-btn" class="obi-modal__action">OK</button>
