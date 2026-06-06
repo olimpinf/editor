@@ -316,7 +316,8 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
       window.AppConfig = {
 	  examGate: { enabled: true },
 	  openExamUrl: true,
-	  useLSP: true
+	  useLSP: false;
+	  //useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
       };
 
       (function(){
