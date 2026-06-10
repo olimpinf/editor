@@ -22,6 +22,8 @@ interface BackupData {
 }
 
 const MAX_BACKUPS_PER_TYPE = 5;
+const MAX_CODE_BACKUP_CHARS  = 8_000;  // ~100 lines × 80 chars
+const MAX_INPUT_BACKUP_CHARS = 1_024;  // 1 KB
 
 function maxBackups(): number {
   const taskCount = (window as any).taskCount || 1;
@@ -482,6 +484,10 @@ export function initBackups(): void {
         alert('Não há código para salvar.');
         return;
       }
+      if (code.length > MAX_CODE_BACKUP_CHARS) {
+        alert(`Código muito grande para backup (${code.length} caracteres; máximo ${MAX_CODE_BACKUP_CHARS}).`);
+        return;
+      }
       try {
         const existing = await fetchBackups('code');
         const limit = maxBackups();
@@ -532,6 +538,10 @@ export function initBackups(): void {
       const input = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || '';
       if (!input.trim()) {
         alert('Não há entrada para salvar.');
+        return;
+      }
+      if (input.length > MAX_INPUT_BACKUP_CHARS) {
+        alert(`Entrada muito grande para backup (${input.length} caracteres; máximo ${MAX_INPUT_BACKUP_CHARS}).`);
         return;
       }
       try {
