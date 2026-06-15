@@ -2579,7 +2579,7 @@ function applyGlobalTheme(mode) {
  * Execute a test run for the given task
  * @param taskId - The task ID/short_name selected from the modal
  */
-async function executeTestRun(taskId: string): Promise<void> {
+async function executeTestRun(taskId: string, taskName?: string): Promise<void> {
     // Clear any previous running tests
     if (runningTabId != null) {
         await alert(`Há uma execução em andamento, aguarde.`);
@@ -2602,8 +2602,8 @@ async function executeTestRun(taskId: string): Promise<void> {
     markRunStart();
     startCooldownTicker();
     
-    const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK', 'blockly': "Python 3 / PyPy"};
-    const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java', 'blockly': "py"};
+    const cmsLanguage = {'c': "C++20 / g++", 'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK', 'blockly': "Python 3 / PyPy"};
+    const cmsExtension = {'c': "cpp", 'cpp': "cpp", 'python': "py", 'java': 'java', 'blockly': "py"};
     
     const code = (window as any).getEditorCode?.() || window.editor?.getValue() || '';
     console.log('[run] selectedLanguage:', (document.getElementById('language-select') as HTMLSelectElement)?.value, '| blocklyMode:', blocklyMode, '| code length:', code.length, '| code preview:', code.slice(0, 120));
@@ -2622,7 +2622,10 @@ async function executeTestRun(taskId: string): Promise<void> {
     
     const theme = getGlobalTheme();
     const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-    const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": Execução iniciada\n";
+    const tabBase = getTabTitle(runningTabId) || runningTabId || '';
+    const tabDisplay = tabDisplayTitle(tabBase, selectedLanguage);
+    const taskLabel = taskName || taskId;
+    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução iniciada para tarefa ${taskLabel} (aba ${tabDisplay})\n`;
     displayProgramOutput(formatOutput(initMessage, colorEmphasis));
     
     try {
@@ -2660,7 +2663,8 @@ async function executeTestRun(taskId: string): Promise<void> {
     scheduleSaveSnapshot();
 }
 
-// Export it so submit-modal.ts can use it
+// Export so submit-modal.ts can use them
 (window as any).executeTestRun = executeTestRun;
+(window as any).getTabTitle = getTabTitle;
 
 

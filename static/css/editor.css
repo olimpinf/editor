@@ -325,7 +325,8 @@ body.pane-expanded .pane:not(.expanded) {
 /* Custom select (accessible: native select is still present) */
 .custom-select {
   position: relative;
-  width: 100px; /* adjust to taste */
+  width: 120px; /* adjust to taste */
+  min-width: 120px;
   height: 28px;
   margin-left: 10px;
   font-size: 14px;

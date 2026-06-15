@@ -277,7 +277,7 @@ function getSubmitHandler() {
     } else if (language === 'java') {
       languageExtension = '.java';
     } else if (language === 'c') {
-      languageExtension = '.c';
+      languageExtension = '.cpp'; // CMS has no C language; g++ compiles C fine
     } else if (language === 'cpp') {
       languageExtension = '.cpp';
     }
@@ -308,7 +308,12 @@ function getSubmitHandler() {
         // Write confirmation to the output pane
         const out = (window as any).App?.Output;
         if (out) {
-          const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso. Consulte o resultado da submissão na aba Prova.\n`;
+          const tabId = (window as any).currentTask;
+          const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
+          const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
+          const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+          const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
+          const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso para tarefa ${taskName} (aba ${tabDisplay}). Consulte o resultado na aba Prova.\n`;
           out.display(out.format(msg));
         }
 
@@ -514,7 +519,7 @@ function getTestHandler() {
     // }
     try {
       if (typeof (window as any).executeTestRun === 'function') {
-        await (window as any).executeTestRun(taskId);
+        await (window as any).executeTestRun(taskId, taskName);
       } else {
         console.error('[TestModal] executeTestRun function not found');
         alert('Função de teste não disponível. Recarregue a página.');

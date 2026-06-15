@@ -436,6 +436,10 @@ body.pane-expanded .pane:not(.expanded) {
     font-size: 12px;
 }
 
+#language-select-wrapper {
+    min-width: 80px; /* wide enough for "Blockly" — longest option */
+}
+
 .bar .custom-select .select-selected {
     height: 25px;
     line-height: 25px;

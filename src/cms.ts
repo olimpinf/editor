@@ -1,7 +1,16 @@
 export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
+// Contest identifier — set window.CMS_CONTEST_ID from ExamLock before the editor loads.
+// 1 = Phase 1 Turn A, 2 = Phase 1 Turn B, etc.
+export const CONTEST_ID: number = (window as any).CMS_CONTEST_ID ?? 1;
+
 function examBaseUrl(): string {
     return (window as any).CMS_EXAM_URL || 'https://pj.provas.ic.unicamp.br';
+}
+
+// Single point for all CMS API URLs — change here if the path structure ever changes.
+function cmsApiUrl(path: string): string {
+    return `${examBaseUrl()}/api/${path}`;
 }
 
 /**
@@ -9,7 +18,7 @@ function examBaseUrl(): string {
  * Returns an array of tasks formatted for the submit modal
  */
 export async function cmsTaskList(): Promise<Array<{ id: string; name: string }> | null> {
-    const url = `${examBaseUrl()}/api/task_list`;
+    const url = cmsApiUrl('task_list');
 
     console.log("[cmsTaskList] *****************************");
     console.log("[cmsTaskList] url:", url);
@@ -94,7 +103,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
 
 
     // Build the submit URL with the task ID
-    const SUBMIT_API_URL = `${examBaseUrl()}/api/${taskId}/submit`;
+    const SUBMIT_API_URL = cmsApiUrl(`${taskId}/submit`);
     
     // Build the file name field and file name
     const fileNameField = `${taskId}.%l`;
@@ -161,7 +170,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
  */
 export async function cmsTestSend(taskId:string, codeContent: string, inputContent: string, language: string, languageExtension: string) {
     // --- Configuration ---
-    let TEST_API_URL = `${examBaseUrl()}/api/${taskId}/test`;
+    let TEST_API_URL = cmsApiUrl(`${taskId}/test`);
     let fileNameField = `${taskId}.%l`;
     let fileName = `${taskId}.${languageExtension}`;
 
@@ -232,7 +241,7 @@ export async function cmsTestSend(taskId:string, codeContent: string, inputConte
  */
 export async function cmsTestStatus(taskId: string, id: string, language: string) {
     console.log("cmsTestStatus, language:", language);
-    let url = `${examBaseUrl()}/api/${taskId}/test/${id}`;
+    let url = cmsApiUrl(`${taskId}/test/${id}`);
     // if (language == "Java / JDK") {
     //     url = "/api/tarefa/test/" + id;
     // }
