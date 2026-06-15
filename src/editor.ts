@@ -94,6 +94,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 	// starter templates
 	window.templates = {
+	    c: `// ========================
+// Compilador online da OBI
+// ========================
+
+#include <stdio.h>
+
+int main() {
+    // Digite seu código aqui, por exemplo:
+    // printf("resposta\\n");
+
+    return 0;
+}`,
 	    cpp: `// ========================
 // Compilador online da OBI
 // ========================
@@ -182,6 +194,11 @@ public class tarefa {
 				// CRITICAL: Must be "tarefa.java" to match the class name in the template
 				fileName = `tarefa.java`;
 				codeToLoad = snap?.code || window.templates.java;
+
+			} else if (language === 'c') {
+				workspacePath = `file:///home/olimpinf/clangd_workspaces/${userId}`;
+				fileName = `${tabId}.c`;
+				codeToLoad = snap?.code || window.templates.c;
 
 			} else { // default to cpp
 				language = 'cpp';
@@ -520,7 +537,7 @@ function hideExamGateMessage() {
 	
 
 
-	const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
+	const langMap = { c: 'c', cpp: 'cpp', java: 'java', python: 'python' };
 
 	document.getElementById("global-style-toggle")?.addEventListener("click", ()  => {
             const now = getGlobalTheme();
@@ -2611,8 +2628,14 @@ async function executeTestRun(taskId: string): Promise<void> {
 
     } catch (error) {
         console.warn("CMS Test Submission Failed:", error);
+        // Clear polling interval if it was started before the error
+        if ((window as any).currentTestInterval) {
+            clearInterval((window as any).currentTestInterval);
+            (window as any).currentTestInterval = null;
+        }
         setStatusLabel("Execução falhou", { spinning: false });
         displayProgramOutput(formatOutput("Execução falhou.", "red"));
+        markRunComplete();  // clears runningTabId so the student can run again immediately
     }
     
     scheduleSaveSnapshot();

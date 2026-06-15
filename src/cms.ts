@@ -90,6 +90,7 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
         cmsLanguage = "Python 3 / PyPy";
     else if (language == "java")
         cmsLanguage = "Java / JDK";
+    // "c" has no separate CMS language; g++ compiles plain C code fine
 
 
     // Build the submit URL with the task ID

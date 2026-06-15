@@ -276,6 +276,8 @@ function getSubmitHandler() {
       languageExtension = '.py';
     } else if (language === 'java') {
       languageExtension = '.java';
+    } else if (language === 'c') {
+      languageExtension = '.c';
     } else if (language === 'cpp') {
       languageExtension = '.cpp';
     }
@@ -349,7 +351,7 @@ function getSubmitHandler() {
       console.error('[SubmitModal] Submission error:', error);
       // Show error alert
           alert(`Erro ao submeter: ${error || 'Erro desconhecido'}`);
-      
+
       // Update status with error
       if ((window as any).App?.Status) {
         (window as any).App.Status.setForCurrent(
@@ -357,7 +359,7 @@ function getSubmitHandler() {
           { spinning: false }
         );
       }
-      
+
       alert(`Erro ao submeter: ${error.message}`);
     }
   };
