@@ -650,7 +650,7 @@ function hideExamGateMessage() {
 	async function getSanitizedTabName() {
 	    const tabId = window.currentTask;
 	    const snap = tabId && loadTabSnapshot(tabId);
-	    const raw = snap?.title || tabId || "programa";
+	    const raw = stripTabExtension(snap?.title || tabId || "programa");
 	    let sanitized = raw.replace(/[\s:-]+/g, '_').replace(/[^a-zA-Z0-9_]+/g, '');
 	    sanitized = sanitized.toLowerCase().replace(/^_|_$/g, '');
 	    return sanitized || 'programa';
@@ -775,7 +775,15 @@ function hideExamGateMessage() {
 		// Sync UI and persist state
 		window.syncLanguageSelectorUI?.();
 		window.scheduleSaveSnapshot?.();
-	    });	
+
+		// Update tab label extension immediately (don't wait for debounce)
+		const activeTabId = window.currentTask;
+		if (activeTabId) {
+		    const s = loadTabSnapshot(activeTabId);
+		    if (s) { s.language = lang; saveTabSnapshot(activeTabId, s); }
+		    renderTabs(activeTabId);
+		}
+	    });
 	})();
 
 	// Programmatic setter: call directly, no events or flags
@@ -1666,7 +1674,7 @@ function loadTabIntoUI(tabId) {
     applyGlobalTheme(getGlobalTheme())
 
     // status footer (if you show tab name there)
-    document.getElementById("status-task")?.replaceChildren(document.createTextNode(snap.title || tabId));
+    document.getElementById("status-task")?.replaceChildren(document.createTextNode(tabDisplayTitle(snap.title || tabId, snap.language || 'cpp')));
 
     // remember
     setLastTab(tabId);
@@ -1773,6 +1781,20 @@ const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 
 // Render tabs
 
+const LANG_EXT: Record<string, string> = {
+    c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml',
+};
+
+function tabDisplayTitle(baseTitle: string, lang: string): string {
+    const ext = LANG_EXT[lang] || 'cpp';
+    return `${baseTitle}.${ext}`;
+}
+
+function stripTabExtension(name: string): string {
+    const exts = Object.values(LANG_EXT).join('|');
+    return name.replace(new RegExp(`\\.(${exts})$`, 'i'), '').trim();
+}
+
 function renderTabs(activeId) {
     console.log("in renderTabs, activeId", activeId);
     const tabs = readTabsIndex();
@@ -1798,7 +1820,7 @@ function renderTabs(activeId) {
 	btn.setAttribute("aria-selected", String(tid === activeId));
 	btn.dataset.tabId = tid;
 	btn.innerHTML = `
-  <span class="tab-title">${escapeHtml(snap.title || tid)}</span>
+  <span class="tab-title">${escapeHtml(tabDisplayTitle(snap.title || tid, snap.language || 'cpp'))}</span>
   ${runningTabId === tid ? `<span class="tab-spinner" aria-hidden="true"></span>` : ''}
   <span class="tab-close" title="Fechar" aria-label="Fechar">✕</span>
 `;
@@ -2035,21 +2057,18 @@ async function newTab(initialTitle = "") {
 }
 
 async function renameTab(tabId) {
-    console.log("in renameTab, tabId =", tabId);
     const snap = loadTabSnapshot(tabId);
+    if (!snap) return;
 
-    if (!snap) {
-        console.log("in renameTab, returning noTabSnapshot", tabId);
-        return;
-    }
-    console.log("will call showPromptModal(), snap.title =", snap.title);
-    const next = await showPromptModal("Renomear aba:", snap.title || "");
-        console.log("showPromptModal()returned next", next);
+    const baseName = snap.title || "";
+    const next = await showPromptModal("Renomear aba:", baseName);
+    if (next == null) return;
 
-    if (!next || next === snap.title) return;
-    snap.title = next;
-    console.log("will save snapshot", tabId, snap);
+    // Strip any extension the user may have typed (.cpp, .py, etc.)
+    const stripped = stripTabExtension(next).trim();
+    if (!stripped || stripped === baseName) return;
 
+    snap.title = stripped;
     saveTabSnapshot(tabId, snap);
     renderTabs(tabId);
 }
