@@ -2650,14 +2650,20 @@ async function executeTestRun(taskId: string, taskName?: string): Promise<void> 
 
     } catch (error) {
         console.warn("CMS Test Submission Failed:", error);
-        // Clear polling interval if it was started before the error
         if ((window as any).currentTestInterval) {
             clearInterval((window as any).currentTestInterval);
             (window as any).currentTestInterval = null;
         }
+        const isOffline = !navigator.onLine ||
+            (error?.message && (error.message as string).toLowerCase().includes('failed to fetch'));
+        const failMsg = isOffline ? "Execução falhou, sem conexão." : "Execução falhou.";
         setStatusLabel("Execução falhou", { spinning: false });
-        displayProgramOutput(formatOutput("Execução falhou.", "red"));
-        markRunComplete();  // clears runningTabId so the student can run again immediately
+        displayProgramOutput(formatOutput(failMsg, "red"));
+        markRunComplete();
+        if (isOffline)
+            alert('Erro ao executar: sem conexão');
+        else
+            alert(`Erro ao executar: ${error?.message || 'Erro desconhecido'}`);
     }
     
     scheduleSaveSnapshot();

@@ -2,7 +2,7 @@ export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
 // Contest identifier — set window.CMS_CONTEST_ID from ExamLock before the editor loads.
 // 1 = Phase 1 Turn A, 2 = Phase 1 Turn B, etc.
-export const CONTEST_ID: number = (window as any).CMS_CONTEST_ID ?? 1;
+export const CONTEST_ID: number = (window as any).CMS_CONTEST_ID ?? 2;
 
 function examBaseUrl(): string {
     return (window as any).CMS_EXAM_URL || 'https://pj.provas.ic.unicamp.br';

@@ -345,27 +345,49 @@ function getSubmitHandler() {
         console.error('[SubmitModal] O erro:', result.error["error"]);
 
         // Show error alert
-        if (result.error.includes("Submissions too frequent!"))
+        const isOffline = !navigator.onLine ||
+            (typeof result.error === 'string' && result.error.toLowerCase().includes('failed to fetch'));
+        if (isOffline) {
+            const out = (window as any).App?.Output;
+            if (out) {
+                const tabId = (window as any).currentTask;
+                const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
+                const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
+                const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+                const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
+                const msg = `\n<b>${out.time()}</b>: Submissão falhou para tarefa ${taskName} (aba ${tabDisplay}) -- sem conexão.\n`;
+                out.display(out.format(msg));
+            }
+            alert('Erro ao submeter: sem conexão');
+        } else if (result.error.includes("Submissions too frequent!"))
           alert("Submissões muito frequentes. Considerando todas as tarefas, você pode submeter novamente 60 segundos após sua última submissão.");
-        else 
+        else
           alert(`Erro ao submeter: ${result.error || 'Erro desconhecido'}`);
       }
     } catch (error) {
-        console.error('[SubmitModal] In exception,  erro:', result.error);
-        console.error('[SubmitModal] In exception, erro:', result.error["error"]);
       console.error('[SubmitModal] Submission error:', error);
-      // Show error alert
-          alert(`Erro ao submeter: ${error || 'Erro desconhecido'}`);
 
-      // Update status with error
       if ((window as any).App?.Status) {
-        (window as any).App.Status.setForCurrent(
-          `Erro na submissão`,
-          { spinning: false }
-        );
+        (window as any).App.Status.setForCurrent(`Erro na submissão`, { spinning: false });
       }
 
-      alert(`Erro ao submeter: ${error.message}`);
+      const isOffline = !navigator.onLine ||
+          (error?.message && error.message.toLowerCase().includes('failed to fetch'));
+      if (isOffline) {
+          const out = (window as any).App?.Output;
+          if (out) {
+              const tabId = (window as any).currentTask;
+              const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
+              const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
+              const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+              const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
+              const msg = `\n<b>${out.time()}</b>: Submissão falhou para tarefa ${taskName} (aba ${tabDisplay}) -- sem conexão.\n`;
+              out.display(out.format(msg));
+          }
+          alert('Erro ao submeter: sem conexão');
+      } else {
+          alert(`Erro ao submeter: ${error?.message || error || 'Erro desconhecido'}`);
+      }
     }
   };
 }
