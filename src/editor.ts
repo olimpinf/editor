@@ -1423,8 +1423,19 @@ function displayStderr(head, str) {
     if (str != "") {
 	tmp += formatOutput("Mensagens de erro:", color);
 	tmp += '<pre class="error">' +str + "</pre>";
-	displayProgramOutput(tmp);
     }
+    displayProgramOutput(tmp);
+}
+
+function displayStderrExtra(head, str) {
+    const theme = getGlobalTheme();
+    const color = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
+    let tmp = formatOutput(head, color);
+    if (str != "") {
+	tmp += formatOutput("Mensagens de erro:", color);
+	tmp += '<pre class="error">' +str + "</pre>";
+    }
+    displayProgramOutput(tmp);
 }
 
 async function pollTestStatus(runningTabId: string, testId: string, taskId: string, language: string) {
@@ -1444,7 +1455,6 @@ async function pollTestStatus(runningTabId: string, testId: string, taskId: stri
 	const EVALUATED = 4;
 
         try {
-            console.log('Will call cmstTestStatus', taskId, testId, language);
             const result = await cmsTestStatus(taskId, testId, language);
             const { status, status_text, compilation_stdout, compilation_stderr, execution_stderr, execution_time, memory, output } = result;
 	    let theOutput = output?.replace(new RegExp(escapeRegex(CMS_TASK_NAME), 'g'), label) || "";
@@ -1462,18 +1472,21 @@ async function pollTestStatus(runningTabId: string, testId: string, taskId: stri
 		    displayStdout(initMessage + "Execução terminou sem erros. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
+		    if (execution_stderr) displayStderrExtra("", execution_stderr);
 		    setStatusLabel("Execução terminou sem erros", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Execution timed out" || status_text === "Execution timed out (wall clock limit exceeded)") {
 		    displayStdout(initMessage + "Execução interrompida por limite de tempo excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
+		    if (execution_stderr) displayStderrExtra("", execution_stderr);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Memory limit exceeded") {
 		    displayStdout(initMessage + "Execução interrompida por limite de memória excedido. ", theOutput);
 		    program_output = formatOutput(`Tempo: ${execution_time} | Memória: ${memory}\n`, colorInfoText);
                     displayProgramOutput(program_output);
+		    if (execution_stderr) displayStderrExtra("", execution_stderr);
 		    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 		}
 		else if (status_text == "Execution killed by signal" || status_text == "Execution failed because the return code was nonzero") {
@@ -1522,13 +1535,13 @@ async function pollTestStatus(runningTabId: string, testId: string, taskId: stri
 
         }
 	catch (error) {
-	    console.error("erro cms:", error);
             clearInterval(window.currentTestInterval);
             delete window.currentTestInterval;
 	    displayStderr(initMessage + "Erro de processamento. ", "");
 	    setStatusLabel("Execução terminou com erro", { spinning: false, tabId: runningTabId });
 	    markRunComplete();
         }
+	
     };
 
     // Start the interval and save its ID so we can stop it later
@@ -1796,7 +1809,6 @@ function stripTabExtension(name: string): string {
 }
 
 function renderTabs(activeId) {
-    console.log("in renderTabs, activeId", activeId);
     const tabs = readTabsIndex();
     const bar = document.getElementById('tabs-bar');
     if (!bar) return;
@@ -1998,7 +2010,6 @@ function showPromptModal(message: string, defaultValue: string = ""): Promise<st
 
     // Hide modal helper
     const hideModal = () => {
-        console.log("in hideModal");
       modal.setAttribute('aria-hidden', 'true');
       modal.style.display = 'none';
       document.body.style.overflow = '';
