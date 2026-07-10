@@ -1,7 +1,7 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
-import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWithTaskList } from './submit-modal';
+import { initSubmitModalWithTasks, initSubmitModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
 import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
 
@@ -400,11 +400,22 @@ public class tarefa {
 
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 
+function wireRunButton(): void {
+    const runBtn = document.getElementById('run-btn');
+    if (runBtn) {
+        runBtn.addEventListener('click', (e: Event) => {
+            e.preventDefault();
+            (window as any).executeTestRun('tarefa', 'Tarefa');
+        });
+    }
+}
+
 async function checkExamGateAndInitialize() {
     if (!window.AppConfig.examGate?.enabled) {
         // Development mode: no exam gate, just initialize normally
         console.log('[ExamGate] Disabled - initializing normally');
         await initSubmitModalWithTasks();
+        wireRunButton();
         return;
     }
 
@@ -439,7 +450,7 @@ async function checkExamGateAndInitialize() {
                 console.log('[ExamGate] will call initSubmitModalWithTaskList()');
 
                 initSubmitModalWithTaskList(tasks);
-                initTestModalWithTaskList(tasks);
+                wireRunButton();
                 (window as any).taskCount = tasks.length;
 
                 // Stop polling
@@ -817,61 +828,7 @@ function hideExamGateMessage() {
 	    window.syncLanguageSelectorUI?.();
 	    window.scheduleSaveSnapshot?.();
 	    return true;
-	};
-	
-	// Run button
-	// document.getElementById('run-btn')?.addEventListener('click', async () => { // Make the handler async
-	//     // Clear any previous running tests
-	//     if (runningTabId != null) {
-	// 	alert(
-	// 	    `Há uma execução em andamento, aguarde.`
-	// 	);
-	// 	return;
-	//     }
-	//     else {
-	// 	const left = cooldownLeft();
-	// 	if (left > 0) {
-	// 	    alert(`Aguarde ${left}s para executar novamente.`);
-	// 	    return;
-	// 	}
-	//     }
-	//     // Start cooldown
-	//     markRunStart();
-	//     //lastRunStartMs = Date.now();
-	//     startCooldownTicker();
-	//     const cmsLanguage = {'cpp': "C++20 / g++", 'python': "Python 3 / PyPy", 'java': 'Java / JDK'};
-	//     const cmsExtension = {'cpp': "cpp", 'python': "py", 'java': 'java'};
-	//     const code = window.editor.getValue();
-	//     const input = document.getElementById('stdin-input')?.value ?? "";
-	//     const selectedLanguage = document.getElementById('language-select')?.value ?? "cpp"; // Get language dynamically
-	//     const language = cmsLanguage[selectedLanguage];
-	//     const languageExtension = cmsExtension[selectedLanguage];
-
-	//     runningTabId = getCurrentTaskId()
-	// 	console.log("will show spinner on tab", runningTabId);
-	//     setRunningTab(runningTabId);             // show spinner on that tab
-	//     setStatusLabel('Preparando…', { spinning: false, tabId: runningTabId });
-	//     runningLanguage = selectedLanguage;
-
-	//     const theme = getGlobalTheme();
-	//     const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
-	//     const initMessage = "\n" + "<b>" + getLocalizedTime() + "</b>" + ": Execução iniciada\n";
-	    
-	//     displayProgramOutput(formatOutput(initMessage, colorEmphasis));
-	//     try {
-	// 	// Submit the code and get the test ID
-	// 	const submissionResult = await cmsTestSend(runningTabId, code, input, language, languageExtension);
-	// 	const testId = submissionResult.data.id;
-
-	// 	console.log("testId", testId);
-		
-	// 	// Start polling for the status
-	// 	console.warn("CMS Test Submission Failed:", error);
-	// 	setStatusLabel("Execução falhou", { spinning: false });
-	// 	displayProgramOutput(formatOutput("Execução falhou.", "red"));
-	//     }
-	//     scheduleSaveSnapshot();	
-	// });
+	};	
 
 	// Clear button
 	document.getElementById('clear-btn').addEventListener('click', async () => {
@@ -2636,7 +2593,7 @@ async function executeTestRun(taskId: string, taskName?: string): Promise<void> 
     const tabBase = getTabTitle(runningTabId) || runningTabId || '';
     const tabDisplay = tabDisplayTitle(tabBase, selectedLanguage);
     const taskLabel = taskName || taskId;
-    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução iniciada para tarefa ${taskLabel} (aba ${tabDisplay})\n`;
+    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução iniciada (aba ${tabDisplay})\n`;
     displayProgramOutput(formatOutput(initMessage, colorEmphasis));
     
     try {

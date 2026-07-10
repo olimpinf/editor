@@ -16,7 +16,6 @@ let TASK_NAMES: Array<{ id: string; name: string }> = [
 
 // Store the modal instance globally
 let submitModalInstance: SubmitModal | null = null;
-let testModalInstance: SubmitModal | null = null;
 
 
 /**
@@ -32,10 +31,6 @@ export function setTaskNames(tasks: Array<{ id: string; name: string }>): void {
   if (submitModalInstance) {
     submitModalInstance.updateTasks(tasks);
   }
-  if (testModalInstance) {
-    testModalInstance.updateTasks(tasks);
-  }
-
 }
 
 interface SubmitModalOptions {
@@ -505,116 +500,3 @@ export function initSubmitModal(): void {
   createSubmitModalInstance();
 }
 
-/**
- * Get the test callback handler
- */
-function getTestHandler() {
-  return async (taskId: string, taskName: string) => {
-    console.log('[TestModal] Testing task:', taskId, taskName);
-    
-    // Get current code from editor
-    // const editor = (window as any).editor;
-    // if (!editor) {
-    //   console.error('[TestModal] Editor not available!');
-    //   alert('Editor não está disponível. Por favor, recarregue a página.');
-    //   return;
-    // }
-    
-    // const code = editor.getValue() || '';
-    // if (!code || code.trim().length === 0) {
-    //   console.warn('[TestModal] Code is empty');
-    //   alert('Por favor, escreva algum código antes de testar.');
-    //   return;
-    // }
-    
-    console.log('[TestModal] Executing test for task:', taskId, taskName);
-    
-    // Import and call the test execution function
-    // You'll need to import it at the top of submit-modal.ts:
-    // import { executeTestRun } from './editor';
-    
-    // try {
-    //   await (window as any).executeTestRun(taskId);
-    // } catch (error) {
-    //   console.error('[TestModal] Test execution error:', error);
-    //   alert(`Erro ao executar teste: ${error.message}`);
-    // }
-    try {
-      if (typeof (window as any).executeTestRun === 'function') {
-        await (window as any).executeTestRun(taskId, taskName);
-      } else {
-        console.error('[TestModal] executeTestRun function not found');
-        alert('Função de teste não disponível. Recarregue a página.');
-      }
-    } catch (error) {
-      console.error('[TestModal] Test execution error:', error);
-      alert(`Erro ao executar teste: ${error.message}`);
-}
-  };
-}
-
-/**
- * Create the test modal instance
- */
-function createTestModalInstance(): void {
-  console.log('[TestModal] Creating modal instance');
-  
-  // Create the modal instance with custom title and button text
-  testModalInstance = new SubmitModal({
-    onSubmit: getTestHandler(),
-    title: 'Escolha a tarefa para testar',
-    confirmButtonText: 'Testar',
-    modalId: 'test-modal'
-  });
-
-  // Attach to the run button
-  const attachRunListener = () => {
-    const runBtn = document.getElementById('run-btn');
-    if (!runBtn) {
-      console.error('[TestModal] Run button not found in DOM');
-      return false;
-    }
-
-    console.log('[TestModal] Attaching listener to run button');
-    runBtn.addEventListener('click', (e: Event) => {
-      e.preventDefault();
-      console.log('[TestModal] Run button clicked');
-      if (testModalInstance) {
-        testModalInstance.show();
-      } else {
-        console.error('[TestModal] Modal instance is null!');
-      }
-    });
-
-    console.log('[TestModal] Initialized successfully');
-    return true;
-  };
-
-  // Try to attach immediately
-  if (!attachRunListener()) {
-    // If button not found, wait for DOM to be ready
-    console.log('[TestModal] Waiting for DOM to be ready...');
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', attachRunListener);
-    } else {
-      setTimeout(attachRunListener, 100);
-    }
-  }
-}
-
-/**
- * Initialize the test modal with a pre-fetched task list
- */
-export function initTestModalWithTaskList(tasks: Array<{ id: string; name: string }>): void {
-  console.log('[TestModal] initTestModalWithTaskList called with tasks:', tasks);
-  
-  if (!tasks || tasks.length === 0) {
-    console.error('[TestModal] No tasks provided!');
-    return;
-  }
-
-  console.log('[TestModal] Creating modal instance...');
-  
-  // Create the test modal instance
-  createTestModalInstance();
-}

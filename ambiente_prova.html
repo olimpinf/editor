@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prova OBI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    /* ── Outer tab bar ── */
+    .outer-tab-bar {
+      display: flex;
+      background: #435f75;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .outer-tab-bar .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 0.95em;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .outer-tab-bar .tab-btn:hover {
+      background: #777;
+      color: #fff;
+    }
+
+    .outer-tab-bar .tab-btn.active {
+      color: #fff;
+      border-bottom-color: #4a9eff;
+      background: #333;
+    }
+
+    /* ── Scrollable content area ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* ── Tab panels ── */
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* ── Inner tab bar (Documentação) ── */
+    .inner-tab-bar {
+      display: flex;
+      background: #e8e8e8;
+      border-bottom: 2px solid #ccc;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .inner-tab-bar .inner-tab-btn {
+      padding: 8px 22px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-size: 0.9em;
+      cursor: pointer;
+      color: #555;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .inner-tab-bar .inner-tab-btn:hover {
+      background: #d8d8d8;
+      color: #222;
+    }
+
+    .inner-tab-bar .inner-tab-btn.active {
+      color: #003a8c;
+      border-bottom-color: #003a8c;
+      background: #f5f5f5;
+      font-weight: 600;
+    }
+
+    .inner-tab-panel {
+      display: none;
+    }
+
+    .inner-tab-panel.active {
+      display: block;
+    }
+
+    /* ── Info page (sans-serif section) ── */
+    .info-content {
+      padding: 40px;
+      background: #bbb;
+      color: black;
+    }
+
+    .content a { color: white; }
+
+    .info-content h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+    }
+
+    .info-content h2 {
+      font-size: 1.8em;
+      margin: 30px 0 15px 0;
+    }
+
+    .info-content h3 {
+      font-size: 1.3em;
+      margin: 20px 0 10px 0;
+    }
+
+    .info-content h4 {
+      font-size: 1.1em;
+      margin: 16px 0 8px 0;
+    }
+
+    .info-content p {
+      font-size: 1.1em;
+      line-height: 1.8;
+      margin-bottom: 15px;
+    }
+
+    .info-content ul {
+      margin: 8px 0 12px 0;
+      padding-left: 28px;
+      line-height: 1.9;
+    }
+
+    .info-box {
+      background: #666;
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border-left: 6px solid #888;
+      color: white;
+    }
+
+    .info-box h3 {
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+
+    .info-box ul {
+      list-style-position: inside;
+      line-height: 2;
+      font-size: 1.05em;
+    }
+
+    .info-box ul li { margin-bottom: 8px; }
+
+    .warning-box {
+      background: #a0392b;
+      border-left: 6px solid #d74c3c;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      color: white;
+    }
+
+    .warning-box h3 {
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+
+    .warning-box ul {
+      list-style-position: inside;
+      line-height: 2;
+      font-size: 1.05em;
+    }
+
+    .warning-box ul li { margin-bottom: 8px; }
+
+    .warning-box strong {
+      font-size: 1.2em;
+      color: yellow;
+      margin-bottom: 10px;
+    }
+
+    /* ── Folha de Informações section (serif) ── */
+    .fi {
+      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #111;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 48px 60px;
+      background: #fff;
+    }
+
+    .fi .fi-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .fi .fi-header img {
+      width: 90px;
+      margin-bottom: 8px;
+    }
+
+    .fi .fi-header .modality {
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+      margin: 4px 0;
+    }
+
+    .fi .fi-header h1 {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      margin: 4px 0 0;
+      color: #111;
+    }
+
+    .fi h2 {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 36px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+      color: #111;
+    }
+
+    .fi h3 {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 24px;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .fi h4 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 20px;
+      margin-bottom: 6px;
+      color: #111;
+    }
+
+    .fi p {
+      margin: 10px 0;
+      text-align: justify;
+      color: #111;
+    }
+
+    .fi ul {
+      margin: 10px 0;
+      padding-left: 28px;
+      color: #111;
+    }
+
+    .fi ul li {
+      margin-bottom: 8px;
+      text-align: justify;
+    }
+
+    .fi ol {
+      margin: 10px 0;
+      padding-left: 28px;
+      color: #111;
+    }
+
+    .fi ol li {
+      margin-bottom: 8px;
+      text-align: justify;
+    }
+
+    .fi ul.dash {
+      list-style: none;
+      padding-left: 28px;
+    }
+
+    .fi ul.dash li::before { content: "– "; }
+
+    .fi .code-block {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin: 14px 0;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+
+    .fi .code-block table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .fi .code-block td.lineno {
+      color: #999;
+      text-align: right;
+      padding: 1px 10px 1px 8px;
+      user-select: none;
+      width: 30px;
+      border-right: 1px solid #ddd;
+      vertical-align: top;
+    }
+
+    .fi .code-block td.code {
+      padding: 1px 10px;
+      white-space: pre;
+      vertical-align: top;
+    }
+
+    .fi code {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      background: #f0f0f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* ── Manual section ── */
+    .manual {
+      padding: 30px 40px 60px;
+      background: #fff;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 3px solid #999;
+      margin: 30px;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .manual h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .manual h2 {
+      font-size: 1.5em;
+      margin: 28px 0 12px 0;
+    }
+
+    .manual h3 {
+      font-size: 1.2em;
+      margin: 20px 0 8px 0;
+    }
+
+    .manual p {
+      font-size: 1em;
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+
+    .manual ul {
+      margin: 8px 0 12px 28px;
+      line-height: 1.9;
+    }
+
+    /* ── Documentação section ── */
+    .docs-content {
+      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #111;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 48px 60px;
+    }
+
+    .docs-content h2 {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 30px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+      color: #111;
+    }
+
+    .docs-content h3 {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .docs-content h4 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      color: #111;
+    }
+
+    .docs-content p {
+      margin: 10px 0;
+      text-align: justify;
+      color: #111;
+    }
+
+    .docs-content ul {
+      margin: 10px 0;
+      padding-left: 28px;
+      color: #111;
+    }
+
+    .docs-content ul li {
+      margin-bottom: 6px;
+      text-align: justify;
+    }
+
+    .docs-content .code-block {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin: 14px 0;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+
+    .docs-content .code-block table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .docs-content .code-block td.lineno {
+      color: #999;
+      text-align: right;
+      padding: 1px 10px 1px 8px;
+      user-select: none;
+      width: 30px;
+      border-right: 1px solid #ddd;
+      vertical-align: top;
+    }
+
+    .docs-content .code-block td.code {
+      padding: 1px 10px;
+      white-space: pre;
+      vertical-align: top;
+    }
+
+    .docs-content code {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      background: #f0f0f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Outer tab bar ── -->
+  <div class="outer-tab-bar">
+    <button class="tab-btn active" data-tab="principal">Principal</button>
+    <button class="tab-btn" data-tab="manual-editor">Manual EditorOBI</button>
+    <button class="tab-btn" data-tab="manual-cms">Manual CMS</button>
+    <button class="tab-btn" data-tab="docs">Documentação</button>
+  </div>
+
+  <!-- ── Scrollable content ── -->
+  <div class="content">
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 1: PRINCIPAL
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="principal">
+      <div class="info-content">
+
+        <p>Este é o Ambiente de Prova da Olimpíada Brasileira de Informática.</p>
+
+        <div class="warning-box">
+          <h3>IMPORTANTE</h3>
+          <ul>
+            <li>A prova somente é iniciada — e o tempo de duração começa a contar — quando você clicar no botão "Iniciar" na aba <em>Prova</em>.</li>
+            <li>Antes de iniciar a prova, leia a <strong>Folha de Informações</strong> e o <strong>Manual do EditorOBI</strong> (abas acima).</li>
+            <li>Após iniciar a prova, caso ela seja encerrada, não será possível acessá-la novamente.</li>
+            <li>Para encerrar a prova, clique no botão "Encerrar".</li>
+            <li><strong>Não tente mudar</strong> para outro aplicativo durante a prova (por exemplo usando ALT-TAB) – sua prova será <strong>encerrada</strong>.</li>
+          </ul>
+        </div>
+
+        <div class="info-box">
+          <h3>Estrutura do ambiente</h3>
+          <p>O ambiente é dividido em três abas principais:</p>
+          <ul>
+            <li><strong>Informações:</strong>
+              <ul style="margin-left:25px">
+                <li>Esta aba, que contém instruções gerais.</li>
+              </ul>
+            </li>
+            <li><strong>EditorOBI:</strong>
+              <ul style="margin-left:25px">
+                <li>Aba destinada à implementação e submissão das suas soluções. Ela contém um editor de código online com compilador integrado.</li>
+                <li>Utilize-a para escrever, compilar e testar seus programas (em C++, Python ou Java) com entradas criadas por você.</li>
+                <li>É também nesta aba que você deve submeter suas soluções para correção.</li>
+              </ul>
+            </li>
+            <li><strong>Prova:</strong>
+              <ul style="margin-left:25px">
+                <li>Nesta aba você inicia a prova e visualiza os enunciados das tarefas.</li>
+                <li>Também é nesta aba que você acompanha o resultado das submissões feitas na aba <em>EditorOBI</em>.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="info-box">
+          <h3>Atalhos de teclado</h3>
+          <ul>
+            <li><strong>Ctrl + 1:</strong> Ir para a aba <em>Informações</em>.</li>
+            <li><strong>Ctrl + 2:</strong> Ir para a aba <em>EditorOBI</em>.</li>
+            <li><strong>Ctrl + 3:</strong> Ir para a aba <em>Prova</em>.</li>
+          </ul>
+        </div>
+
+        <p style="margin-top: 40px; text-align: center; font-size: 1.2em;">
+          <strong>Boa prova!</strong>
+        </p>
+
+      </div>
+    </div><!-- /#principal -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 2: MANUAL EDITOROBI
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="manual-editor">
+      <div class="manual">
+
+        <div class="center">
+          <img src="editor/img/lampada-yellow-black-text.svg" width="80px"
+               alt="OBI Logo"
+               onerror="this.style.display='none'">
+          <h1>Manual EditorOBI</h1>
+        </div>
+
+        <p>Com o EditorOBI você codifica, testa e submete para correção a sua solução para as tarefas da prova da OBI.</p>
+
+        <div class="center">
+          <img src="editor/img/editor-all.png" width="95%" align="center">
+        </div>
+
+        <p>Há três botões na barra de ferramentas principal:</p>
+        <ul>
+          <li><img src="editor/img/icon-font-size-black.svg" height="16pt" alt="Tamanho fonte"> aumenta ou diminui o tamanho do fonte utilizado.</li>
+          <li><img src="editor/img/icon-theme-black.svg" height="17pt" alt="Tema"> altera o tema do editor para o modo escuro ou claro.</li>
+          <li><img src="editor/img/icon-info-black.svg" height="17pt" alt="Info"> mostra um pequeno texto sobre como usar o EditorOBI.</li>
+        </ul>
+
+        <p>Abaixo da barra de ferramentas principal há três painéis:</p>
+        <ul>
+          <li>Painel Código (à esquerda)</li>
+          <li>Painel Entrada (acima, à direita)</li>
+          <li>Painel Saída (abaixo, à direita)</li>
+        </ul>
+
+        <p>Cada um desses três painéis possui uma barra de ferramentas própria, que serão descritas mais adiante.</p>
+
+        <p>Abaixo dos painéis há ainda uma barra de status, com um texto indicador de status mostrado do lado direito.</p>
+
+        <h2>Painel Código</h2>
+        <div class="center">
+          <img src="editor/img/editor-codigo.png" width="95%" align="center">
+        </div>
+
+        <p>O Painel Código é onde você escreve o código de suas soluções. Você pode trabalhar em mais de uma solução, criando novas abas no Painel Código.</p>
+
+        <h3>Nova Aba</h3>
+        <p>Para criar uma nova aba, clique na aba marcada com "+" (a aba mais à esquerda). Você deve dar um nome para a nova aba. Pode ser qualquer nome: o nome da tarefa, o nome da tarefa seguido de um número de versão, por exemplo.</p>
+
+        <p>O nome da aba corrente é destacado em relação às outras abas existentes. Para trabalhar em uma outra aba, clique no nome da aba.</p>
+
+        <p>Você pode também editar o nome de uma aba existente, clicando duas vezes no nome da aba.</p>
+
+        <p>A barra de ferramentas do Painel Código contém sete botões. Da esquerda para a direita, os botões são:</p>
+        <div class="center">
+          <img src="editor/img/editor-bar-codigo.png" width="95%" align="center">
+        </div>
+
+        <ul>
+          <li>Executar</li>
+          <li>Submeter</li>
+          <li>Seletor de Linguagem</li>
+          <li>Salvar</li>
+          <li>Carregar</li>
+          <li>Limpar</li>
+          <li>Tela Cheia (&nbsp;<img src="editor/img/icon-grow-black.svg" height="17pt" alt="Tela cheia">&nbsp;)</li>
+        </ul>
+
+        <h3>Seleção de Linguagem</h3>
+        <p>Em cada aba do Painel Código você pode trabalhar em uma linguagem de programação diferente. Para escolher a linguagem usada na aba, use o Seletor de Linguagem; você pode escolher entre C++, Java, Python ou Blockly.</p>
+
+        <h3>Executar</h3>
+        <p>Antes de submeter sua solução para correção, você deve testá-la com diversas entradas, para certificar-se de que está correta. Algumas entradas são mostradas nos exemplos dos enunciados das tarefas. Além dessas, você deve também testar com outras entradas que você mesmo crie. Procure testar entradas que constituam situações representativas dos limites definidos na tarefa.</p>
+
+        <p>Para testar uma solução, escreva os valores para a entrada de seu programa no Painel Entrada e pressione o botão Executar. O código submetido será o conteúdo do Painel Código, e a entrada para o teste será o conteúdo do Painel Entrada. O resultado da execução do teste será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).</p>
+
+        <h3>Submeter</h3>
+        <p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção, utilizando o botão Submeter.</p>
+        <p>A barra de status mostra o status da submissão. Para consultar o resultado da submissão, você deve utilizar a aba Prova do Ambiente de Prova. Na aba Prova, no menu à esquerda, clique em Submissões para a tarefa em que a solução foi submetida. Note que pode ser necessário recarregar a página Submissões para que a nova submissão seja visualizada. Para recarregar a página:</p>
+        <ul>
+          <li>Chrome
+            <ul>
+              <li>Para Windows/Linux:
+                <ul>
+                  <li>Mantenha pressionado Ctrl e pressione F5; ou</li>
+                  <li>Mantenha pressionados Ctrl e Shift, em seguida pressione R.</li>
+                </ul>
+              </li>
+              <li>Para MacOS:
+                <ul>
+                  <li>Mantenha pressionados Ctrl e Shift, em seguida pressione R.</li>
+                  <li>Mantenha pressionados Command e Shift, em seguida pressione R.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>Firefox
+            <ul>
+              <li>Para Windows/Linux:
+                <ul>
+                  <li>Mantenha pressionado Ctrl, em seguida pressione F5.</li>
+                  <li>Mantenha pressionados Ctrl e Shift, em seguida pressione R.</li>
+                </ul>
+              </li>
+              <li>Para MacOS:
+                <ul>
+                  <li>Mantenha pressionados Command e Shift, em seguida pressione R.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>Microsoft Edge
+            <ul>
+              <li>Mantenha pressionado Ctrl, em seguida pressione F5.</li>
+            </ul>
+          </li>
+          <li>Safari
+            <ul>
+              <li>Mantenha Command e Option pressionados, em seguida pressione R.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>Salvar</h3>
+        <p>Você pode salvar até 5 cópias para cada tarefa da prova (ou seja, se o número de tarefas da prova é três, você pode salvar 15 cópias de código). Você deve fornecer um nome para a cópia (pode ser qualquer nome). Se o número de cópias exceder o limite, você deve remover uma das cópias antes de salvar uma nova. Para remover uma cópia, use o botão Carregar, descrito a seguir.</p>
+
+        <h3>Carregar</h3>
+        <p>Para carregar o Painel Código com uma cópia, pressione o botão Carregar. Será mostrada a lista de cópias disponíveis. Clique numa cópia para restaurá-la. Você pode também remover uma cópia clicando na lixeira que aparece à direita do nome da cópia na lista de cópias disponíveis.</p>
+
+        <h3>Limpar</h3>
+        <p>Utilize para remover todo o conteúdo do painel código para a aba corrente.</p>
+
+        <h3>Tela Cheia (&nbsp;<img src="editor/img/icon-grow-black.svg" height="17pt" alt="Tela cheia">&nbsp;)</h3>
+        <p>Utilize este botão para expandir o Painel de Código de forma a utilizar toda a área disponível, escondendo os outros painéis. Para desfazer a expansão, clique novamente no botão Tela Cheia.</p>
+
+        <h2>Painel Entrada</h2>
+        <p>Utilize este painel para definir a entrada de seu teste. Este painel não é utilizado quando você submete uma solução para correção (nesse caso os casos de testes são escondidos!).</p>
+        <p>Similar ao Painel de Código, o Painel de Entrada possui os botões Salvar, Carregar, Limpar e Tela Cheia, com funções similares.</p>
+
+        <h2>Painel Saída</h2>
+        <p>Este painel mostra o resultado de seus testes.</p>
+        <p>Similar ao Painel de Código, o Painel de Saída possui os botões Limpar e Tela Cheia, com funções similares.</p>
+
+      </div>
+    </div><!-- /#manual-editor -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 3: MANUAL CMS (Folha de Informações)
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="manual-cms">
+      <div class="fi" id="folha-informacoes">
+
+        <div class="fi-header">
+          <img src="editor/img/lampada-yellow-black-text.svg"
+               alt="OBI Logo"
+               onerror="this.style.display='none'">
+          <div class="modality">Modalidade Programação</div>
+          <h1>Folha de Informações</h1>
+        </div>
+
+        <!-- 1 -->
+        <h2>1 &nbsp; Instruções Gerais</h2>
+        <ul>
+          <li>A prova deve ser feita individualmente, na escola, sob supervisão.</li>
+          <li>É proibido consultar a Internet, livros, anotações ou qualquer outro material durante a prova.</li>
+          <li>É proibido utilizar ferramentas de Inteligência Artificial para resolver as tarefas.</li>
+          <li>A correção é automatizada, portanto siga atentamente as exigências da tarefa quanto ao formato da entrada e saída de seu programa; em particular, seu programa não deve escrever frases como "Digite o dado de entrada:" ou similares.</li>
+          <li>Não implemente nenhum recurso gráfico nas suas soluções (janelas, menus, etc.), nem utilize qualquer rotina para limpar a tela ou posicionar o cursor.</li>
+          <li>Procure resolver as tarefas de maneira eficiente. Na correção, eficiência também será levada em conta. As soluções serão testadas com muitas outras entradas além das apresentadas como exemplo nas tarefas.</li>
+        </ul>
+
+        <!-- 2 -->
+        <h2>2 &nbsp; Corretor</h2>
+        <p>As soluções submetidas para correção são corrigidas utilizando o mesmo corretor utilizado na Olimpíada Internacional de Informática.</p>
+        <p>Você pode submeter até 50 soluções para cada tarefa, obedecendo a um intervalo de 60 segundos entre duas submissões consecutivas.</p>
+        <p>O tempo de prova é controlado pelo Ambiente de Prova e começa a contar a partir do momento que você clica o botão <em>Iniciar</em> na aba Prova.</p>
+
+        <!-- 3 -->
+        <h2>3 &nbsp; Subtarefas</h2>
+        <p>Na OBI uma subtarefa é um grupo de casos de testes com determinadas restrições de entrada. Cada subtarefa vale um conjunto de pontos; a soma dos pontos das subtarefas de uma dada tarefa é sempre 100.</p>
+        <p>Basicamente, você pode pensar que cada subtarefa é a divisão da tarefa em um problema "menor", potencialmente mais fácil de ser resolvido. Note que você pode escrever e submeter programas diferentes para resolver subtarefas diferentes, mas em geral é possível também escrever um único programa que resolve todas as subtarefas de uma dada tarefa.</p>
+        <p>Para cada subtarefa, sua solução é avaliada com múltiplos casos de teste, diferentes dos mostrados nos enunciados da tarefa, e para cada caso de teste sua solução recebe um número de pontos que depende do resultado da execução de seu programa com o caso de teste.</p>
+        <ol>
+          <li>Para cada submissão a pontuação de cada subtarefa é o menor número de pontos obtido entre todos os casos de teste da subtarefa.</li>
+          <li>A pontuação final de cada subtarefa é a maior pontuação da subtarefa, entre todas as submissões.</li>
+          <li>A pontuação final de cada tarefa é a soma das pontuações finais de suas subtarefas.</li>
+        </ol>
+        <p>Por exemplo, considere uma competidora que fez duas submissões para uma tarefa que contém duas subtarefas. Considere ainda que a primeira solução submetida recebeu 30 pontos para a primeira subtarefa e 10 pontos para a segunda subtarefa, e a segunda solução recebeu 0 pontos para a primeira subtarefa e 40 pontos para a segunda subtarefa. Então a pontuação final dessa competidora para essa tarefa é 70 pontos, ou seja, o máximo entre (30, 0), correspondente à primeira subtarefa, somado ao máximo entre (10, 40), correspondente à segunda subtarefa.</p>
+
+        <!-- 4 -->
+        <h2>4 &nbsp; Resultado da correção</h2>
+        <p>O ambiente de prova executa sua solução usando vários casos de testes, diferentes dos mostrados como exemplos nos enunciados das tarefas. Cada execução usa um caso de teste diferente e executa por um limite máximo de tempo e um limite máximo de uso de memória. Os limites de tempo e memória são estabelecidos para cada tarefa e cada linguagem de programação.</p>
+        <p>Para resolver corretamente um caso de teste, sua solução deverá:</p>
+        <ul>
+          <li>Terminar a execução dentro do tempo limite estabelecido.</li>
+          <li>Não exceder o limite de uso de memória estabelecido.</li>
+          <li>Imprimir a resposta correta, <strong>exatamente</strong> no mesmo formato descrito na seção "Saída" do enunciado, e nada mais. Por exemplo, se a saída esperada para um caso de teste é "3", então o código precisa imprimir somente "3" para ser considerado correto (imprimir "<code>resposta = 3</code>", por exemplo, seria avaliado como resposta errada).</li>
+        </ul>
+        <p>O resultado da correção de um caso de teste pode ser:</p>
+        <ul>
+          <li><em>Correto</em>: se a solução produziu o resultado correto dentro dos limites de tempo e memória estabelecidos para a tarefa.</li>
+          <li><em>Incorreto</em>: se a solução
+            <ul class="dash">
+              <li>produziu um resultado incorreto; ou</li>
+              <li>foi interrompida por exceder o tempo limite ou o limite de memória estabelecido para a tarefa; ou</li>
+              <li>foi interrompida por algum erro durante a execução (acesso inválido à memória, por exemplo).</li>
+            </ul>
+          </li>
+        </ul>
+        <p>Se a execução foi interrompida por algum erro durante a execução, nem sempre é possível para o ambiente de prova determinar o tipo de erro que causou a interrupção da execução. Quando o ambiente de prova não consegue determinar a causa do erro, ele emite uma mensagem de erro genérica: "A execução falhou pois o código de retorno foi diferente de zero".</p>
+
+      </div><!-- /.fi -->
+    </div><!-- /#manual-cms -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 4: DOCUMENTAÇÃO (inner tabs per language)
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="docs">
+
+      <!-- Inner tab bar -->
+      <div class="inner-tab-bar">
+        <button class="inner-tab-btn active" data-inner-tab="lang-c">C</button>
+        <button class="inner-tab-btn" data-inner-tab="lang-cpp">C++</button>
+        <button class="inner-tab-btn" data-inner-tab="lang-java">Java</button>
+        <button class="inner-tab-btn" data-inner-tab="lang-python">Python</button>
+      </div>
+
+      <!-- C -->
+      <div class="inner-tab-panel active" id="lang-c">
+        <div class="docs-content">
+          <h2>C</h2>
+          <p>Para submeter suas soluções em C, você deve seguir as seguintes instruções:</p>
+          <ul>
+            <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize por exemplo a função <code>scanf</code> para ler da entrada padrão e a função <code>printf</code> para escrever na saída padrão.</li>
+            <li>A função "main" de seu programa deve obrigatoriamente retornar o valor 0 ao final da execução.</li>
+          </ul>
+          <h4>Um pequeno exemplo de programa em C</h4>
+          <p>O exemplo abaixo lê dois valores inteiros e imprime o maior desses valores.</p>
+          <div class="code-block"><table>
+            <tr><td class="lineno">1</td><td class="code">#include &lt;stdio.h&gt;</td></tr>
+            <tr><td class="lineno">2</td><td class="code"></td></tr>
+            <tr><td class="lineno">3</td><td class="code">int val1, val2;</td></tr>
+            <tr><td class="lineno">4</td><td class="code"></td></tr>
+            <tr><td class="lineno">5</td><td class="code">int main(void) {</td></tr>
+            <tr><td class="lineno">6</td><td class="code">    // lê as duas variáveis</td></tr>
+            <tr><td class="lineno">7</td><td class="code">    scanf("%d%d", &amp;val1, &amp;val2);</td></tr>
+            <tr><td class="lineno">8</td><td class="code"></td></tr>
+            <tr><td class="lineno">9</td><td class="code">    // escreve o resultado</td></tr>
+            <tr><td class="lineno">10</td><td class="code">    if (val1 &gt; val2)</td></tr>
+            <tr><td class="lineno">11</td><td class="code">        printf("%d\n", val1);</td></tr>
+            <tr><td class="lineno">12</td><td class="code">    else</td></tr>
+            <tr><td class="lineno">13</td><td class="code">        printf("%d\n", val2);</td></tr>
+            <tr><td class="lineno">14</td><td class="code"></td></tr>
+            <tr><td class="lineno">15</td><td class="code">    // termina a execução</td></tr>
+            <tr><td class="lineno">16</td><td class="code">    return 0;  // importante!</td></tr>
+            <tr><td class="lineno">17</td><td class="code">}</td></tr>
+          </table></div>
+        </div>
+      </div><!-- /#lang-c -->
+
+      <!-- C++ -->
+      <div class="inner-tab-panel" id="lang-cpp">
+        <div class="docs-content">
+          <h2>C++</h2>
+          <p>Para submeter suas soluções em C++, você deve seguir as seguintes instruções:</p>
+          <ul>
+            <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize por exemplo <code>cin</code> ou a função <code>scanf</code> para ler da entrada padrão e <code>cout</code> ou a função <code>printf</code> para escrever na saída padrão.</li>
+            <li>A função "main" de seu programa deve retornar o valor 0 ao final da execução.</li>
+          </ul>
+          <h4>Um pequeno exemplo de programa em C++</h4>
+          <p>O exemplo abaixo lê dois valores inteiros e imprime o maior desses valores.</p>
+          <div class="code-block"><table>
+            <tr><td class="lineno">1</td><td class="code">#include &lt;iostream&gt;</td></tr>
+            <tr><td class="lineno">2</td><td class="code">using namespace std;</td></tr>
+            <tr><td class="lineno">3</td><td class="code"></td></tr>
+            <tr><td class="lineno">4</td><td class="code">int val1, val2;</td></tr>
+            <tr><td class="lineno">5</td><td class="code"></td></tr>
+            <tr><td class="lineno">6</td><td class="code">int main(void) {</td></tr>
+            <tr><td class="lineno">7</td><td class="code">    // lê as duas vals</td></tr>
+            <tr><td class="lineno">8</td><td class="code">    cin &gt;&gt; val1 &gt;&gt; val2;</td></tr>
+            <tr><td class="lineno">9</td><td class="code"></td></tr>
+            <tr><td class="lineno">10</td><td class="code">    // escreve o resultado</td></tr>
+            <tr><td class="lineno">11</td><td class="code">    if (val1 &gt; val2)</td></tr>
+            <tr><td class="lineno">12</td><td class="code">        cout &lt;&lt; val1 &lt;&lt; endl;</td></tr>
+            <tr><td class="lineno">13</td><td class="code">    else</td></tr>
+            <tr><td class="lineno">14</td><td class="code">        cout &lt;&lt; val2 &lt;&lt; endl;</td></tr>
+            <tr><td class="lineno">15</td><td class="code"></td></tr>
+            <tr><td class="lineno">16</td><td class="code">    // termina a execução</td></tr>
+            <tr><td class="lineno">17</td><td class="code">    return 0;</td></tr>
+            <tr><td class="lineno">18</td><td class="code">}</td></tr>
+          </table></div>
+        </div>
+      </div><!-- /#lang-cpp -->
+
+      <!-- Java -->
+      <div class="inner-tab-panel" id="lang-java">
+        <div class="docs-content">
+          <h2>Java</h2>
+          <p>Para submeter suas soluções em Java, você deve seguir as seguintes instruções:</p>
+          <ul>
+            <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize qualquer classe ou função padrão para leitura, como por exemplo <code>Scanner</code> ou <code>BufferedReader</code>, e qualquer classe ou função padrão para escrita, como por exemplo <code>System.out.println</code> ou <code>BufferedWriter</code>.</li>
+            <li>Não use a diretiva <code>package</code>.</li>
+            <li>O nome de sua classe principal pública e do seu arquivo <code>.java</code> deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no ambiente de prova. Por exemplo, se o identificador da tarefa é "festa", o arquivo deve se chamar <code>festa.java</code> e a classe principal pública deve se chamar <code>festa</code>.</li>
+          </ul>
+          <h4>Um pequeno exemplo de programa em Java</h4>
+          <p>O exemplo abaixo lê dois valores inteiros e imprime o maior valor.</p>
+          <div class="code-block"><table>
+            <tr><td class="lineno">1</td><td class="code">import java.util.Scanner;</td></tr>
+            <tr><td class="lineno">2</td><td class="code"></td></tr>
+            <tr><td class="lineno">3</td><td class="code">public class tarefa {</td></tr>
+            <tr><td class="lineno">4</td><td class="code"></td></tr>
+            <tr><td class="lineno">5</td><td class="code">    public static void main(String[] args) {</td></tr>
+            <tr><td class="lineno">6</td><td class="code">        Scanner in = new Scanner(System.in);</td></tr>
+            <tr><td class="lineno">7</td><td class="code"></td></tr>
+            <tr><td class="lineno">8</td><td class="code">        // lê duas variáveis inteiras</td></tr>
+            <tr><td class="lineno">9</td><td class="code">        int a = in.nextInt();</td></tr>
+            <tr><td class="lineno">10</td><td class="code">        int b = in.nextInt();</td></tr>
+            <tr><td class="lineno">11</td><td class="code"></td></tr>
+            <tr><td class="lineno">12</td><td class="code">        // escreve o resultado</td></tr>
+            <tr><td class="lineno">13</td><td class="code">        if (a &gt; b)</td></tr>
+            <tr><td class="lineno">14</td><td class="code">            System.out.printf("%d\n", a);</td></tr>
+            <tr><td class="lineno">15</td><td class="code">        else</td></tr>
+            <tr><td class="lineno">16</td><td class="code">            System.out.printf("%d\n", b);</td></tr>
+            <tr><td class="lineno">17</td><td class="code">    }</td></tr>
+            <tr><td class="lineno">18</td><td class="code">}</td></tr>
+          </table></div>
+        </div>
+      </div><!-- /#lang-java -->
+
+      <!-- Python -->
+      <div class="inner-tab-panel" id="lang-python">
+        <div class="docs-content">
+          <h2>Python</h2>
+          <p>Para submeter suas soluções em Python, você deve seguir as seguintes instruções:</p>
+          <ul>
+            <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão.</li>
+            <li>Ao usar a função <code>input()</code> para ler a entrada, não use o parâmetro que escreve uma cadeia de caracteres, ou seja não use por exemplo assim: <code>input('Entre com o valor:')</code>. Isso faz com que a cadeia de caracteres "Entre com o valor:" seja escrita na saída do programa, fazendo com que a saída seja diferente do que o mostrado no exemplo do enunciado da tarefa.</li>
+          </ul>
+          <h4>Um pequeno exemplo de programa em Python</h4>
+          <p>O exemplo abaixo lê dois valores inteiros dados em duas linhas e imprime o maior valor.</p>
+          <div class="code-block"><table>
+            <tr><td class="lineno">1</td><td class="code"># exemplo de solucao em Python3</td></tr>
+            <tr><td class="lineno">2</td><td class="code"></td></tr>
+            <tr><td class="lineno">3</td><td class="code"># le dois valores inteiros</td></tr>
+            <tr><td class="lineno">4</td><td class="code">val1 = input()  # NÃO use input("Entre com um valor:")</td></tr>
+            <tr><td class="lineno">5</td><td class="code">val2 = input()</td></tr>
+            <tr><td class="lineno">6</td><td class="code"></td></tr>
+            <tr><td class="lineno">7</td><td class="code"># escreve o resultado</td></tr>
+            <tr><td class="lineno">8</td><td class="code">if val1 &gt; val2:</td></tr>
+            <tr><td class="lineno">9</td><td class="code">    print(val1)</td></tr>
+            <tr><td class="lineno">10</td><td class="code">else:</td></tr>
+            <tr><td class="lineno">11</td><td class="code">    print(val2)</td></tr>
+          </table></div>
+        </div>
+      </div><!-- /#lang-python -->
+
+    </div><!-- /#docs -->
+
+  </div><!-- /.content -->
+
+  <script>
+    // Outer tabs
+    document.querySelectorAll('.outer-tab-bar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.outer-tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Inner tabs (Documentação)
+    document.querySelectorAll('.inner-tab-bar .inner-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.inner-tab-bar .inner-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.inner-tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.innerTab).classList.add('active');
+      });
+    });
+  </script>
+
+</body>
+</html>
