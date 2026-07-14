@@ -12,7 +12,7 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: 'Noto Sans', sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -36,12 +36,12 @@
       font-size: 0.95em;
       cursor: pointer;
       white-space: nowrap;
-      border-bottom: 3px solid transparent;
+      border-bottom: 4px solid transparent;
       transition: background 0.15s, color 0.15s;
     }
 
     .outer-tab-bar .tab-btn:hover {
-      background: #777;
+      background: #597a96;
       color: #fff;
     }
 
@@ -70,7 +70,7 @@
     .inner-tab-bar {
       display: flex;
       background: #e8e8e8;
-      border-bottom: 2px solid #ccc;
+      border-bottom: 4px solid #ccc;
       position: sticky;
       top: 0;
       z-index: 10;
@@ -201,11 +201,10 @@
 
     /* ── Folha de Informações section (serif) ── */
     .fi {
-      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+      font-family: 'Noto Sans', sans-serif;
       font-size: 15px;
       line-height: 1.6;
       color: #111;
-      max-width: 800px;
       margin: 0 auto;
       padding: 40px 48px 60px;
       background: #fff;
@@ -381,11 +380,10 @@
 
     /* ── Documentação section ── */
     .docs-content {
-      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+      font-family: 'Noto Sans', sans-serif;
       font-size: 15px;
       line-height: 1.6;
       color: #111;
-      max-width: 800px;
       margin: 0 auto;
       padding: 32px 48px 60px;
     }
@@ -479,7 +477,7 @@
   <div class="outer-tab-bar">
     <button class="tab-btn active" data-tab="principal">Principal</button>
     <button class="tab-btn" data-tab="manual-editor">Manual EditorOBI</button>
-    <button class="tab-btn" data-tab="manual-cms">Manual CMS</button>
+    <button class="tab-btn" data-tab="manual-cms">Informações Sobre a Prova</button>
     <button class="tab-btn" data-tab="docs">Documentação</button>
   </div>
 
