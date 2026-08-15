@@ -1,6 +1,6 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
-import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME } from './cms';
+import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, transformTaskList } from './cms';
 import { initSubmitModalWithTasks, initSubmitModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
 import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
@@ -431,28 +431,55 @@ async function checkExamGateAndInitialize() {
 
     console.log('[ExamGate] Will poll exam status using cmsTaskList()');
 
+    // Guards against unlocking twice — both the in-page poll below and
+    // ExamLock's own external poll (see window.__obiApplyExternalTaskList)
+    // can independently discover the task list and race to apply it.
+    let examGateUnlocked = false;
+    const applyTasksAndUnlock = (tasks: Array<{ id: string; name: string }>) => {
+        if (examGateUnlocked) {
+            console.log('[ExamGate] Already unlocked - ignoring duplicate tasks source');
+            return;
+        }
+        examGateUnlocked = true;
+        console.log('[ExamGate] Exam started - tasks available:', tasks);
+
+        // Unlock the editor
+        //setEditorReadOnly(false);
+        hideExamGateMessage();
+
+        console.log('[ExamGate] will call initSubmitModalWithTaskList()');
+        initSubmitModalWithTaskList(tasks);
+        wireRunButton();
+        (window as any).taskCount = tasks.length;
+    };
+
+    // Entry point for ExamLock to hand over a task list it fetched itself, from
+    // the main process. This webview sits in a hidden (display:none) tab
+    // whenever the student is on Informações/Prova, and Chromium can suspend a
+    // hidden guest's own JS/network activity badly enough that its in-page
+    // poll below hangs indefinitely — not just a delayed retry, but a fetch()
+    // that never settles. ExamLock's main process is never backgrounded, so
+    // polling from there and injecting the result here is immune to that.
+    (window as any).__obiApplyExternalTaskList = (rawData: any) => {
+        if (examGateUnlocked) return;
+        console.log('[ExamGate] Received task list from ExamLock outer poll:', rawData);
+        const tasks = transformTaskList(rawData);
+        if (tasks !== null && tasks.length > 0) {
+            applyTasksAndUnlock(tasks);
+        } else {
+            console.log('[ExamGate] External task list was empty/invalid - ignoring');
+        }
+    };
+
     // Poll the task list API
     const pollInterval = 3000; // Check every 3 seconds
     const checkExamStatus = async () => {
         try {
 	    console.log('[ExamGate] Will call cmsTaskList()');
             const tasks = await cmsTaskList();
-            
+
             if (tasks !== null && tasks.length > 0) {
-                // Exam has started! Task list is available
-                console.log('[ExamGate] Exam started - tasks available:', tasks);
-                
-                // Unlock the editor
-                //setEditorReadOnly(false);
-                hideExamGateMessage();
-                
-                // Initialize submit modal with the retrieved tasks
-                console.log('[ExamGate] will call initSubmitModalWithTaskList()');
-
-                initSubmitModalWithTaskList(tasks);
-                wireRunButton();
-                (window as any).taskCount = tasks.length;
-
+                applyTasksAndUnlock(tasks);
                 // Stop polling
                 return true;
             } else {
@@ -477,8 +504,25 @@ async function checkExamGateAndInitialize() {
             const started = await checkExamStatus();
             if (started) {
                 clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVisible);
             }
         }, pollInterval);
+
+        // Belt-and-braces: this webview sits in a hidden (display:none) tab
+        // whenever the student is on Informações/Prova, which Chromium background-
+        // throttles — timers and in-flight requests can be delayed or cancelled.
+        // Re-check immediately when the tab becomes visible again instead of
+        // waiting for the next (possibly delayed) interval tick.
+        const onVisible = async () => {
+            if (document.visibilityState !== 'visible') return;
+            console.log('[ExamGate] Tab became visible - checking immediately');
+            const started = await checkExamStatus();
+            if (started) {
+                clearInterval(intervalId);
+                document.removeEventListener('visibilitychange', onVisible);
+            }
+        };
+        document.addEventListener('visibilitychange', onVisible);
     }
 }
 

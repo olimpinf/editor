@@ -12,7 +12,7 @@
     }
 
     body {
-      font-family: 'Noto Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -36,12 +36,12 @@
       font-size: 0.95em;
       cursor: pointer;
       white-space: nowrap;
-      border-bottom: 4px solid transparent;
+      border-bottom: 3px solid transparent;
       transition: background 0.15s, color 0.15s;
     }
 
     .outer-tab-bar .tab-btn:hover {
-      background: #597a96;
+      background: #777;
       color: #fff;
     }
 
@@ -70,7 +70,7 @@
     .inner-tab-bar {
       display: flex;
       background: #e8e8e8;
-      border-bottom: 4px solid #ccc;
+      border-bottom: 2px solid #ccc;
       position: sticky;
       top: 0;
       z-index: 10;
@@ -106,35 +106,6 @@
 
     .inner-tab-panel.active {
       display: block;
-    }
-
-    /* ── Calculadora (iframe) ── */
-    #calculadora {
-      height: 100%;
-    }
-
-    #calculadora iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    /* ── Documentação: C++ / Python reference (iframe) ── */
-    #docs.tab-panel.active {
-      height: 100%;
-    }
-
-    #docs .inner-tab-panel.active {
-      height: 100%;
-    }
-
-    #lang-cpp iframe,
-    #lang-python iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: none;
     }
 
     /* ── Info page (sans-serif section) ── */
@@ -230,10 +201,11 @@
 
     /* ── Folha de Informações section (serif) ── */
     .fi {
-      font-family: 'Noto Sans', sans-serif;
+      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
       font-size: 15px;
       line-height: 1.6;
       color: #111;
+      max-width: 800px;
       margin: 0 auto;
       padding: 40px 48px 60px;
       background: #fff;
@@ -409,10 +381,11 @@
 
     /* ── Documentação section ── */
     .docs-content {
-      font-family: 'Noto Sans', sans-serif;
+      font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
       font-size: 15px;
       line-height: 1.6;
       color: #111;
+      max-width: 800px;
       margin: 0 auto;
       padding: 32px 48px 60px;
     }
@@ -506,8 +479,7 @@
   <div class="outer-tab-bar">
     <button class="tab-btn active" data-tab="principal">Principal</button>
     <button class="tab-btn" data-tab="manual-editor">Manual EditorOBI</button>
-    <button class="tab-btn" data-tab="calculadora">Calculadora</button>
-    <button class="tab-btn" data-tab="manual-cms">Informações Sobre a Prova</button>
+    <button class="tab-btn" data-tab="manual-cms">Manual CMS</button>
     <button class="tab-btn" data-tab="docs">Documentação</button>
   </div>
 
@@ -721,15 +693,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         TAB 3: CALCULADORA
-         ══════════════════════════════════════════════════════ -->
-    <div class="tab-panel" id="calculadora">
-      <iframe src="calculadora/index.html" title="Calculadora"></iframe>
-    </div><!-- /#calculadora -->
-
-
-    <!-- ══════════════════════════════════════════════════════
-         TAB 4: MANUAL CMS (Folha de Informações)
+         TAB 3: MANUAL CMS (Folha de Informações)
          ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="manual-cms">
       <div class="fi" id="folha-informacoes">
@@ -798,7 +762,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         TAB 5: DOCUMENTAÇÃO (inner tabs per language)
+         TAB 4: DOCUMENTAÇÃO (inner tabs per language)
          ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="docs">
 
@@ -861,7 +825,7 @@
             <tr><td class="lineno">4</td><td class="code">int val1, val2;</td></tr>
             <tr><td class="lineno">5</td><td class="code"></td></tr>
             <tr><td class="lineno">6</td><td class="code">int main(void) {</td></tr>
-            <tr><td class="lineno">7</td><td class="code">    // lê as duas variáveis</td></tr>
+            <tr><td class="lineno">7</td><td class="code">    // lê as duas vals</td></tr>
             <tr><td class="lineno">8</td><td class="code">    cin &gt;&gt; val1 &gt;&gt; val2;</td></tr>
             <tr><td class="lineno">9</td><td class="code"></td></tr>
             <tr><td class="lineno">10</td><td class="code">    // escreve o resultado</td></tr>
@@ -885,10 +849,7 @@
           <ul>
             <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize qualquer classe ou função padrão para leitura, como por exemplo <code>Scanner</code> ou <code>BufferedReader</code>, e qualquer classe ou função padrão para escrita, como por exemplo <code>System.out.println</code> ou <code>BufferedWriter</code>.</li>
             <li>Não use a diretiva <code>package</code>.</li>
-	  </ul>
-	  <h3>Nome da classe principal</h3>
-	  <ul>
-            <li>Na submissão (botão Submeter), o nome de sua classe principal pública e do seu arquivo <code>.java</code> deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no ambiente de prova. Por exemplo, se o identificador da tarefa é "festa", o arquivo deve se chamar <code>festa.java</code> e a classe principal pública deve se chamar <code>festa</code>.</li>
+            <li>O nome de sua classe principal pública e do seu arquivo <code>.java</code> deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no ambiente de prova. Por exemplo, se o identificador da tarefa é "festa", o arquivo deve se chamar <code>festa.java</code> e a classe principal pública deve se chamar <code>festa</code>.</li>
           </ul>
           <h4>Um pequeno exemplo de programa em Java</h4>
           <p>O exemplo abaixo lê dois valores inteiros e imprime o maior valor.</p>
@@ -912,78 +873,6 @@
             <tr><td class="lineno">17</td><td class="code">    }</td></tr>
             <tr><td class="lineno">18</td><td class="code">}</td></tr>
           </table></div>
-
-
-          <h3>Entrada e saída rápidas</h3>
-          <p><code>Scanner</code> é simples, mas lento. Para entradas grandes (dezenas de milhares de números ou mais), prefira <code>BufferedReader</code> com <code>StringTokenizer</code> — a diferença de tempo pode ser a diferença entre passar ou estourar o tempo limite.</p>
-          <div class="code-block"><table>
-            <tr><td class="lineno">1</td><td class="code">import java.io.BufferedReader;</td></tr>
-            <tr><td class="lineno">2</td><td class="code">import java.io.InputStreamReader;</td></tr>
-            <tr><td class="lineno">3</td><td class="code">import java.util.StringTokenizer;</td></tr>
-            <tr><td class="lineno">4</td><td class="code"></td></tr>
-            <tr><td class="lineno">5</td><td class="code">public class tarefa {</td></tr>
-            <tr><td class="lineno">6</td><td class="code">    public static void main(String[] args) throws Exception {</td></tr>
-            <tr><td class="lineno">7</td><td class="code">        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));</td></tr>
-            <tr><td class="lineno">8</td><td class="code">        int n = Integer.parseInt(br.readLine().trim());</td></tr>
-            <tr><td class="lineno">9</td><td class="code"></td></tr>
-            <tr><td class="lineno">10</td><td class="code">        // lê n inteiros separados por espaço numa mesma linha</td></tr>
-            <tr><td class="lineno">11</td><td class="code">        StringTokenizer st = new StringTokenizer(br.readLine());</td></tr>
-            <tr><td class="lineno">12</td><td class="code">        int[] v = new int[n];</td></tr>
-            <tr><td class="lineno">13</td><td class="code">        for (int i = 0; i &lt; n; i++)</td></tr>
-            <tr><td class="lineno">14</td><td class="code">            v[i] = Integer.parseInt(st.nextToken());</td></tr>
-            <tr><td class="lineno">15</td><td class="code"></td></tr>
-            <tr><td class="lineno">16</td><td class="code">        // saída volumosa: monte tudo num StringBuilder e imprima uma vez só</td></tr>
-            <tr><td class="lineno">17</td><td class="code">        StringBuilder sb = new StringBuilder();</td></tr>
-            <tr><td class="lineno">18</td><td class="code">        for (int x : v) sb.append(x).append('\n');</td></tr>
-            <tr><td class="lineno">19</td><td class="code">        System.out.print(sb);</td></tr>
-            <tr><td class="lineno">20</td><td class="code">    }</td></tr>
-            <tr><td class="lineno">21</td><td class="code">}</td></tr>
-          </table></div>
-          <p>Para entradas menores, <code>Scanner</code> é mais direto:</p>
-          <div class="code-block"><table>
-            <tr><td class="lineno">1</td><td class="code">import java.util.Scanner;</td></tr>
-            <tr><td class="lineno">2</td><td class="code"></td></tr>
-            <tr><td class="lineno">3</td><td class="code">public class tarefa {</td></tr>
-            <tr><td class="lineno">4</td><td class="code">    public static void main(String[] args) {</td></tr>
-            <tr><td class="lineno">5</td><td class="code">        Scanner in = new Scanner(System.in);</td></tr>
-            <tr><td class="lineno">6</td><td class="code">        int a = in.nextInt();</td></tr>
-            <tr><td class="lineno">7</td><td class="code">        int b = in.nextInt();</td></tr>
-            <tr><td class="lineno">8</td><td class="code">        System.out.println(Math.max(a, b));</td></tr>
-            <tr><td class="lineno">9</td><td class="code">    }</td></tr>
-            <tr><td class="lineno">10</td><td class="code">}</td></tr>
-          </table></div>
-          <p>Outros métodos úteis do <code>Scanner</code>: <code>nextLong()</code>, <code>nextDouble()</code>, <code>next()</code> (uma palavra), <code>nextLine()</code> (linha inteira), <code>hasNext()</code> (para ler até o fim da entrada, quando não se sabe quantos valores virão).</p>
-
-          <h3>Coleções mais usadas</h3>
-          <ul>
-            <li><code>ArrayList&lt;Integer&gt; lista = new ArrayList&lt;&gt;();</code> — lista de tamanho dinâmico. <code>lista.add(x)</code>, <code>lista.get(i)</code>, <code>lista.size()</code>.</li>
-            <li><code>HashMap&lt;String, Integer&gt; mapa = new HashMap&lt;&gt;();</code> — <code>mapa.put(k, v)</code>, <code>mapa.get(k)</code>, <code>mapa.getOrDefault(k, 0)</code>, <code>mapa.containsKey(k)</code>.</li>
-            <li><code>HashSet&lt;Integer&gt;</code> — conjunto sem repetição, sem ordem garantida.</li>
-            <li><code>TreeMap</code> / <code>TreeSet</code> — como <code>HashMap</code>/<code>HashSet</code>, porém mantidos em ordem crescente das chaves.</li>
-            <li><code>PriorityQueue&lt;Integer&gt; pq = new PriorityQueue&lt;&gt;();</code> — fila de prioridade (min-heap por padrão, o menor elemento sai primeiro). Para max-heap: <code>new PriorityQueue&lt;&gt;(Collections.reverseOrder())</code>.</li>
-            <li><code>Collections.sort(lista)</code> e <code>Arrays.sort(v)</code> — ordenam em ordem crescente. Para ordem decrescente ou critério customizado, use um <code>Comparator</code>.</li>
-          </ul>
-
-          <h3>Strings</h3>
-          <ul>
-            <li>Compare strings com <code>s1.equals(s2)</code>, <strong>nunca</strong> com <code>==</code> (que compara referências, não conteúdo).</li>
-            <li>Métodos comuns: <code>s.length()</code>, <code>s.charAt(i)</code>, <code>s.substring(i, j)</code>, <code>s.split(" ")</code>, <code>s.trim()</code>.</li>
-            <li>Para montar uma string dentro de um laço, use <code>StringBuilder</code> em vez de concatenar com <code>+</code> repetidamente — concatenar strings em Java cria um novo objeto a cada vez, o que fica lento para muitas repetições.</li>
-          </ul>
-
-          <h3>Matemática</h3>
-          <ul>
-            <li><code>Math.pow(a, b)</code>, <code>Math.sqrt(a)</code>, <code>Math.abs(a)</code>, <code>Math.max(a, b)</code>, <code>Math.min(a, b)</code>, <code>Math.floor(a)</code>, <code>Math.ceil(a)</code>.</li>
-            <li>Cuidado com overflow: a multiplicação de dois <code>int</code> grandes pode estourar mesmo que o resultado caiba num <code>long</code> — nesse caso, converta um dos operandos antes: <code>(long) a * b</code>.</li>
-            <li>Para números que não cabem nem em <code>long</code>, use <code>java.math.BigInteger</code>.</li>
-          </ul>
-
-          <h3>Dicas de desempenho</h3>
-          <ul>
-            <li>Evite <code>Scanner</code> para entradas grandes; prefira <code>BufferedReader</code> com <code>StringTokenizer</code>.</li>
-            <li>Para saída volumosa, monte o resultado num <code>StringBuilder</code> e imprima tudo de uma vez, em vez de várias chamadas a <code>System.out.println</code>.</li>
-            <li>Evite criar objetos desnecessários dentro de laços que executam muitas vezes.</li>
-          </ul>
         </div>
       </div><!-- /#lang-java -->
 

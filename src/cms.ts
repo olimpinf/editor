@@ -1,8 +1,12 @@
 export const CMS_TASK_NAME = "hashedName-d8724aa0b88f985f11";
 
-// Contest identifier — set window.CMS_CONTEST_ID from ExamLock before the editor loads.
+// Contest identifier — ExamLock injects window.CMS_CONTEST_ID asynchronously, well
+// after this module has already been evaluated, so this must be read live on each
+// call rather than captured once at module load (which would always see it unset).
 // 1 = Phase 1 Turn A, 2 = Phase 1 Turn B, etc.
-export const CONTEST_ID: number = (window as any).CMS_CONTEST_ID ?? 2;
+export function contestId(): number {
+    return (window as any).CMS_CONTEST_ID ?? 2;
+}
 
 function examBaseUrl(): string {
     return (window as any).CMS_EXAM_URL || 'https://pj.provas.ic.unicamp.br';
@@ -11,6 +15,56 @@ function examBaseUrl(): string {
 // Single point for all CMS API URLs — change here if the path structure ever changes.
 function cmsApiUrl(path: string): string {
     return `${examBaseUrl()}/api/${path}`;
+}
+
+/**
+ * Transform the raw CMS /api/task_list response body into the format expected
+ * by the submit modal. Shared by cmsTaskList() (normal in-page fetch) and by
+ * the ExamLock-driven external path (see window.__obiApplyExternalTaskList in
+ * editor.ts) — the outer app polls task_list itself, from the main process,
+ * so this must not depend on anything only available inside the fetch call.
+ *
+ * CMS can return different formats:
+ * Format 1: { "tasks": ["task1", "task2", ...] }
+ * Format 2: { "tasks": [{ "name": "task1", "short_name": "t1" }, ...] }
+ * Format 3: { "tasks": [{ "name": "task1" }, ...] }
+ */
+export function transformTaskList(data: any): Array<{ id: string; name: string }> | null {
+    if (!(data && data.tasks && Array.isArray(data.tasks))) {
+        console.error('[transformTaskList] Unexpected data format:', data);
+        return null;
+    }
+
+    const taskArray = data.tasks.map((task: any) => {
+        // If task is a string
+        if (typeof task === 'string') {
+            console.log('[transformTaskList] Task is string:', task);
+            return {
+                id: task,
+                name: task
+            };
+        }
+        // If task is an object with name property
+        else if (typeof task === 'object' && task !== null) {
+            console.log('[transformTaskList] Task is object:', task);
+            const taskId = task.short_name || task.name || task.id || 'unknown';
+            const taskName = task.name || task.short_name || task.id || 'Unknown Task';
+            return {
+                id: taskId,
+                name: taskName
+            };
+        }
+        // Fallback
+        else {
+            console.warn('[transformTaskList] Unexpected task format:', task);
+            return {
+                id: String(task),
+                name: String(task)
+            };
+        }
+    });
+    console.log('[transformTaskList] Formatted tasks:', taskArray);
+    return taskArray;
 }
 
 /**
@@ -36,48 +90,8 @@ export async function cmsTaskList(): Promise<Array<{ id: string; name: string }>
 
         const data = await resp.json();
         console.log('[cmsTaskList] Raw data:', data);
-        
-        // Transform CMS task list into format expected by submit modal
-        // CMS can return different formats:
-        // Format 1: { "tasks": ["task1", "task2", ...] }
-        // Format 2: { "tasks": [{ "name": "task1", "short_name": "t1" }, ...] }
-        // Format 3: { "tasks": [{ "name": "task1" }, ...] }
-        
-        if (data && data.tasks && Array.isArray(data.tasks)) {
-            const taskArray = data.tasks.map((task: any) => {
-                // If task is a string
-                if (typeof task === 'string') {
-                    console.log('[cmsTaskList] Task is string:', task);
-                    return {
-                        id: task,
-                        name: task
-                    };
-                }
-                // If task is an object with name property
-                else if (typeof task === 'object' && task !== null) {
-                    console.log('[cmsTaskList] Task is object:', task);
-                    const taskId = task.short_name || task.name || task.id || 'unknown';
-                    const taskName = task.name || task.short_name || task.id || 'Unknown Task';
-                    return {
-                        id: taskId,
-                        name: taskName
-                    };
-                }
-                // Fallback
-                else {
-                    console.warn('[cmsTaskList] Unexpected task format:', task);
-                    return {
-                        id: String(task),
-                        name: String(task)
-                    };
-                }
-            });
-            console.log('[cmsTaskList] Formatted tasks:', taskArray);
-            return taskArray;
-        }
-        
-        console.error('[cmsTaskList] Unexpected data format:', data);
-        return null;
+
+        return transformTaskList(data);
 
     } catch (err) {
         console.error("[cmsTaskList] Error during task list retrieval:", err);
