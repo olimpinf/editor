@@ -1,7 +1,7 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, transformTaskList } from './cms';
-import { initSubmitModalWithTasks, initSubmitModalWithTaskList } from './submit-modal';
+import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
 import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
 
@@ -410,12 +410,36 @@ function wireRunButton(): void {
     }
 }
 
+// 'fixed'  — Testar always runs against the hidden "tarefa" task (wireRunButton).
+// 'choose' — Testar opens a task picker, same as Submeter (initTestModalWithTaskList).
+// Set via AppConfig.testTaskSelection in index.html, per exam.
+function testTaskSelectionMode(): 'fixed' | 'choose' {
+    return (window as any).AppConfig?.testTaskSelection === 'choose' ? 'choose' : 'fixed';
+}
+
+function wireTestButtonForTasks(tasks: Array<{ id: string; name: string }>): void {
+    if (testTaskSelectionMode() === 'choose') {
+        initTestModalWithTaskList(tasks);
+    } else {
+        wireRunButton();
+    }
+}
+
 async function checkExamGateAndInitialize() {
     if (!window.AppConfig.examGate?.enabled) {
         // Development mode: no exam gate, just initialize normally
         console.log('[ExamGate] Disabled - initializing normally');
         await initSubmitModalWithTasks();
-        wireRunButton();
+        if (testTaskSelectionMode() === 'choose') {
+            const tasks = await cmsTaskList();
+            if (tasks && tasks.length > 0) {
+                initTestModalWithTaskList(tasks);
+            } else {
+                wireRunButton(); // fallback if no tasks available
+            }
+        } else {
+            wireRunButton();
+        }
         return;
     }
 
@@ -449,7 +473,7 @@ async function checkExamGateAndInitialize() {
 
         console.log('[ExamGate] will call initSubmitModalWithTaskList()');
         initSubmitModalWithTaskList(tasks);
-        wireRunButton();
+        wireTestButtonForTasks(tasks);
         (window as any).taskCount = tasks.length;
     };
 
