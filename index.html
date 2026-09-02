@@ -4,10 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Editor-OBI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
-	  rel="stylesheet"/>
+    <link href="/editor/fonts/noto-sans/noto-sans.css" rel="stylesheet"/>
     <link rel="stylesheet" data-name="vs/editor/editor.main"
-	  href="https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs/editor/editor.main.css"/>
+	  href="/editor/cdn/monaco/0.54.0/min/vs/editor/editor.main.css"/>
   </head>
   <body>
 
@@ -315,10 +314,10 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
 
     <script>
       window.AppConfig = {
-	  examGate: { enabled: true },
-	  openExamUrl: true,
-	  //useLSP: false;
-	  useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
+	  examGate: { enabled: false },
+	  openExamUrl: false,
+	  useLSP: false;
+	  //useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
       };
 
       (function(){
@@ -334,9 +333,9 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
     </script>
 
     <!-- Monaco Editor -->
-    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs/loader.js"></script>
+    <script src="/editor/cdn/monaco/0.54.0/min/vs/loader.js"></script>
     <script>
-      require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs' } });
+      require.config({ paths: { 'vs': '/editor/cdn/monaco/0.54.0/min/vs' } });
       require(['vs/editor/editor.main'], function() {
 	  // Hide overlay once Monaco has initialized
 	  document.getElementById('loading-overlay')?.classList.add('hidden');
