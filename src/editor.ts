@@ -420,14 +420,14 @@ async function checkExamGateAndInitialize() {
     }
 
     console.log('[ExamGate] Enabled - checking if exam has started');
-    
+
     // Block the editor initially
 	    console.log('[ExamGate] will call setEditorReadOnly(true)');
 
-    //setEditorReadOnly(true);
+    setEditorReadOnly(true);
 		    console.log('[ExamGate] will call showExamGateMessage()');
 
-    showExamGateMessage('Aguardando você iniciar a prova.<br>Para iniciar a prova vá para a aba Prova<br/> e clique no botão Iniciar.');
+    showExamGateMessage('Verificando se você já iniciou a prova.<br>Para iniciar a prova vá para a aba Prova<br/> e clique no botão Iniciar.');
 
     console.log('[ExamGate] Will poll exam status using cmsTaskList()');
 
@@ -444,7 +444,7 @@ async function checkExamGateAndInitialize() {
         console.log('[ExamGate] Exam started - tasks available:', tasks);
 
         // Unlock the editor
-        //setEditorReadOnly(false);
+        setEditorReadOnly(false);
         hideExamGateMessage();
 
         console.log('[ExamGate] will call initSubmitModalWithTaskList()');
@@ -526,18 +526,28 @@ async function checkExamGateAndInitialize() {
     }
 }
 
-// Helper function to set editor read-only state
-// function setEditorReadOnly(readonly: boolean) {
-//     const currentTab = tabsState.tabs.get(tabsState.activeTabId);
-//     if (currentTab?.editor) {
-//         currentTab.editor.updateOptions({ readOnly: readonly });
-//     }
-// }
+// Helper function to set editor read-only state.
+// window.editor is a single shared Monaco instance (tabs swap models/snapshots
+// in and out of it — see loadTabIntoUI), not one editor per tab, so this needs
+// no per-tab lookup.
+function setEditorReadOnly(readonly: boolean) {
+    if (window.editor) {
+        window.editor.updateOptions({ readOnly: readonly });
+    }
+}
+
+// Keydown handler currently trapping Tab inside the exam-gate overlay, if one
+// is showing. Tracked here so hideExamGateMessage() can remove it again.
+let examGateTrapKeydown: ((e: KeyboardEvent) => void) | null = null;
 
 // Helper function to show exam gate message
 function showExamGateMessage(message: string) {
     const overlay = document.createElement('div');
     overlay.id = 'exam-gate-overlay';
+    // tabindex="-1": focusable via .focus() below, but not reachable via Tab
+    // from elsewhere — it's not meant to be part of the normal tab order,
+    // just to hold focus hostage while it's up.
+    overlay.tabIndex = -1;
     overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -553,18 +563,44 @@ function showExamGateMessage(message: string) {
         z-index: 10000;
         font-size: 18px;
 	text-align: center;
+	outline: none;
     `;
     overlay.innerHTML = `
         <div class="loading-spinner"></div>
         <div style="margin-top: 20px;">${message}</div>
     `;
     document.body.appendChild(overlay);
+
+    // Defense-in-depth alongside setEditorReadOnly(true) — which is what
+    // actually blocks edits, regardless of focus. This is just a best-effort
+    // nudge to also stop focus from reaching the editor in the first place:
+    // grab focus once now (covers Monaco already having it at this instant),
+    // and swallow Tab while the overlay itself holds focus (covers the
+    // student tabbing past it). Deliberately NOT re-grabbing focus on every
+    // future blur/focusout — this webview sits hidden (display:none) behind
+    // Informações/Prova for most of the exam, and a hidden host repeatedly
+    // firing focusout is exactly the kind of thing that must not turn into a
+    // recurring loop running behind the scenes while the gate is still
+    // waiting for CMS. readOnly is the real guarantee; this is only extra.
+    try {
+        overlay.focus();
+        examGateTrapKeydown = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+            }
+        };
+        overlay.addEventListener('keydown', examGateTrapKeydown);
+    } catch (err) {
+        console.error('[ExamGate] Focus trap setup failed (non-fatal, readOnly still applies):', err);
+    }
 }
 
 // Helper function to hide exam gate message
 function hideExamGateMessage() {
     const overlay = document.getElementById('exam-gate-overlay');
     if (overlay) {
+        if (examGateTrapKeydown) overlay.removeEventListener('keydown', examGateTrapKeydown);
+        examGateTrapKeydown = null;
         overlay.remove();
     }
 }
