@@ -66,6 +66,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Wait for window.username to be injected
     async function waitForUsername(timeout = 5000) {
+        if (!isOpenExamUrlEnabled()) {
+            // Local/dev run (AppConfig.openExamUrl === false): nothing will
+            // ever inject window.username here, so don't wait on it.
+            return null;
+        }
         const startTime = Date.now();
         while (!window.username) {
             if (Date.now() - startTime > timeout) {

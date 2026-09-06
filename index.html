@@ -4,9 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Editor-OBI</title>
-    <link rel="stylesheet" href="%BASE_URL%fonts/noto-sans/noto-sans.css"/>
+    <!-- Plain relative paths (matching how img src= is done elsewhere in this
+         file), not Vite's %BASE_URL% placeholder: Vite 5.4.21's dev server
+         (`npm run dev`) doubles any base-rooted path here to
+         '/editor/editor/...' (confirmed via curl -- the production build via
+         `vite build` substitutes %BASE_URL% correctly, but a plain relative
+         path resolves correctly in both, via normal browser URL resolution). -->
+    <link rel="stylesheet" href="fonts/noto-sans/noto-sans.css"/>
     <link rel="stylesheet" data-name="vs/editor/editor.main"
-	  href="%BASE_URL%cdn/monaco/0.54.0/min/vs/editor/editor.main.css"/>
+	  href="cdn/monaco/0.54.0/min/vs/editor/editor.main.css"/>
   </head>
   <body>
 
@@ -314,8 +320,8 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
 
     <script>
       window.AppConfig = {
-	  examGate: { enabled: true },
-	  openExamUrl: true,
+	  examGate: { enabled: false },
+	  openExamUrl: false,
 	  //useLSP: false;
 	  useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
       };
@@ -333,9 +339,10 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
     </script>
 
     <!-- Monaco Editor (self-hosted — run scripts/fetch-cdn.sh to populate public/cdn/) -->
-    <script src="%BASE_URL%cdn/monaco/0.54.0/min/vs/loader.js"></script>
+    <!-- Plain relative path here too, for the same reason as above. -->
+    <script src="cdn/monaco/0.54.0/min/vs/loader.js"></script>
     <script>
-      require.config({ paths: { 'vs': '%BASE_URL%cdn/monaco/0.54.0/min/vs' } });
+      require.config({ paths: { 'vs': 'cdn/monaco/0.54.0/min/vs' } });
       require(['vs/editor/editor.main'], function() {
 	  // Hide overlay once Monaco has initialized
 	  document.getElementById('loading-overlay')?.classList.add('hidden');
