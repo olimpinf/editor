@@ -7,6 +7,7 @@
 # Produces:
 #   public/cdn/monaco/0.54.0/min/vs/  ← served at /editor/cdn/monaco/…
 #   public/fonts/noto-sans/            ← served at /editor/fonts/noto-sans/…
+#   public/media/                      ← served at /editor/media/… (Blockly toolbar icons)
 #   s3://editor-obi-static/shared/pdfjs/3.11.174/  ← for CMS task_description.html
 
 set -e
@@ -75,7 +76,25 @@ else
     echo "Noto Sans already in public/fonts/ — skipping."
 fi
 
-# ─── 3. PDF.js ────────────────────────────────────────────────────────────────
+# ─── 3. Blockly media (trashcan/zoom/etc. icons) ──────────────────────────────
+
+BLOCKLY_MEDIA_DST="$PROJECT_DIR/public/media"
+
+if [ ! -d "$BLOCKLY_MEDIA_DST" ]; then
+    BLOCKLY_MEDIA_SRC="$PROJECT_DIR/node_modules/blockly/media"
+    if [ ! -d "$BLOCKLY_MEDIA_SRC" ]; then
+        echo "ERROR: node_modules/blockly not found. Run 'npm install' first." >&2
+        exit 1
+    fi
+    echo "Copying Blockly UI media from node_modules..."
+    mkdir -p "$BLOCKLY_MEDIA_DST"
+    cp -r "$BLOCKLY_MEDIA_SRC/." "$BLOCKLY_MEDIA_DST/"
+    echo "  Done. ($(du -sh "$BLOCKLY_MEDIA_DST" | cut -f1))"
+else
+    echo "Blockly media already in public/media/ — skipping."
+fi
+
+# ─── 4. PDF.js ────────────────────────────────────────────────────────────────
 # PDF.js is used only by the CMS template, not by the editor build.
 # Upload directly to S3 so it's available at /shared/pdfjs/…
 

@@ -66,7 +66,7 @@
       display: block;
     }
 
-    /* ── Inner tab bar (Documentação) ── */
+    /* ── Inner tab bar (Exemplos) ── */
     .inner-tab-bar {
       display: flex;
       background: #e8e8e8;
@@ -120,7 +120,7 @@
       border: none;
     }
 
-    /* ── Documentação: C++ / Python reference (iframe) ── */
+    /* ── Examplos: C++ / Python reference (iframe) ── */
     #docs.tab-panel.active {
       height: 100%;
     }
@@ -407,7 +407,7 @@
       line-height: 1.9;
     }
 
-    /* ── Documentação section ── */
+    /* ── Exemplos section ── */
     .docs-content {
       font-family: 'Noto Sans', sans-serif;
       font-size: 15px;
@@ -498,6 +498,20 @@
       padding: 1px 4px;
       border-radius: 3px;
     }
+
+    .framed-box {
+      display: inline-block;
+      border: 1px solid #333;
+      padding: 5px;
+      background-color: #fff;
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+    
+    .framed-box img {
+      display: block;
+      max-width: 100%;
+      width: auto;
+    }    
   </style>
 </head>
 <body>
@@ -506,9 +520,9 @@
   <div class="outer-tab-bar">
     <button class="tab-btn active" data-tab="principal">Principal</button>
     <button class="tab-btn" data-tab="manual-editor">Manual EditorOBI</button>
-    <button class="tab-btn" data-tab="calculadora">Calculadora</button>
     <button class="tab-btn" data-tab="manual-cms">Informações Sobre a Prova</button>
-    <button class="tab-btn" data-tab="docs">Documentação</button>
+    <button class="tab-btn" data-tab="docs">Exemplos</button>
+    <button class="tab-btn" data-tab="calculadora">Calculadora</button>
   </div>
 
   <!-- ── Scrollable content ── -->
@@ -590,7 +604,7 @@
 
         <p>Com o EditorOBI você codifica, testa e submete para correção a sua solução para as tarefas da prova da OBI.</p>
 
-        <div class="center">
+        <div class="framed-box">
           <img src="editor/img/editor-all.png" width="95%" align="center">
         </div>
 
@@ -613,7 +627,7 @@
         <p>Abaixo dos painéis há ainda uma barra de status, com um texto indicador de status mostrado do lado direito.</p>
 
         <h2>Painel Código</h2>
-        <div class="center">
+        <div class="framed-box">
           <img src="editor/img/editor-codigo.png" width="95%" align="center">
         </div>
 
@@ -627,7 +641,7 @@
         <p>Você pode também editar o nome de uma aba existente, clicando duas vezes no nome da aba.</p>
 
         <p>A barra de ferramentas do Painel Código contém sete botões. Da esquerda para a direita, os botões são:</p>
-        <div class="center">
+        <div class="framed-box">
           <img src="editor/img/editor-bar-codigo.png" width="95%" align="center">
         </div>
 
@@ -721,15 +735,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         TAB 3: CALCULADORA
-         ══════════════════════════════════════════════════════ -->
-    <div class="tab-panel" id="calculadora">
-      <iframe src="calculadora/index.html" title="Calculadora"></iframe>
-    </div><!-- /#calculadora -->
-
-
-    <!-- ══════════════════════════════════════════════════════
-         TAB 4: MANUAL CMS (Folha de Informações)
+         TAB 3: MANUAL CMS (Folha de Informações)
          ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="manual-cms">
       <div class="fi" id="folha-informacoes">
@@ -798,7 +804,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         TAB 5: DOCUMENTAÇÃO (inner tabs per language)
+         TAB 4: Exemplos (inner tabs per language)
          ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="docs">
 
@@ -808,12 +814,12 @@
         <button class="inner-tab-btn" data-inner-tab="lang-cpp">C++</button>
         <button class="inner-tab-btn" data-inner-tab="lang-java">Java</button>
         <button class="inner-tab-btn" data-inner-tab="lang-python">Python</button>
+        <button class="inner-tab-btn" data-inner-tab="lang-blockly">Blockly</button>
       </div>
 
       <!-- C -->
       <div class="inner-tab-panel active" id="lang-c">
         <div class="docs-content">
-          <h2>C</h2>
           <p>Para submeter suas soluções em C, você deve seguir as seguintes instruções:</p>
           <ul>
             <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize por exemplo a função <code>scanf</code> para ler da entrada padrão e a função <code>printf</code> para escrever na saída padrão.</li>
@@ -846,7 +852,6 @@
       <!-- C++ -->
       <div class="inner-tab-panel" id="lang-cpp">
         <div class="docs-content">
-          <h2>C++</h2>
           <p>Para submeter suas soluções em C++, você deve seguir as seguintes instruções:</p>
           <ul>
             <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize por exemplo <code>cin</code> ou a função <code>scanf</code> para ler da entrada padrão e <code>cout</code> ou a função <code>printf</code> para escrever na saída padrão.</li>
@@ -880,7 +885,6 @@
       <!-- Java -->
       <div class="inner-tab-panel" id="lang-java">
         <div class="docs-content">
-          <h2>Java</h2>
           <p>Para submeter suas soluções em Java, você deve seguir as seguintes instruções:</p>
           <ul>
             <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão. Utilize qualquer classe ou função padrão para leitura, como por exemplo <code>Scanner</code> ou <code>BufferedReader</code>, e qualquer classe ou função padrão para escrita, como por exemplo <code>System.out.println</code> ou <code>BufferedWriter</code>.</li>
@@ -888,7 +892,9 @@
 	  </ul>
 	  <h3>Nome da classe principal</h3>
 	  <ul>
-            <li>Na submissão (botão Submeter), o nome de sua classe principal pública e do seu arquivo <code>.java</code> deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no ambiente de prova. Por exemplo, se o identificador da tarefa é "festa", o arquivo deve se chamar <code>festa.java</code> e a classe principal pública deve se chamar <code>festa</code>.</li>
+            <li>Na submissão (botão Submeter), o nome de sua classe principal pública deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no enunciado da tarefa. Por exemplo, se o identificador da tarefa é "festa", a classe principal pública deve se chamar <code>festa</code>.</li>
+            <li>Nas execuções para teste de sua solução (botão Executar), o nome de sua classe principal pública deve ser obrigatoriamente <code>tarefa.java</code> deve ser obrigatoriamente o identificador da tarefa com todas as letras em minúsculo, sem acento. O identificador da tarefa é o nome que aparece entre parênteses no título da tarefa no ambiente de prova. Por exemplo, se o identificador da tarefa é "festa", o arquivo deve se chamar <code>festa.java</code> e a classe principal pública deve se chamar <code>festa</code>.</li>
+	    <li>O nome da aba (por exemplo <code>tarefa.java</code>) não é utilizado pelo sistema e serve apenas como identificador da aba; você pode usar qualquer nome para o nome da aba.
           </ul>
           <h4>Um pequeno exemplo de programa em Java</h4>
           <p>O exemplo abaixo lê dois valores inteiros e imprime o maior valor.</p>
@@ -915,7 +921,7 @@
 
 
           <h3>Entrada e saída rápidas</h3>
-          <p><code>Scanner</code> é simples, mas lento. Para entradas grandes (dezenas de milhares de números ou mais), prefira <code>BufferedReader</code> com <code>StringTokenizer</code> — a diferença de tempo pode ser a diferença entre passar ou estourar o tempo limite.</p>
+          <p><code>Scanner</code> é simples de usar, mas lento. Para entradas grandes (dezenas de milhares de números ou mais), use <code>BufferedReader</code> com <code>StringTokenizer</code> — a diferença de tempo pode ser a diferença entre a solução ganhar todos os pontos ou estourar o tempo limite de execução.</p>
           <div class="code-block"><table>
             <tr><td class="lineno">1</td><td class="code">import java.io.BufferedReader;</td></tr>
             <tr><td class="lineno">2</td><td class="code">import java.io.InputStreamReader;</td></tr>
@@ -990,13 +996,12 @@
       <!-- Python -->
       <div class="inner-tab-panel" id="lang-python">
         <div class="docs-content">
-          <h2>Python</h2>
           <p>Para submeter suas soluções em Python, você deve seguir as seguintes instruções:</p>
           <ul>
             <li>A entrada de dados é feita pela entrada padrão, a saída deve ser feita na saída padrão.</li>
             <li>Ao usar a função <code>input()</code> para ler a entrada, não use o parâmetro que escreve uma cadeia de caracteres, ou seja não use por exemplo assim: <code>input('Entre com o valor:')</code>. Isso faz com que a cadeia de caracteres "Entre com o valor:" seja escrita na saída do programa, fazendo com que a saída seja diferente do que o mostrado no exemplo do enunciado da tarefa.</li>
           </ul>
-          <h4>Um pequeno exemplo de programa em Python</h4>
+          <h4>Um exemplo de programa em Python</h4>
           <p>O exemplo abaixo lê dois valores inteiros dados em duas linhas e imprime o maior valor.</p>
           <div class="code-block"><table>
             <tr><td class="lineno">1</td><td class="code"># exemplo de solucao em Python3</td></tr>
@@ -1011,10 +1016,53 @@
             <tr><td class="lineno">10</td><td class="code">else:</td></tr>
             <tr><td class="lineno">11</td><td class="code">    print(val2)</td></tr>
           </table></div>
+          <h4>Outro exemplo de programa em Python</h4>
+          <p>O exemplo abaixo lê dois valores inteiros dados <em>em uma única linha, separados por espaço em branco</em> e imprime o maior valor.</p>
+          <div class="code-block"><table>
+            <tr><td class="lineno">1</td><td class="code"># exemplo de solucao em Python3</td></tr>
+            <tr><td class="lineno">2</td><td class="code"></td></tr>
+            <tr><td class="lineno">3</td><td class="code"># le dois valores inteiros</td></tr>
+            <tr><td class="lineno">4</td><td class="code">val1, val2 = input().split()  # NÃO use input("Entre com os valores:").split()</td></tr>
+            <tr><td class="lineno">5</td><td class="code"># transforma os valores em inteiros</tr>
+            <tr><td class="lineno">5</td><td class="code">val1 = int(val1)</td></tr>
+            <tr><td class="lineno">5</td><td class="code">val2 = int(val2)</td></tr>
+            <tr><td class="lineno">6</td><td class="code"></td></tr>
+            <tr><td class="lineno">7</td><td class="code"># escreve o resultado</td></tr>
+            <tr><td class="lineno">8</td><td class="code">if val1 &gt; val2:</td></tr>
+            <tr><td class="lineno">9</td><td class="code">    print(val1)</td></tr>
+            <tr><td class="lineno">10</td><td class="code">else:</td></tr>
+            <tr><td class="lineno">11</td><td class="code">    print(val2)</td></tr>
+          </table></div>
+
         </div>
       </div><!-- /#lang-python -->
 
+      <!-- Blockly -->
+      <div class="inner-tab-panel" id="lang-blockly">
+        <div class="docs-content">
+          <p>No modo Blockly, você monta seu programa encaixando blocos em vez de escrever texto. Os blocos de leitura de entrada estão na categoria E/S da caixa de ferramentas.</p>
+          <ul>
+            <li>O bloco <code>leia número</code> lê uma linha inteira da entrada padrão e a converte para um número inteiro — use um bloco <code>leia número</code> para cada linha de entrada.</li>
+            <li>Para ler vários valores em uma mesma linha, separados por espaço, use o bloco <code>leia linha</code> seguido do bloco <code>separe ... como inteiros</code>, que devolve uma lista com os valores da linha já convertidos para inteiro.</li>
+          </ul>
+          <h4>Um exemplo de programa em Blockly</h4>
+          <p>O exemplo abaixo lê dois valores inteiros dados em duas linhas e imprime o maior valor.</p>
+          <img src="editor/img/exemplo_blockly2linhas.png" alt="Exemplo de programa em Blockly: leitura de dois valores inteiros em duas linhas" style="max-width:100%;">
+          <h4>Outro exemplo de programa em Blockly</h4>
+          <p>O exemplo abaixo lê dois valores inteiros dados <em>em uma única linha, separados por espaço em branco</em> e imprime o maior valor.</p>
+          <img src="editor/img/exemplo_blockly1linha.png" alt="Exemplo de programa em Blockly: leitura de dois valores inteiros em uma única linha, usando separe como inteiros" style="max-width:100%;">
+        </div>
+      </div><!-- /#lang-blockly -->
+
     </div><!-- /#docs -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         TAB 5: CALCULADORA
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="calculadora">
+      <iframe src="calculadora/index.html" title="Calculadora"></iframe>
+    </div><!-- /#calculadora -->
 
   </div><!-- /.content -->
 

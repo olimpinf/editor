@@ -830,19 +830,28 @@ function hideExamGateMessage() {
 		    resizeBlockly();
 		    window.syncLanguageSelectorUI?.();
 		    window.scheduleSaveSnapshot?.();
+
+		    // Update tab label extension immediately (don't wait for debounce)
+		    const activeTabId = window.currentTask;
+		    if (activeTabId) {
+			const s = loadTabSnapshot(activeTabId);
+			if (s) { s.language = lang; saveTabSnapshot(activeTabId, s); }
+			renderTabs(activeTabId);
+		    }
 		    return;
 		}
 
 		// --- Leaving Blockly mode (if active) ---
-		if (blocklyMode) {
-		    blocklyMode = false;
-		    document.getElementById('blockly-div')!.style.display = 'none';
-		    document.getElementById('editor-container')!.style.display = 'block';
-		}
-
-		// Check if current code is non-empty or custom before replacing
-		const currentCode = (window.editor?.getValue() || "").trim();
-		const isTemplate = Object.values(window.templates || {}).some(
+		// Content must be checked BEFORE flipping blocklyMode/clearing state below:
+		// while in Blockly mode, the Monaco model holds whatever stale text was
+		// there before Blockly was entered, not the Blockly workspace's content,
+		// so the "was anything edited" check has to read the Blockly workspace
+		// (via getBlocklyPython()) while we can still tell we were in that mode.
+		const wasBlockly = blocklyMode;
+		const currentCode = wasBlockly
+		    ? getBlocklyPython().trim()
+		    : (window.editor?.getValue() || "").trim();
+		const isTemplate = !wasBlockly && Object.values(window.templates || {}).some(
 		    t => t.trim() === currentCode
 		);
 
@@ -855,6 +864,12 @@ function hideExamGateMessage() {
 			window.syncLanguageSelectorUI?.();
 			return;
 		    }
+		}
+
+		if (wasBlockly) {
+		    blocklyMode = false;
+		    document.getElementById('blockly-div')!.style.display = 'none';
+		    document.getElementById('editor-container')!.style.display = 'block';
 		}
 
 		switchLanguage(lang);
@@ -1832,7 +1847,7 @@ const langMap = { cpp: 'cpp', java: 'java', python: 'python' };
 // Render tabs
 
 const LANG_EXT: Record<string, string> = {
-    c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml',
+    c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky',
 };
 
 function tabDisplayTitle(baseTitle: string, lang: string): string {

@@ -306,7 +306,7 @@ function getSubmitHandler() {
           const tabId = (window as any).currentTask;
           const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
           const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
-          const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+          const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky'};
           const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
           const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso para tarefa ${taskName} (aba ${tabDisplay}). Consulte o resultado na aba Prova.\n`;
           out.display(out.format(msg));
@@ -348,7 +348,7 @@ function getSubmitHandler() {
                 const tabId = (window as any).currentTask;
                 const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
                 const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
-                const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+                const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky'};
                 const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
                 const msg = `\n<b>${out.time()}</b>: Submissão falhou para tarefa ${taskName} (aba ${tabDisplay}) -- sem conexão.\n`;
                 out.display(out.format(msg));
@@ -374,7 +374,7 @@ function getSubmitHandler() {
               const tabId = (window as any).currentTask;
               const tabBase = (window as any).getTabTitle?.(tabId) || tabId || '';
               const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
-              const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'xml'};
+              const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky'};
               const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
               const msg = `\n<b>${out.time()}</b>: Submissão falhou para tarefa ${taskName} (aba ${tabDisplay}) -- sem conexão.\n`;
               out.display(out.format(msg));
