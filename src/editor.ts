@@ -416,7 +416,7 @@ function wireRunButton(): void {
 }
 
 async function checkExamGateAndInitialize() {
-    if (!window.AppConfig.examGate?.enabled) {
+    if (!window.AppConfig?.examGate?.enabled) {
         // Development mode: no exam gate, just initialize normally
         console.log('[ExamGate] Disabled - initializing normally');
         await initSubmitModalWithTasks();
@@ -968,8 +968,8 @@ function hideExamGateMessage() {
 	    if (!btn) return;
 
 	    // cycle order: medium (default) → small → large → medium ...
-	    const sizes = ["small", "medium", "large", "extralarge"];
-	    const fontMap = { small: 10, medium: 12, large: 14, extralarge: 16};
+	    const sizes = ["small", "medium", "large", "extralarge", "superlarge"];
+	    const fontMap = { small: 10, medium: 12, large: 14, extralarge: 16, superlarge: 19};
 	    let idx = 1;
 
 	    // restore saved size if any

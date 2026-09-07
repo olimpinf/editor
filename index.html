@@ -320,10 +320,10 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
 
     <script>
       window.AppConfig = {
-	  examGate: { enabled: false },
-	  openExamUrl: false,
-	  //useLSP: false;
-	  useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
+	  examGate: { enabled: true },
+	  openExamUrl: true,
+	  useLSP: false,
+	  //useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
       };
 
       (function(){
