@@ -120,6 +120,18 @@
       border: none;
     }
 
+    /* ── Stress Test (iframe) ── */
+    #stress-test {
+      height: 100%;
+    }
+
+    #stress-test iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
     /* ── Examplos: C++ / Python reference (iframe) ── */
     #docs.tab-panel.active {
       height: 100%;
@@ -523,6 +535,7 @@
     <button class="tab-btn" data-tab="manual-cms">Informações Sobre a Prova</button>
     <button class="tab-btn" data-tab="docs">Exemplos</button>
     <button class="tab-btn" data-tab="calculadora">Calculadora</button>
+    <button class="tab-btn" data-tab="stress-test">EstressadorOBI</button>
   </div>
 
   <!-- ── Scrollable content ── -->
@@ -640,13 +653,14 @@
 
         <p>Você pode também editar o nome de uma aba existente, clicando duas vezes no nome da aba.</p>
 
-        <p>A barra de ferramentas do Painel Código contém sete botões. Da esquerda para a direita, os botões são:</p>
+        <p>A barra de ferramentas do Painel Código contém oito botões. Da esquerda para a direita, os botões são:</p>
         <div class="framed-box">
           <img src="editor/img/editor-bar-codigo.png" width="95%" align="center">
         </div>
 
         <ul>
           <li>Executar</li>
+          <li>Testar</li>
           <li>Submeter</li>
           <li>Seletor de Linguagem</li>
           <li>Salvar</li>
@@ -659,9 +673,20 @@
         <p>Em cada aba do Painel Código você pode trabalhar em uma linguagem de programação diferente. Para escolher a linguagem usada na aba, use o Seletor de Linguagem; você pode escolher entre C++, Java, Python ou Blockly.</p>
 
         <h3>Executar</h3>
-        <p>Antes de submeter sua solução para correção, você deve testá-la com diversas entradas, para certificar-se de que está correta. Algumas entradas são mostradas nos exemplos dos enunciados das tarefas. Além dessas, você deve também testar com outras entradas que você mesmo crie. Procure testar entradas que constituam situações representativas dos limites definidos na tarefa.</p>
+        <p>O botão Executar roda o seu código diretamente no seu computador, sem passar pelo servidor da OBI. Por isso ele é rápido: não há fila de espera, e você recebe o resultado quase na hora.</p>
 
-        <p>Para testar uma solução, escreva os valores para a entrada de seu programa no Painel Entrada e pressione o botão Executar. O código submetido será o conteúdo do Painel Código, e a entrada para o teste será o conteúdo do Painel Entrada. O resultado da execução do teste será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).</p>
+        <p>Para usar, escreva os valores de entrada no Painel Entrada e pressione o botão Executar. O resultado aparece no Painel Saída.</p>
+
+        <p>Enquanto o programa está rodando, o botão Executar se transforma no botão Parar (fica vermelho). Use-o se o seu programa travar — por exemplo, por causa de um laço infinito no seu código. Mesmo que você não clique em Parar, uma execução que demore mais de 5 segundos é interrompida automaticamente.</p>
+
+        <p><strong>Atenção:</strong> o botão Executar funciona apenas para C, C++, Python e Blockly — não está disponível para Java (o botão fica desabilitado nesse caso). Além disso, o tempo que o seu programa leva para rodar no seu computador não tem relação com o tempo que ele levará no servidor da OBI durante a correção — computadores diferentes têm velocidades diferentes. Use o Executar para descobrir e corrigir erros rapidamente, testando várias entradas diferentes. Para ter uma ideia real do tempo de execução e do uso de memória na correção, use o botão Testar.</p>
+
+        <h3>Testar</h3>
+        <p>O botão Testar envia sua solução para ser executada no servidor da OBI, da mesma forma que ela será executada na correção — com os mesmos limites de tempo e memória. Diferente do Executar, o Testar funciona para todas as linguagens, incluindo Java.</p>
+
+        <p>Para usar, escreva os valores de entrada no Painel Entrada e pressione o botão Testar. O código enviado será o conteúdo do Painel Código, e a entrada será o conteúdo do Painel Entrada. O resultado será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).</p>
+
+        <p>Como o Testar usa o servidor da OBI, ele pode demorar mais que o Executar, principalmente se houver fila de espera de outros competidores. Para encontrar a maioria dos erros no seu código, o Executar já é suficiente e mais rápido — use o Testar principalmente perto do momento de submeter, para confirmar que sua solução roda dentro dos limites de tempo e memória da prova.</p>
 
         <h3>Submeter</h3>
         <p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção, utilizando o botão Submeter.</p>
@@ -1064,6 +1089,13 @@
       <iframe src="calculadora/index.html" title="Calculadora"></iframe>
     </div><!-- /#calculadora -->
 
+    <!-- ══════════════════════════════════════════════════════
+         TAB 6: STRESS TEST
+         ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="stress-test">
+      <iframe src="stress-test/index.html" title="EstressadorOBI"></iframe>
+    </div><!-- /#stress-test -->
+
   </div><!-- /.content -->
 
   <script>
@@ -1085,6 +1117,34 @@
         btn.classList.add('active');
         document.getElementById(btn.dataset.innerTab).classList.add('active');
       });
+    });
+
+    // ── Stress Test gate relay ──
+    // ExamLock's renderer.js calls window.__obiSetExamStarted(bool) once it
+    // learns the exam has started (the same signal that unlocks EditorOBI),
+    // relayed here into the Stress Test iframe via postMessage — this page
+    // has no CMS credentials of its own to poll with. Defaults to "not
+    // started" (locked) so the Stress Test tool fails closed if this page is
+    // ever opened without ExamLock driving it (e.g. a direct browser preview
+    // of this page), unlike the tool's own standalone URL, which stays fully
+    // open since it isn't loaded inside an iframe in that case.
+    window.__obiExamStarted = false;
+
+    function sendExamStateToStressTest() {
+      const iframe = document.querySelector('#stress-test iframe');
+      iframe?.contentWindow?.postMessage({ type: 'obi-exam-started', started: window.__obiExamStarted }, '*');
+    }
+
+    window.__obiSetExamStarted = function (started) {
+      window.__obiExamStarted = !!started;
+      sendExamStateToStressTest();
+    };
+
+    // The iframe may finish loading and attach its listener before or after
+    // __obiSetExamStarted is ever called, so it asks for the current state
+    // itself on startup instead of relying on a single unprompted push.
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'obi-request-exam-state') sendExamStateToStressTest();
     });
   </script>
 

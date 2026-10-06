@@ -1,13 +1,22 @@
 // 1. Import the language client function from our other module.
 import { initLanguageClient } from './language-client';
 import { cmsTaskList, cmsTestSend, cmsTestStatus, CMS_TASK_NAME, transformTaskList } from './cms';
-import { initSubmitModalWithTasks, initSubmitModalWithTaskList } from './submit-modal';
+import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWithTasks, initTestModalWithTaskList } from './submit-modal';
 import { initBackups } from './backups';
 import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
+import { getToolchainBaseUrl } from './local-run-config';
+import { runCppLocalInWorker, runPythonLocalInWorker, stopLocalRun, warmUpLocalRun, LOCAL_RUN_TIMEOUT_MS, type LocalRunOutcome } from './local-run-client';
 
 
 window.runningTabId   = null;
 window.runningLanguage = null;
+
+// __APP_VERSION__ is injected by vite.config.ts's `define`, sourced from
+// package.json -- keeps the title and the status bar's version label in
+// sync with it automatically, no separate manual edit needed when the
+// version bumps.
+document.title = `Editor-OBI v${__APP_VERSION__}`;
+document.getElementById('version-label')!.textContent = `Versão ${__APP_VERSION__}`;
 
 const BLOCKLY_BACKUP_PREFIX = 'BLOCKLY_XML:';
 
@@ -405,14 +414,39 @@ public class tarefa {
 
 	// ======== Exam Gate (poll remote endpoint and lock UI until "ready") ========
 
-function wireRunButton(): void {
+function wireRunButtons(): void {
+    // "Executar"/"Parar": compiles+runs locally via WASM (C/C++/Python), no
+    // CMS round-trip, no queue. Bounded by a short timeout (see
+    // local-run-client.ts) and stoppable mid-run — both guard against a
+    // student's runaway/infinite-loop program hanging the editor (confirmed
+    // by hands-on testing: without them, an infinite loop froze the tab with
+    // no recovery but a reload). Java has no local-run path — see
+    // updateRunButtonForLanguage.
     const runBtn = document.getElementById('run-btn');
     if (runBtn) {
         runBtn.addEventListener('click', (e: Event) => {
             e.preventDefault();
-            (window as any).executeTestRun('tarefa', 'Tarefa');
+            if (localRunActive) {
+                stopLocalExecution();
+            } else {
+                executeLocalRun();
+            }
         });
     }
+    // "Testar": the original CMS-backed test flow, unchanged — gives
+    // students a real sense of CMS execution time/limits before submitting.
+    // Its click listener is attached by the test modal itself (see
+    // submit-modal.ts's initTestModalWithTaskList/initTestModalWithTasks),
+    // which asks which task to test against — same real per-task limits
+    // Submeter uses, no separate hidden "tarefa" task needed in the CMS.
+    updateRunButtonForLanguage();
+
+    // Pre-read the local-run WASM toolchains off disk in the background
+    // now that the student is actually allowed to run code — pays the
+    // one-time disk-read/AV-scan cost (see LOCAL_STARTUP_TIMEOUT_MS in
+    // local-run-client.ts) while they're still reading the problem
+    // statement, rather than during their first timed "Executar" click.
+    warmUpLocalRun(getToolchainBaseUrl('cpp'), getToolchainBaseUrl('python'));
 }
 
 async function checkExamGateAndInitialize() {
@@ -420,7 +454,8 @@ async function checkExamGateAndInitialize() {
         // Development mode: no exam gate, just initialize normally
         console.log('[ExamGate] Disabled - initializing normally');
         await initSubmitModalWithTasks();
-        wireRunButton();
+        await initTestModalWithTasks();
+        wireRunButtons();
         return;
     }
 
@@ -454,7 +489,8 @@ async function checkExamGateAndInitialize() {
 
         console.log('[ExamGate] will call initSubmitModalWithTaskList()');
         initSubmitModalWithTaskList(tasks);
-        wireRunButton();
+        initTestModalWithTaskList(tasks);
+        wireRunButtons();
         (window as any).taskCount = tasks.length;
     };
 
@@ -1197,6 +1233,8 @@ window.syncTaskSelectorUI = function syncTaskSelectorUI() {
 
 // Keep the custom language select UI in sync with the native <select>
 window.syncLanguageSelectorUI = function syncLanguageSelectorUI() {
+    (window as any).updateRunButtonForLanguage?.();
+
     const wrap   = document.getElementById('language-select-wrapper');
     const select = document.getElementById('language-select');
     if (!wrap || !select) return;
@@ -2693,7 +2731,7 @@ async function executeTestRun(taskId: string, taskName?: string): Promise<void> 
     const tabBase = getTabTitle(runningTabId) || runningTabId || '';
     const tabDisplay = tabDisplayTitle(tabBase, selectedLanguage);
     const taskLabel = taskName || taskId;
-    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução iniciada (aba ${tabDisplay})\n`;
+    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução remota iniciada para tarefa ${taskLabel} (aba ${tabDisplay})\n`;
     displayProgramOutput(formatOutput(initMessage, colorEmphasis));
     
     try {
@@ -2740,5 +2778,149 @@ async function executeTestRun(taskId: string, taskName?: string): Promise<void> 
 // Export so submit-modal.ts can use them
 (window as any).executeTestRun = executeTestRun;
 (window as any).getTabTitle = getTabTitle;
+
+// ===== Local run (Executar/Parar): compiles+runs C/C++/Python client-side
+// via WASM, no CMS round-trip, no queue. Runs in a dedicated Worker (see
+// local-run-client.ts / local-run-worker.ts) — the only way to forcibly stop
+// a runaway program (e.g. an infinite loop), which cannot be interrupted
+// from the same thread it's running on. Bounded by LOCAL_RUN_TIMEOUT_MS as
+// an automatic guard against exactly that. Java has no local-run path — its
+// "Executar" button is disabled entirely (see updateRunButtonForLanguage).
+// Blockly (via getBlocklyPython) is treated the same as Python. =====
+
+// Whether a local run is currently in flight — toggles "Executar" into
+// "Parar" (a single button changing role, not two separate buttons) and
+// lets its click handler stop the run instead of starting a new one.
+let localRunActive = false;
+
+function setExecutarButtonRunningState(running: boolean): void {
+    localRunActive = running;
+    const btn = document.getElementById('run-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    btn.textContent = running ? 'Parar' : 'Executar';
+    btn.title = running ? 'Parar execução local' : 'Executar localmente';
+    btn.classList.toggle('stopButton', running);
+}
+
+// Java has no local-run path (see plan) — disable "Executar" entirely for
+// it rather than silently falling through to something else. Called from
+// wireRunButtons() (initial state) and from syncLanguageSelectorUI()
+// (covers every language-change path — manual, programmatic, tab restore).
+function updateRunButtonForLanguage(): void {
+    if (localRunActive) return; // don't fight a run in progress
+    const btn = document.getElementById('run-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
+    btn.disabled = lang === 'java';
+    btn.title = lang === 'java' ? 'Execução local não disponível para Java — use Testar' : 'Executar localmente';
+}
+(window as any).updateRunButtonForLanguage = updateRunButtonForLanguage;
+
+async function executeLocalRun(): Promise<void> {
+    if (runningTabId != null) {
+        await alert(`Há uma execução em andamento, aguarde.`);
+        return;
+    }
+
+    const selectedLanguage = (document.getElementById('language-select') as HTMLSelectElement)?.value || "cpp";
+    if (selectedLanguage === 'java') return; // button should be disabled for this case anyway
+
+    const code = (window as any).getEditorCode?.() || window.editor?.getValue() || '';
+    const input = (document.getElementById('stdin-input') as HTMLTextAreaElement)?.value || "";
+
+    const tabId = getCurrentTaskId();
+    runningTabId = tabId;
+    setRunningTab(tabId);
+    setStatusLabel('Compilando…', { spinning: true, tabId });
+    runningLanguage = selectedLanguage;
+    setExecutarButtonRunningState(true);
+
+    const theme = getGlobalTheme();
+    const colorEmphasis = theme === 'light' ? colorEmphasisTextLight : colorEmphasisTextDark;
+    const colorInfoText = theme === 'light' ? colorInfoTextLight : colorInfoTextDark;
+    const tabBase = getTabTitle(tabId) || tabId || '';
+    const tabDisplay = tabDisplayTitle(tabBase, selectedLanguage);
+    const initMessage = `\n<b>${getLocalizedTime()}</b>: Execução local iniciada (aba ${tabDisplay})\n`;
+    displayProgramOutput(formatOutput(initMessage, colorEmphasis));
+
+    try {
+        const isPython = selectedLanguage === 'python' || selectedLanguage === 'blockly';
+        setStatusLabel('Executando…', { spinning: true, tabId });
+        const outcome = isPython
+            ? await runPythonLocalInWorker(code, input, getToolchainBaseUrl('python'))
+            : await runCppLocalInWorker(tabId, code, input, getToolchainBaseUrl('cpp'));
+        reportLocalRunOutcome(outcome, colorInfoText, tabId);
+    } catch (error: any) {
+        console.warn("Local run failed:", error);
+        setStatusLabel("Execução falhou", { spinning: false, tabId });
+        displayProgramOutput(formatOutput(`Execução falhou: ${error?.message || 'Erro desconhecido'}`, "red"));
+        markRunComplete();
+        setExecutarButtonRunningState(false);
+    }
+}
+
+// Just stops the worker — all UI reporting (including whatever partial
+// output the run had produced) happens in reportLocalRunOutcome() once the
+// still-pending executeLocalRun() call's promise resolves with
+// outcome.stopped, so there's exactly one place that decides what gets shown.
+function stopLocalExecution(): void {
+    stopLocalRun();
+}
+
+// Shows whatever stdout/stderr the run produced — reused by the normal
+// completion path AND by timeout/stop, since local-run-client.ts streams
+// output as it's produced specifically so a forcibly-killed run (a hung
+// infinite loop, stopped via Worker.terminate() with no chance for a final
+// message) can still show what it printed before being killed, the same way
+// the output-size-limit case already does.
+function displayLocalRunOutput(outcome: LocalRunOutcome, colorInfoText: string): void {
+    const initMessage = `${getLocalizedTime()}: `;
+    if (outcome.stdout === "") {
+        displayProgramOutput(formatOutput(initMessage + "O programa não gerou saída.\n", colorInfoText));
+    } else {
+        displayProgramOutput(formatOutput(initMessage + "Saída produzida:", colorInfoText));
+        displayProgramOutput('<pre>' + outcome.stdout + '</pre>');
+    }
+    if (outcome.stderr) {
+        displayProgramOutput(formatOutput("Mensagens de erro:", colorInfoText));
+        displayProgramOutput('<pre class="error">' + outcome.stderr + '</pre>');
+    }
+}
+
+function reportLocalRunOutcome(outcome: LocalRunOutcome, colorInfoText: string, tabId: string): void {
+    setExecutarButtonRunningState(false);
+
+    if (outcome.timedOut || outcome.stopped) {
+        displayLocalRunOutput(outcome, colorInfoText);
+        const message = outcome.timedOut
+            ? `${getLocalizedTime()}: Execução interrompida: limite de ${LOCAL_RUN_TIMEOUT_MS / 1000}s excedido (provável loop infinito).\n`
+            : `${getLocalizedTime()}: Execução interrompida pelo usuário.\n`;
+        displayProgramOutput(formatOutput(message, "red"));
+        setStatusLabel(outcome.timedOut ? 'Tempo limite excedido' : 'Execução interrompida', { spinning: false, tabId });
+        markRunComplete();
+        return;
+    }
+    if (!outcome.ok) {
+        displayProgramOutput(formatOutput(`${getLocalizedTime()}: Erro interno: ${outcome.errorMessage || 'erro desconhecido'}\n`, "red"));
+        setStatusLabel('Execução falhou', { spinning: false, tabId });
+        markRunComplete();
+        return;
+    }
+    if (outcome.compileOk === false) {
+        displayProgramOutput(formatOutput(`${getLocalizedTime()}: Erro de compilação:\n`, colorInfoText));
+        displayProgramOutput('<pre class="error">' + outcome.compileOutput + '</pre>');
+        setStatusLabel('Erro de compilação', { spinning: false, tabId });
+        markRunComplete();
+        return;
+    }
+
+    displayLocalRunOutput(outcome, colorInfoText);
+    const statusText = outcome.exitCode === 0 ? 'Execução terminou sem erros' : `Execução terminou com código ${outcome.exitCode}`;
+    setStatusLabel(statusText, { spinning: false, tabId });
+    markRunComplete();
+}
+
+(window as any).executeLocalRun = executeLocalRun;
+(window as any).stopLocalExecution = stopLocalExecution;
 
 

@@ -8,8 +8,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
     "blockly": "^12.5.1",
+    "browsercc": "^0.1.1",
     "monaco-editor": "^0.54.0",
+    "pyodide": "^314.0.6",
     "vscode-ws-jsonrpc": "^3.5.0"
   },
   "devDependencies": {

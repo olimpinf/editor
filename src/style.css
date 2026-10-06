@@ -324,6 +324,32 @@ pre.error {
     top: 1px;
 }
 
+.bar button.submitButton:disabled {
+    background-color: #cfcfcf;
+    border-color: #b8b8b8;
+    color: #777;
+    cursor: not-allowed;
+}
+
+.bar button.submitButton:disabled:hover {
+    background-color: #cfcfcf;
+}
+
+/* "Executar" toggled into "Parar" while a local run is in progress. */
+.bar button.submitButton.stopButton {
+    background-color: #d42121;
+    border: 1.5px solid #ec2323;
+    color: #fff;
+}
+
+.bar button.submitButton.stopButton:hover {
+    background-color: #c01818;
+}
+
+.bar button.submitButton.stopButton:active {
+    background-color: #a81414;
+}
+
 /* Expanded (fullscreen) pane */
 .pane.expanded {
     position: fixed !important;

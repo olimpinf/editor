@@ -5,9 +5,12 @@
 # deploy.sh calls this automatically.
 #
 # Produces:
-#   public/cdn/monaco/0.54.0/min/vs/  ← served at /editor/cdn/monaco/…
-#   public/fonts/noto-sans/            ← served at /editor/fonts/noto-sans/…
-#   public/media/                      ← served at /editor/media/… (Blockly toolbar icons)
+#   public/cdn/monaco/0.54.0/min/vs/           ← served at /editor/cdn/monaco/…
+#   public/fonts/noto-sans/                     ← served at /editor/fonts/noto-sans/…
+#   public/media/                               ← served at /editor/media/… (Blockly toolbar icons)
+#   public/cdn/wasm-toolchains/{cpp,python}/    ← served at /editor/cdn/wasm-toolchains/…
+#                                                  (local Executar fallback when not running
+#                                                  inside ExamLock — see local-run-config.ts)
 #   s3://editor-obi-static/shared/pdfjs/3.11.174/  ← for CMS task_description.html
 
 set -e
@@ -18,6 +21,8 @@ BUCKET="editor-obi-static"
 
 MONACO_VERSION="0.54.0"   # must match version in node_modules/monaco-editor
 PDFJS_VERSION="3.11.174"  # must match version in task_description.html
+BROWSERCC_VERSION="0.1.1" # must match browsercc in package.json
+PYODIDE_VERSION="314.0.6" # must match pyodide in package.json
 
 # ─── 1. Monaco ────────────────────────────────────────────────────────────────
 
@@ -120,6 +125,40 @@ else
 
     cd "$PROJECT_DIR"
     echo "  Done."
+fi
+
+# ─── 5. WASM toolchains (local Executar: C/C++ via browsercc, Python via Pyodide) ──
+# Fallback path for when the editor runs standalone (outside ExamLock, which
+# instead serves these same files via its bundled 'examlock-assets://'
+# protocol — see exam-app-branch-version2.0/build-scripts/fetch-wasm-toolchains.sh).
+
+WASM_DST="$PROJECT_DIR/public/cdn/wasm-toolchains"
+
+if [ -d "$WASM_DST/cpp" ] && [ -d "$WASM_DST/python" ]; then
+    echo "WASM toolchains already in public/cdn/wasm-toolchains/ — skipping."
+else
+    BROWSERCC_SRC="$PROJECT_DIR/node_modules/browsercc/dist"
+    PYODIDE_SRC="$PROJECT_DIR/node_modules/pyodide"
+    if [ ! -d "$BROWSERCC_SRC" ] || [ ! -d "$PYODIDE_SRC" ]; then
+        echo "ERROR: node_modules/browsercc or node_modules/pyodide not found. Run 'npm install' first." >&2
+        exit 1
+    fi
+
+    echo "Copying browsercc $BROWSERCC_VERSION WASM assets..."
+    mkdir -p "$WASM_DST/cpp"
+    cp "$BROWSERCC_SRC/clang.wasm"   "$WASM_DST/cpp/"
+    cp "$BROWSERCC_SRC/lld.wasm"     "$WASM_DST/cpp/"
+    cp "$BROWSERCC_SRC/sysroot.tar"  "$WASM_DST/cpp/"
+    cp "$BROWSERCC_SRC/stdc++.h.pch" "$WASM_DST/cpp/"
+    echo "  Done. ($(du -sh "$WASM_DST/cpp" | cut -f1))"
+
+    echo "Copying Pyodide $PYODIDE_VERSION WASM assets..."
+    mkdir -p "$WASM_DST/python"
+    cp "$PYODIDE_SRC/pyodide.asm.mjs"   "$WASM_DST/python/"
+    cp "$PYODIDE_SRC/pyodide.asm.wasm"  "$WASM_DST/python/"
+    cp "$PYODIDE_SRC/python_stdlib.zip" "$WASM_DST/python/"
+    cp "$PYODIDE_SRC/pyodide-lock.json" "$WASM_DST/python/"
+    echo "  Done. ($(du -sh "$WASM_DST/python" | cut -f1))"
 fi
 
 # ─── Summary ──────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ let TASK_NAMES: Array<{ id: string; name: string }> = [
 
 // Store the modal instance globally
 let submitModalInstance: SubmitModal | null = null;
+let testModalInstance: SubmitModal | null = null;
 
 
 /**
@@ -30,6 +31,9 @@ export function setTaskNames(tasks: Array<{ id: string; name: string }>): void {
   // If modal already exists, recreate it with new tasks
   if (submitModalInstance) {
     submitModalInstance.updateTasks(tasks);
+  }
+  if (testModalInstance) {
+    testModalInstance.updateTasks(tasks);
   }
 }
 
@@ -498,5 +502,122 @@ export async function initSubmitModalWithTasks(): Promise<void> {
 export function initSubmitModal(): void {
   console.log('[SubmitModal] Initializing with default tasks');
   createSubmitModalInstance();
+}
+
+/**
+ * Get the test callback handler. executeTestRun (in editor.ts) already reads
+ * the current code/input/language itself, so this just forwards the task
+ * chosen in the modal to it.
+ */
+function getTestHandler() {
+  return async (taskId: string, taskName: string) => {
+    console.log('[TestModal] Testing task:', taskId, taskName);
+    try {
+      if (typeof (window as any).executeTestRun === 'function') {
+        await (window as any).executeTestRun(taskId, taskName);
+      } else {
+        console.error('[TestModal] executeTestRun function not found');
+        alert('Função de teste não disponível. Recarregue a página.');
+      }
+    } catch (error) {
+      console.error('[TestModal] Test execution error:', error);
+      alert(`Erro ao executar teste: ${error.message}`);
+    }
+  };
+}
+
+/**
+ * Internal function to create the actual test-modal instance
+ */
+function createTestModalInstance(): void {
+  console.log('[TestModal] Creating modal instance');
+
+  testModalInstance = new SubmitModal({
+    onSubmit: getTestHandler(),
+    title: 'Escolha a tarefa para testar',
+    confirmButtonText: 'Testar',
+    modalId: 'test-modal'
+  });
+
+  // Attach to the "Testar" button with retry logic
+  const attachTestListener = () => {
+    const testBtn = document.getElementById('test-btn');
+    if (!testBtn) {
+      console.error('[TestModal] Test button not found in DOM');
+      return false;
+    }
+
+    console.log('[TestModal] Attaching listener to test button');
+    testBtn.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      console.log('[TestModal] Test button clicked');
+      if (testModalInstance) {
+        testModalInstance.show();
+      } else {
+        console.error('[TestModal] Modal instance is null!');
+      }
+    });
+
+    console.log('[TestModal] Initialized successfully');
+    return true;
+  };
+
+  // Try to attach immediately
+  if (!attachTestListener()) {
+    // If button not found, wait for DOM to be ready
+    console.log('[TestModal] Waiting for DOM to be ready...');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachTestListener);
+    } else {
+      // DOM is ready but button still not found - try one more time after a delay
+      setTimeout(attachTestListener, 100);
+    }
+  }
+}
+
+/**
+ * Initialize the test modal with a pre-fetched task list
+ * (e.g. from exam gate polling) — the RECOMMENDED way when tasks are
+ * already known.
+ *
+ * @param tasks - Array of task objects with id and name
+ */
+export function initTestModalWithTaskList(tasks: Array<{ id: string; name: string }>): void {
+  console.log('[TestModal] initTestModalWithTaskList called with tasks:', tasks);
+
+  if (!tasks || tasks.length === 0) {
+    console.error('[TestModal] No tasks provided!');
+    return;
+  }
+
+  setTaskNames(tasks);
+  console.log('[TestModal] Task names set, creating modal instance...');
+
+  createTestModalInstance();
+}
+
+/**
+ * Initialize the test modal by fetching tasks from CMS.
+ * Used for development mode (when exam gate is disabled) — for exam mode,
+ * use initTestModalWithTaskList() instead.
+ */
+export async function initTestModalWithTasks(): Promise<void> {
+  console.log('[TestModal] Loading tasks from CMS API...');
+
+  try {
+    const tasks = await cmsTaskList();
+
+    if (tasks && tasks.length > 0) {
+      console.log('[TestModal] Tasks loaded successfully:', tasks);
+      initTestModalWithTaskList(tasks);
+    } else {
+      console.warn('[TestModal] No tasks returned from API, using defaults');
+      createTestModalInstance();
+    }
+  } catch (error) {
+    console.error('[TestModal] Error loading tasks:', error);
+    console.warn('[TestModal] Using default tasks as fallback');
+    createTestModalInstance();
+  }
 }
 

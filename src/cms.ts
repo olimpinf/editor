@@ -183,11 +183,12 @@ export async function cmsSubmit(taskId: string, codeContent: string, language: s
  * @param {string} language - The programming language string (e.g., 'C++20 / g++').
  */
 export async function cmsTestSend(taskId:string, codeContent: string, inputContent: string, language: string, languageExtension: string) {
-    // Tests always run on the hidden "tarefa" task (fixed 1 GB / 1 s limits, hidden from task list).
-    const TEST_TASK = "tarefa";
-    let TEST_API_URL = cmsApiUrl(`${TEST_TASK}/test`);
-    let fileNameField = `${TEST_TASK}.%l`;
-    let fileName = `${TEST_TASK}.${languageExtension}`;
+    // Tests run on the task chosen in the modal, using its real time/memory
+    // limits — matches Submeter, and lets students gauge their actual margin
+    // before submitting instead of the old fixed 1 GB / 1 s "tarefa" limits.
+    let TEST_API_URL = cmsApiUrl(`${taskId}/test`);
+    let fileNameField = `${taskId}.%l`;
+    let fileName = `${taskId}.${languageExtension}`;
 
     console.log("[cmsTestSend] URL", TEST_API_URL);
     console.log('[cmsTestSend] language:', language);
@@ -250,9 +251,8 @@ export async function cmsTestSend(taskId:string, codeContent: string, inputConte
  */
 export async function cmsTestStatus(taskId: string, id: string, language: string) {
     console.log("cmsTestStatus, language:", language);
-    // Tests are always tracked under the hidden "tarefa" task — must match cmsTestSend.
-    const TEST_TASK = "tarefa";
-    let url = cmsApiUrl(`${TEST_TASK}/test/${id}`);
+    // Must match the task used in cmsTestSend for the same run.
+    let url = cmsApiUrl(`${taskId}/test/${id}`);
     console.log("Test Status for taskId", taskId);
     console.log("url", url);
 

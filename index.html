@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- Static fallback; editor.ts overwrites this with the real version
+         (__APP_VERSION__, from package.json) as soon as it runs. -->
     <title>Editor-OBI</title>
     <!-- Plain relative paths (matching how img src= is done elsewhere in this
          file), not Vite's %BASE_URL% placeholder: Vite 5.4.21's dev server
@@ -57,10 +59,14 @@
 	  <div class="bar">
 	    <span>Código</span>
 	    <div class="controls">
-	      <!-- Run button -->
-	      <button id="run-btn" title="Executar" class="submitButton">
+	      <!-- Run button (local WASM: C/C++/Python, no CMS round-trip) -->
+	      <button id="run-btn" title="Executar localmente" class="submitButton">
 			Executar
 	        <!--img src="img/icon-play.svg" height="17pt" alt="Executar"-->
+	      </button>
+	      <!-- Test button (CMS execution — real limits/timing, like a submission) -->
+	      <button id="test-btn" title="Testar no CMS" class="submitButton">
+			Testar
 	      </button>
 	      <!-- Submit button -->
 	      <button id="submit-btn" title="Submeter para correção" class="submitButton">
@@ -152,10 +158,7 @@
       </div>
       <div class="pane" id="pane-footer" data-pane="footer">
 	<div class="status-bar">
-	  <div class="status-left">
-	    <!--a href="https://olimpiada.ic.unicamp.br" target="_blank" rel="noopener">Olimpíada Brasileira de Informática</a-->
-	    Olimpíada Brasileira de Informática
-	  </div>
+	  <div class="status-left" id="version-label"></div>
 	  <div class="status-right" id="run-status" aria-live="polite">
 	    <strong>Status <span id="status-task"></span>: </strong><span id="status-label">Inativo</span>
 	    <span class="spinner" id="status-spinner" hidden></span>
@@ -227,9 +230,10 @@
 <p>Você pode também editar o nome de uma aba existente, clicando duas vezes no nome da aba.
 
 
-<p>A barra de ferramentas do Painel Código contém sete botões. Da esquerda para a direita, os botões são
+<p>A barra de ferramentas do Painel Código contém oito botões. Da esquerda para a direita, os botões são
 <ul>
 <li>Executar
+<li>Testar
 <li>Submeter
 <li>Seletor de Linguagem
 <li>Salvar
@@ -243,12 +247,25 @@
 <p>Em cada aba do Painel Código você pode trabalhar em uma linguagem de programação diferente. Para escolher a linguagem usada na aba, use o Seletor de Linguagem; você pode escolher entre C, C++, Java, Python ou Blockly).
 
 <h3>Executar</h3>
+<p>O botão Executar roda o seu código diretamente no seu computador, sem passar pelo servidor da OBI. Por isso ele é rápido: não há fila de espera, e você recebe o resultado quase na hora.
+
+<p>Para usar, escreva os valores de entrada no Painel Entrada e pressione o botão Executar. O resultado aparece no Painel Saída.
+
+<p>Enquanto o programa está rodando, o botão Executar se transforma no botão Parar (fica vermelho). Use-o se o seu programa travar — por exemplo, por causa de um laço infinito no seu código. Mesmo que você não clique em Parar, uma execução que demore mais de 5 segundos é interrompida automaticamente.
+
+<p><b>Atenção:</b> o botão Executar funciona apenas para C, C++, Python e Blockly — não está disponível para Java (o botão fica desabilitado nesse caso). Além disso, o tempo que o seu programa leva para rodar no seu computador não tem relação com o tempo que ele levará no servidor da OBI durante a correção — computadores diferentes têm velocidades diferentes. Use o Executar para descobrir e corrigir erros rapidamente, testando várias entradas diferentes. Para ter uma ideia real do tempo de execução e do uso de memória na correção, use o botão Testar.
+
+<h3>Testar</h3>
 <p>Antes de submeter sua solução para correção, você deve testá-la com diversas entradas, para certificar-se de que está correta. Algumas entradas são mostradas nos exemplos dos enunciados das tarefas. Além dessas, você deve também testar com outras entradas que você mesmo crie. Procure testar entradas que constituam situações representativas dos limites definidos na tarefa.
 
-<p>Para testar uma solução, escreva os valores para a entrada de seu programa no Painel Entrada e pressione o botão Executar. Nas execuções com o botão Executar o limite de tempo de execução é 1s e o limite de memória é 1GB.
+<p>O botão Testar envia sua solução para ser executada no servidor da OBI, da mesma forma que ela será executada na correção — com os mesmos limites de tempo e memória. Diferente do Executar, o Testar funciona para todas as linguagens, incluindo Java.
+
+<p>Para usar, escreva os valores para a entrada de seu programa no Painel Entrada e pressione o botão Testar. Nas execuções com o botão Testar o limite de tempo de execução é 1s e o limite de memória é 1GB.
 Se a execução de seu programa exceder esses limites ela será interrompida.
 
-<p>O código submetido será o conteúdo do Painel Código, e a entrada para o teste será o conteúdo do Painel Entrada. O resultado da execução do teste será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).
+<p>O código enviado será o conteúdo do Painel Código, e a entrada para o teste será o conteúdo do Painel Entrada. O resultado da execução do teste será mostrado no Painel Saída. A barra de status mostra o progresso da execução do teste ("compilando", "executando",...).
+
+<p>Como o Testar usa o servidor da OBI, ele pode demorar mais que o Executar, principalmente se houver fila de espera de outros competidores. Para encontrar a maioria dos erros no seu código, o Executar já é suficiente e mais rápido — use o Testar principalmente perto do momento de submeter, para confirmar que sua solução roda dentro dos limites de tempo e memória da prova.
 
 <h3>Submeter</h3>
 <p>Após testar seu código e certificar-se de que está correto, submeta sua solução para correção, utilizando o botão Submeter.
