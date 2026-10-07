@@ -147,8 +147,18 @@ async function getCompilerInvocation(baseUrl: string, inputName: string, flags: 
   };
 }
 
-/** Compiles one C++ source file to a runnable WebAssembly module. */
-export async function compileCpp(source: string, baseUrl: string, fileName = 'main.cpp'): Promise<CompileResult> {
+/**
+ * Compiles one C++ source file to a runnable WebAssembly module.
+ * maxMemoryBytes is a link-time cap (wasm-ld's --max-memory, bakes a fixed
+ * max page count into the module's own exported memory) -- there is no
+ * runtime WebAssembly.Memory import to swap in instead, since this module
+ * self-contains its memory (confirmed: runCppLocally below never provides
+ * one on instantiate, so it must be exported, not imported). This is why
+ * changing the memory-limit setting requires recompiling, not just
+ * re-running -- see local-run-worker.ts's cache key, which includes
+ * maxMemoryBytes alongside the source for exactly this reason.
+ */
+export async function compileCpp(source: string, baseUrl: string, fileName: string, maxMemoryBytes: number): Promise<CompileResult> {
   let stderr = '';
   const onErr = (data: string) => { stderr += data + '\n'; };
 
@@ -177,7 +187,7 @@ export async function compileCpp(source: string, baseUrl: string, fileName = 'ma
   const objectBytes = clang.FS.readFile(invocation.compilerArtifact, { encoding: 'binary' });
   lld.FS.writeFile(invocation.compilerArtifact, objectBytes);
   setUpSysroot(lld, sysroot);
-  exitCode = lld.callMain(invocation.linkerArgs);
+  exitCode = lld.callMain([...invocation.linkerArgs, `--max-memory=${maxMemoryBytes}`]);
   if (exitCode !== 0) {
     return { ok: false, module: null, compileOutput: stderr };
   }

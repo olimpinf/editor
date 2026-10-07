@@ -777,6 +777,18 @@ body.pane-expanded .pane:not(.expanded) {
   color: #333 !important;
 }
 
+.config-field { margin-bottom: 14px; }
+.config-field label { display: block; margin-bottom: 4px; font-size: 14px; }
+.config-field input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.config-hint { font-size: 13px; color: #888; margin: 0; }
+
 /* Mobile-specific adjustments */
 @media (max-width: 600px) {
   .obi-modal {
@@ -804,3 +816,66 @@ body.pane-expanded .pane:not(.expanded) {
     max-height: 98vh;
   }
 }
+
+/* === Submission results (Submeter -> ApiSubmissionStatusHandler in CMS) ===
+ * details_html below is CMS's own score_type_object.get_html_details()
+ * output -- the exact same markup/classes (.subtask, .subtask-head,
+ * .correct/.notcorrect/.partiallycorrect/.undefined, table.testcase-list)
+ * CWS's own "Details" view uses, ported from cms/server/contest/static/
+ * cws_style.css (NOT Pratique's django-adapted copy, which targets
+ * different Pratique-specific markup). Scoped under .submission-detail
+ * (a class, not CMS's own #submission_detail id, since the output pane
+ * can show results from several submissions in one scrolling history). */
+.submission-detail .subtask {
+  margin-bottom: 4px;
+}
+.submission-detail .subtask.open {
+  margin-bottom: 14px;
+}
+.submission-detail .subtask-head {
+  font-size: 14px;
+  line-height: 20px;
+  border-radius: 5px;
+  background-color: rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+}
+.submission-detail .subtask.open .subtask-head {
+  margin-bottom: 8px;
+}
+.submission-detail .subtask-head .title {
+  font-weight: 500;
+}
+.submission-detail .subtask-head .score {
+  float: right;
+  font-weight: bold;
+  display: inline-block;
+  border-radius: 5px;
+  min-width: 20%;
+  text-align: center;
+  color: white;
+  padding: 0 8px;
+}
+.submission-detail .subtask.undefined .subtask-head .score { background-color: #888; }
+.submission-detail .subtask.correct .subtask-head .score { background-color: #2a7a2a; }
+.submission-detail .subtask.notcorrect .subtask-head .score { background-color: #b02020; }
+.submission-detail .subtask.partiallycorrect .subtask-head .score { background-color: #b8960c; }
+.submission-detail .subtask:not(.open) .subtask-body {
+  display: none;
+}
+.submission-detail table.testcase-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.submission-detail table.testcase-list th,
+.submission-detail table.testcase-list td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+.submission-detail table.testcase-list tr.correct td.outcome { color: #2a7a2a; font-weight: 500; }
+.submission-detail table.testcase-list tr.notcorrect td.outcome { color: #b02020; font-weight: 500; }
+.submission-detail table.testcase-list tr.partiallycorrect td.outcome { color: #b8960c; font-weight: 500; }

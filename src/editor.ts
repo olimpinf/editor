@@ -5,11 +5,18 @@ import { initSubmitModalWithTasks, initSubmitModalWithTaskList, initTestModalWit
 import { initBackups } from './backups';
 import { initBlockly, getBlocklyPython, getBlocklyXml, loadBlocklyXml, resizeBlockly, setBlocklyTheme, setBlocklyChangeCallback } from './blockly-editor';
 import { getToolchainBaseUrl } from './local-run-config';
-import { runCppLocalInWorker, runPythonLocalInWorker, stopLocalRun, warmUpLocalRun, LOCAL_RUN_TIMEOUT_MS, type LocalRunOutcome } from './local-run-client';
+import { runCppLocalInWorker, runPythonLocalInWorker, stopLocalRun, warmUpLocalRun, type LocalRunOutcome } from './local-run-client';
+import { loadSettings, saveSettings, clampSettings, CAPS as LOCAL_RUN_CAPS, type LocalRunSettings } from './local-run-settings';
 
 
 window.runningTabId   = null;
 window.runningLanguage = null;
+
+// Student-configurable (gear icon -> modal, see local-run-settings.ts)
+// limits for local "Executar" -- loaded once here and kept live-updated by
+// the config modal's Salvar handler below, rather than re-reading
+// localStorage on every run.
+let localRunSettings: LocalRunSettings = loadSettings();
 
 // __APP_VERSION__ is injected by vite.config.ts's `define`, sourced from
 // package.json -- keeps the title and the status bar's version label in
@@ -49,6 +56,58 @@ window.currentLspClient = null;
 
 
 initGlobalTheme();
+
+// --- Config (gear icon): student-tunable local "Executar" limits, see
+// local-run-settings.ts. Wired unconditionally (not gated by exam state) --
+// unlike Submeter/Testar, configuring local run limits doesn't depend on
+// any task list being known yet. ---
+function wireLocalRunConfigModal(): void {
+    const modal = document.getElementById('config-modal');
+    const timeLimitInput = document.getElementById('config-time-limit') as HTMLInputElement | null;
+    const maxMemoryInput = document.getElementById('config-max-memory') as HTMLInputElement | null;
+    const btn = document.getElementById('config-btn');
+    if (!modal || !timeLimitInput || !maxMemoryInput || !btn) {
+        console.warn('[Config] gear modal elements not found — skipping wiring.');
+        return;
+    }
+
+    function openModal() {
+        timeLimitInput!.value = String(localRunSettings.timeLimitMs / 1000);
+        maxMemoryInput!.value = String(localRunSettings.maxMemoryBytes / (1024 * 1024));
+        modal!.setAttribute('aria-hidden', 'false');
+        (modal as HTMLElement).style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal!.setAttribute('aria-hidden', 'true');
+        (modal as HTMLElement).style.display = 'none';
+    }
+
+    btn.addEventListener('click', openModal);
+    document.getElementById('config-cancel-btn')?.addEventListener('click', closeModal);
+    document.getElementById('config-close-btn')?.addEventListener('click', closeModal);
+    modal.querySelector('.obi-modal__backdrop')?.addEventListener('click', closeModal);
+
+    const hint = document.getElementById('config-hint');
+    if (hint) {
+        hint.textContent = `Valores são limitados a ${LOCAL_RUN_CAPS.timeLimitS.max}s e ${LOCAL_RUN_CAPS.maxMemoryMiB.max}MB. O limite de memória se aplica apenas a C/C++ (Python não é afetado).`;
+    }
+
+    document.getElementById('config-save-btn')?.addEventListener('click', () => {
+        localRunSettings = clampSettings({
+            timeLimitS: timeLimitInput!.value,
+            maxMemoryMiB: maxMemoryInput!.value,
+        });
+        saveSettings(localRunSettings);
+        // No "mark dirty" step needed here (unlike stress_test's equivalent):
+        // the C++ compile cache in local-run-worker.ts is keyed on
+        // maxMemoryBytes alongside the source, so a changed memory setting
+        // is naturally a cache miss on the next Executar — not something
+        // this module needs to track.
+        closeModal();
+    });
+}
+wireLocalRunConfigModal();
 
 // Helper: is LSP enabled for this session?
 function isLSPEnabled(): boolean {
@@ -451,10 +510,21 @@ function wireRunButtons(): void {
 
 async function checkExamGateAndInitialize() {
     if (!window.AppConfig?.examGate?.enabled) {
-        // Development mode: no exam gate, just initialize normally
-        console.log('[ExamGate] Disabled - initializing normally');
-        await initSubmitModalWithTasks();
-        await initTestModalWithTasks();
+        const fixedTasks = (window as any).AppConfig?.fixedTasks as Array<{ id: string; name: string }> | undefined;
+        if (fixedTasks && fixedTasks.length > 0) {
+            // Pratique profile (see index.html's bootstrap script): the host
+            // page already knows exactly which one task this is for, so skip
+            // both the exam-gate poll and the generic placeholder task list
+            // initSubmitModalWithTasks() would otherwise use.
+            console.log('[ExamGate] Disabled - using fixedTasks from AppConfig', fixedTasks);
+            initSubmitModalWithTaskList(fixedTasks);
+            initTestModalWithTaskList(fixedTasks);
+        } else {
+            // Development mode: no exam gate, just initialize normally
+            console.log('[ExamGate] Disabled - initializing normally');
+            await initSubmitModalWithTasks();
+            await initTestModalWithTasks();
+        }
         wireRunButtons();
         return;
     }
@@ -2783,8 +2853,9 @@ async function executeTestRun(taskId: string, taskName?: string): Promise<void> 
 // via WASM, no CMS round-trip, no queue. Runs in a dedicated Worker (see
 // local-run-client.ts / local-run-worker.ts) — the only way to forcibly stop
 // a runaway program (e.g. an infinite loop), which cannot be interrupted
-// from the same thread it's running on. Bounded by LOCAL_RUN_TIMEOUT_MS as
-// an automatic guard against exactly that. Java has no local-run path — its
+// from the same thread it's running on. Bounded by localRunSettings.timeLimitMs
+// (gear icon -> modal, see local-run-settings.ts) as an automatic guard
+// against exactly that. Java has no local-run path — its
 // "Executar" button is disabled entirely (see updateRunButtonForLanguage).
 // Blockly (via getBlocklyPython) is treated the same as Python. =====
 
@@ -2847,8 +2918,8 @@ async function executeLocalRun(): Promise<void> {
         const isPython = selectedLanguage === 'python' || selectedLanguage === 'blockly';
         setStatusLabel('Executando…', { spinning: true, tabId });
         const outcome = isPython
-            ? await runPythonLocalInWorker(code, input, getToolchainBaseUrl('python'))
-            : await runCppLocalInWorker(tabId, code, input, getToolchainBaseUrl('cpp'));
+            ? await runPythonLocalInWorker(code, input, getToolchainBaseUrl('python'), localRunSettings.timeLimitMs)
+            : await runCppLocalInWorker(tabId, code, input, getToolchainBaseUrl('cpp'), localRunSettings.maxMemoryBytes, localRunSettings.timeLimitMs);
         reportLocalRunOutcome(outcome, colorInfoText, tabId);
     } catch (error: any) {
         console.warn("Local run failed:", error);
@@ -2893,7 +2964,7 @@ function reportLocalRunOutcome(outcome: LocalRunOutcome, colorInfoText: string, 
     if (outcome.timedOut || outcome.stopped) {
         displayLocalRunOutput(outcome, colorInfoText);
         const message = outcome.timedOut
-            ? `${getLocalizedTime()}: Execução interrompida: limite de ${LOCAL_RUN_TIMEOUT_MS / 1000}s excedido (provável loop infinito).\n`
+            ? `${getLocalizedTime()}: Execução interrompida: limite de ${localRunSettings.timeLimitMs / 1000}s excedido (provável loop infinito).\n`
             : `${getLocalizedTime()}: Execução interrompida pelo usuário.\n`;
         displayProgramOutput(formatOutput(message, "red"));
         setStatusLabel(outcome.timedOut ? 'Tempo limite excedido' : 'Execução interrompida', { spinning: false, tabId });

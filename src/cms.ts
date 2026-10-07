@@ -275,3 +275,35 @@ export async function cmsTestStatus(taskId: string, id: string, language: string
         console.error("Error during task list retrieval:", err);
     }
 }
+
+/**
+ * Polled after a real cmsSubmit() (not a test) to show the per-subtask
+ * score breakdown inline -- same shape as cmsTestStatus above, hitting
+ * CMS's new /api/<task>/submission/<id> endpoint (ApiSubmissionStatusHandler)
+ * instead of the test one. Returns { status: 'compiling' | 'compilation_failed'
+ * | 'evaluating' | 'scored', ...fields }; when status is 'scored', details_html
+ * is ready-to-insert HTML straight from CMS's own score_type_object.get_html_details()
+ * -- the exact same rendering CWS's own "Details" view uses for this submission,
+ * respecting whatever token/analysis-mode visibility rules apply.
+ */
+export async function cmsSubmissionStatus(taskId: string, id: string): Promise<any> {
+    const url = cmsApiUrl(`${taskId}/submission/${id}`);
+    console.log("[cmsSubmissionStatus] url", url);
+
+    try {
+        const resp = await fetch(url, {
+            method: "GET",
+            headers: window.CMS_API_HEADERS,
+        });
+
+        if (!resp.ok) {
+            console.error("[cmsSubmissionStatus] failed with status", resp.status);
+            return { status: "error" };
+        }
+
+        return await resp.json();
+    } catch (err) {
+        console.error("[cmsSubmissionStatus] error:", err);
+        return { status: "error" };
+    }
+}

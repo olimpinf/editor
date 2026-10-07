@@ -40,6 +40,12 @@
 	      <img src="img/icon-theme.svg" height="17pt" alt="Tema">
 	    </button>
 
+	    <!-- Config (local Executar limits) -->
+	    <button id="config-btn" title="Configuração">
+	      <img src="img/icon-gear.svg" height="18pt" alt="Configuração"
+		   onerror="this.replaceWith(document.createTextNode('Configuração'));">
+	    </button>
+
 	    <!-- Info button -->
 	    <button id="info-btn" title="Informações">
 	      <img src="img/icon-info.svg" height="18pt" alt="Info"
@@ -190,6 +196,33 @@
 	</div>
 
 
+    <!-- Config Modal (local Executar limits) -->
+    <div id="config-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="config-title"
+	    aria-hidden="true" style="display: none;">
+	    <div class="obi-modal__backdrop" data-dismiss="modal" tabindex="-1"></div>
+	    <div class="obi-modal__dialog" role="document" style="max-width: 420px;">
+		    <div class="obi-modal__header">
+			    <h2 id="config-title">Configuração</h2>
+			    <button id="config-close-btn" class="obi-modal__close" aria-label="Fechar">✕</button>
+		    </div>
+		    <div class="obi-modal__body">
+			    <div class="config-field">
+				    <label for="config-time-limit">Tempo limite de execução local (s)</label>
+				    <input type="number" id="config-time-limit" min="1" max="60" step="1">
+			    </div>
+			    <div class="config-field">
+				    <label for="config-max-memory">Limite de memória local, C/C++ (MB)</label>
+				    <input type="number" id="config-max-memory" min="16" max="4096" step="1">
+			    </div>
+			    <p class="config-hint" id="config-hint"></p>
+		    </div>
+		    <div class="obi-modal__footer">
+			    <button id="config-cancel-btn" class="obi-modal__action" style="background: #6c757d;">Cancelar</button>
+			    <button id="config-save-btn" class="obi-modal__action">Salvar</button>
+		    </div>
+	    </div>
+    </div>
+
     <!-- Info Modal -->
     <div id="info-modal" class="obi-modal" role="dialog" aria-modal="true" aria-labelledby="info-title"
 	 aria-hidden="true">
@@ -251,7 +284,7 @@
 
 <p>Para usar, escreva os valores de entrada no Painel Entrada e pressione o botão Executar. O resultado aparece no Painel Saída.
 
-<p>Enquanto o programa está rodando, o botão Executar se transforma no botão Parar (fica vermelho). Use-o se o seu programa travar — por exemplo, por causa de um laço infinito no seu código. Mesmo que você não clique em Parar, uma execução que demore mais de 5 segundos é interrompida automaticamente.
+<p>Enquanto o programa está rodando, o botão Executar se transforma no botão Parar (fica vermelho). Use-o se o seu programa travar — por exemplo, por causa de um laço infinito no seu código. Mesmo que você não clique em Parar, uma execução que demore demais ou use memória demais (C/C++) é interrompida automaticamente — ajuste esses limites no botão <b>⚙ Configuração</b>.
 
 <p><b>Atenção:</b> o botão Executar funciona apenas para C, C++, Python e Blockly — não está disponível para Java (o botão fica desabilitado nesse caso). Além disso, o tempo que o seu programa leva para rodar no seu computador não tem relação com o tempo que ele levará no servidor da OBI durante a correção — computadores diferentes têm velocidades diferentes. Use o Executar para descobrir e corrigir erros rapidamente, testando várias entradas diferentes. Para ter uma ideia real do tempo de execução e do uso de memória na correção, use o botão Testar.
 
@@ -336,12 +369,42 @@ Se a execução de seu programa exceder esses limites ela será interrompida.
 	</div>
 
     <script>
+      // Default: embedded in ExamLock (examlock-assets://, no query string) --
+      // exam gate locked until ExamLock's own task-list poll unlocks it (see
+      // editor.ts's checkExamGateAndInitialize), username/CMS_* injected
+      // asynchronously afterward by ExamLock's renderer.js.
       window.AppConfig = {
 	  examGate: { enabled: true },
 	  openExamUrl: true,
 	  useLSP: false,
 	  //useLSP: new URLSearchParams(window.location.search).get('lsp') !== '0'
       };
+
+      // Pratique profile: a host page (different origin, so this can't just
+      // be injected into an already-loaded page the way ExamLock does it --
+      // query params are the cross-origin-safe equivalent) opens this URL
+      // with ?task_id=...&task_name=...&cms_base=...&cms_token=...&username=...
+      // -- a single fixed task, no exam gate, and a CMS login token obtained
+      // server-side (see obi2026's pratique/views.py get_editor_url()) so the
+      // real password never reaches the browser. openExamUrl stays true here
+      // too: it's what makes editor.ts's waitForUsername() preserve the
+      // username set below instead of nulling it out (that helper only
+      // special-cases openExamUrl=false, which assumes nothing will ever set
+      // window.username and skips waiting -- but we HAVE already set it,
+      // synchronously, right here).
+      (function () {
+	  var params = new URLSearchParams(window.location.search);
+	  var taskId = params.get('task_id');
+	  var cmsToken = params.get('cms_token');
+	  if (!taskId || !cmsToken) return; // not a Pratique-style open — keep the ExamLock default above
+
+	  window.AppConfig.examGate = { enabled: false };
+	  window.AppConfig.fixedTasks = [{ id: taskId, name: params.get('task_name') || taskId }];
+	  window.username = params.get('username') || 'anonymous';
+	  window.CMS_AUTH_TOKEN = cmsToken;
+	  window.CMS_API_HEADERS = { 'X-CMS-Authorization': cmsToken };
+	  window.CMS_EXAM_URL = params.get('cms_base') || window.CMS_EXAM_URL;
+      })();
 
       (function(){
 	  try {

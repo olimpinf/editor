@@ -3,7 +3,60 @@
  * Handles the task selection modal when submitting code
  */
 
-import { cmsTaskList, cmsSubmit } from './cms';
+import { cmsTaskList, cmsSubmit, cmsSubmissionStatus } from './cms';
+
+// Delegated once: toggles a subtask's open/closed state in whatever
+// submission-result block is currently in the output pane -- works for
+// every poll result shown, past or future, without rewiring per-render.
+// Mirrors the equivalent inline script in obi2026's
+// pratique/corrige_programacao_resultado_cms.html (jQuery there, vanilla
+// here since the editor doesn't depend on jQuery).
+document.addEventListener('click', (e: Event) => {
+  const head = (e.target as HTMLElement).closest?.('.submission-detail .subtask-head');
+  if (head) head.parentElement?.classList.toggle('open');
+});
+
+const SUBMISSION_POLL_INTERVAL_MS = 3000;
+const SUBMISSION_POLL_MAX_TRIES = 30; // ~90s ceiling -- generous for a judge queue, not unbounded
+
+/**
+ * Polls ApiSubmissionStatusHandler after a real Submeter (not Testar) and
+ * shows the per-subtask score breakdown inline, same purpose as editor.ts's
+ * pollTestStatus but for a real submission. details_html is CMS's own
+ * score_type_object.get_html_details() output -- see the matching CSS in
+ * style.css ("Submission results" section) for the classes it uses.
+ */
+function pollSubmissionStatus(taskId: string, submissionId: string): void {
+  const out = (window as any).App?.Output;
+  let tries = 0;
+
+  const check = async () => {
+    tries++;
+    const result = await cmsSubmissionStatus(taskId, submissionId);
+
+    if (result.status === 'scored') {
+      out?.display(`<div class="submission-detail">${result.details_html}</div>`);
+      return;
+    }
+    if (result.status === 'compilation_failed') {
+      out?.display(out.format('Erro de compilação na submissão:', 'red'));
+      out?.display('<pre class="error">' + (result.compilation_stderr || result.compilation_stdout || '') + '</pre>');
+      return;
+    }
+    if (result.status === 'error') {
+      out?.display(out.format('Erro ao consultar o resultado da submissão. Verifique na aba Prova.', 'red'));
+      return;
+    }
+    // 'compiling' or 'evaluating' -- keep polling.
+    if (tries >= SUBMISSION_POLL_MAX_TRIES) {
+      out?.display(out.format('Tempo esgotado aguardando o resultado da submissão. Verifique na aba Prova.', 'orange'));
+      return;
+    }
+    setTimeout(check, SUBMISSION_POLL_INTERVAL_MS);
+  };
+
+  check();
+}
 
 // Task names - modify this array to add/remove tasks dynamically
 // Each task should have an id and a name
@@ -304,6 +357,16 @@ function getSubmitHandler() {
       if (result.success) {
         console.log('[SubmitModal] Submission successful!', result);
 
+        // Inline results only outside a gated/live exam (standalone dev use
+        // today, the Pratique profile once it exists) -- during a real
+        // proctored exam this stays exactly as before, pointing the
+        // student at the Prova tab instead. ApiSubmissionStatusHandler
+        // would show the same CMS-visibility-respecting result either way;
+        // this is a product choice about where it's surfaced, not a
+        // technical restriction.
+        const showInline = !(window as any).AppConfig?.examGate?.enabled;
+        const submissionId: string | undefined = result.data?.id;
+
         // Write confirmation to the output pane
         const out = (window as any).App?.Output;
         if (out) {
@@ -312,7 +375,10 @@ function getSubmitHandler() {
           const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
           const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky'};
           const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
-          const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso para tarefa ${taskName} (aba ${tabDisplay}). Consulte o resultado na aba Prova.\n`;
+          const resultHint = showInline && submissionId
+            ? 'Aguardando resultado...'
+            : 'Consulte o resultado na aba Prova.';
+          const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso para tarefa ${taskName} (aba ${tabDisplay}). ${resultHint}\n`;
           out.display(out.format(msg));
         }
 
@@ -323,7 +389,11 @@ function getSubmitHandler() {
             { spinning: false }
           );
         }
-        
+
+        if (showInline && submissionId) {
+          pollSubmissionStatus(taskId, submissionId);
+        }
+
         // If there's a redirect, you might want to handle it
         if (result.redirect) {
           console.log('[SubmitModal] Redirect to:', result.redirect);

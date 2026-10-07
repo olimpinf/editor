@@ -7,16 +7,6 @@
 import type { WorkerRequest, WorkerResponse } from './local-run-worker';
 import { appendCapped } from './local-run-config';
 
-// Guards against a student's runaway/infinite-loop program hanging the
-// editor indefinitely (confirmed by hands-on testing: without this, an
-// infinite loop froze the whole webview with no way to recover but reload).
-// Local runs are meant for fast iteration, not full-scale testing — Testar
-// (CMS) is the place for that — so this is deliberately short. This only
-// covers the student's own code actually running — see
-// LOCAL_STARTUP_TIMEOUT_MS below for the (separately timed) toolchain
-// load/compile phase that precedes it.
-export const LOCAL_RUN_TIMEOUT_MS = 8_000;
-
 // Covers reading the C++ toolchain off disk (clang.wasm/lld.wasm/
 // sysroot.tar/stdc++.h.pch, ~114MB) plus compiling+linking, or loading
 // Pyodide (~13MB) — none of which has anything to do with whether the
@@ -53,7 +43,7 @@ export interface LocalRunOutcome {
 // on kill" would show. `timer` holds whichever of the two timeouts
 // (startup/run) is currently armed for this request — swapped out when a
 // 'toolchain-ready' message arrives, see ensureWorker()'s onmessage below.
-type PendingEntry = { resolve: (r: LocalRunOutcome) => void; stdout: string; stderr: string; timer: ReturnType<typeof setTimeout> };
+type PendingEntry = { resolve: (r: LocalRunOutcome) => void; stdout: string; stderr: string; timer: ReturnType<typeof setTimeout>; runTimeoutMs: number };
 
 let worker: Worker | null = null;
 let nextReqId = 0;
@@ -98,9 +88,12 @@ function ensureWorker(): Worker {
     if (data.cmd === 'toolchain-ready') {
       // The slow, disk/AV-scan-bound part is done — from here on, a hang can
       // only mean the student's own code is looping, so switch from the
-      // generous startup allowance to the short infinite-loop guard.
+      // generous startup allowance to the short infinite-loop guard (the
+      // student's own configured limit, see local-run-settings.ts — set
+      // when this request was sent, not re-read live, so it can't change
+      // mid-run out from under an in-flight request).
       clearTimeout(entry.timer);
-      entry.timer = armTimeout(data.reqId, LOCAL_RUN_TIMEOUT_MS);
+      entry.timer = armTimeout(data.reqId, entry.runTimeoutMs);
       return; // not a final message — keep waiting
     }
 
@@ -129,15 +122,15 @@ export function stopLocalRun(): void {
   killWorker('stopped');
 }
 
-async function sendRequest(req: Omit<WorkerRequest, 'reqId'>): Promise<LocalRunOutcome> {
+async function sendRequest(req: Omit<WorkerRequest, 'reqId'>, runTimeoutMs: number): Promise<LocalRunOutcome> {
   const w = ensureWorker();
   const reqId = nextReqId++;
 
-  // Starts under the generous startup allowance — swapped for the short
-  // run-only timeout once the worker reports 'toolchain-ready' (see
-  // ensureWorker()'s onmessage above).
+  // Starts under the generous startup allowance — swapped for the
+  // caller-supplied run-only timeout once the worker reports
+  // 'toolchain-ready' (see ensureWorker()'s onmessage above).
   const resultPromise = new Promise<LocalRunOutcome>((resolve) => {
-    pending.set(reqId, { resolve, stdout: '', stderr: '', timer: armTimeout(reqId, LOCAL_STARTUP_TIMEOUT_MS) });
+    pending.set(reqId, { resolve, stdout: '', stderr: '', timer: armTimeout(reqId, LOCAL_STARTUP_TIMEOUT_MS), runTimeoutMs });
   });
 
   w.postMessage({ ...req, reqId } as WorkerRequest);
@@ -158,10 +151,13 @@ export function warmUpLocalRun(cppBaseUrl: string, pythonBaseUrl: string): void 
   w.postMessage({ cmd: 'warmup', reqId: nextReqId++, cppBaseUrl, pythonBaseUrl } as WorkerRequest);
 }
 
-export function runCppLocalInWorker(tabId: string, source: string, stdin: string, baseUrl: string): Promise<LocalRunOutcome> {
-  return sendRequest({ cmd: 'run-cpp', tabId, source, stdin, baseUrl });
+export function runCppLocalInWorker(
+  tabId: string, source: string, stdin: string, baseUrl: string,
+  maxMemoryBytes: number, runTimeoutMs: number,
+): Promise<LocalRunOutcome> {
+  return sendRequest({ cmd: 'run-cpp', tabId, source, stdin, baseUrl, maxMemoryBytes }, runTimeoutMs);
 }
 
-export function runPythonLocalInWorker(source: string, stdin: string, baseUrl: string): Promise<LocalRunOutcome> {
-  return sendRequest({ cmd: 'run-python', source, stdin, baseUrl });
+export function runPythonLocalInWorker(source: string, stdin: string, baseUrl: string, runTimeoutMs: number): Promise<LocalRunOutcome> {
+  return sendRequest({ cmd: 'run-python', source, stdin, baseUrl }, runTimeoutMs);
 }

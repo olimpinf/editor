@@ -6,7 +6,7 @@ import { compileCpp, runCppLocally, warmUpCppAssets, type CompileResult } from '
 import { runPythonLocally, warmUpPythonAssets } from './local-python';
 
 export type WorkerRequest =
-  | { cmd: 'run-cpp'; reqId: number; tabId: string; source: string; stdin: string; baseUrl: string }
+  | { cmd: 'run-cpp'; reqId: number; tabId: string; source: string; stdin: string; baseUrl: string; maxMemoryBytes: number }
   | { cmd: 'run-python'; reqId: number; source: string; stdin: string; baseUrl: string }
   | { cmd: 'warmup'; reqId: number; cppBaseUrl: string; pythonBaseUrl: string };
 
@@ -22,18 +22,22 @@ export type WorkerResponse =
   | { cmd: 'output-chunk'; reqId: number; stream: 'stdout' | 'stderr'; chunk: string }
   | { cmd: 'error'; reqId: number; message: string };
 
-// Skips recompiling C++ when the source hasn't changed since the last
-// successful compile for that tab. Lives here (not the client) so it
-// survives across calls within one worker's lifetime — a stop/timeout
-// terminates the worker, which naturally clears this too, matching the
-// expected cost of forcibly killing a runaway compile/run.
-const cppCompileCache = new Map<string, { source: string; result: CompileResult }>();
+// Skips recompiling C++ when neither the source nor the memory-limit
+// setting has changed since the last successful compile for that tab.
+// maxMemoryBytes is part of the cache key (not just source) because it's a
+// link-time flag (see local-cpp.ts's compileCpp) -- a cached module from
+// before the student changed the setting would silently keep the OLD
+// limit. Lives here (not the client) so it survives across calls within
+// one worker's lifetime — a stop/timeout terminates the worker, which
+// naturally clears this too, matching the expected cost of forcibly
+// killing a runaway compile/run.
+const cppCompileCache = new Map<string, { source: string; maxMemoryBytes: number; result: CompileResult }>();
 
-async function getCompiledCpp(tabId: string, source: string, baseUrl: string): Promise<CompileResult> {
+async function getCompiledCpp(tabId: string, source: string, baseUrl: string, maxMemoryBytes: number): Promise<CompileResult> {
   const cached = cppCompileCache.get(tabId);
-  if (cached && cached.source === source) return cached.result;
-  const result = await compileCpp(source, baseUrl);
-  cppCompileCache.set(tabId, { source, result });
+  if (cached && cached.source === source && cached.maxMemoryBytes === maxMemoryBytes) return cached.result;
+  const result = await compileCpp(source, baseUrl, 'main.cpp', maxMemoryBytes);
+  cppCompileCache.set(tabId, { source, maxMemoryBytes, result });
   return result;
 }
 
@@ -68,7 +72,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   try {
     if (req.cmd === 'run-cpp') {
-      const compileResult = await getCompiledCpp(req.tabId, req.source, req.baseUrl);
+      const compileResult = await getCompiledCpp(req.tabId, req.source, req.baseUrl, req.maxMemoryBytes);
       // Everything slow and disk/AV-scan-bound (reading clang.wasm/lld.wasm/
       // sysroot.tar off disk, compiling, linking) is done by this point,
       // whether or not the student's source actually compiled — from here
