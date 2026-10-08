@@ -20,6 +20,16 @@ const SUBMISSION_POLL_INTERVAL_MS = 3000;
 const SUBMISSION_POLL_MAX_TRIES = 30; // ~90s ceiling -- generous for a judge queue, not unbounded
 
 /**
+ * Formats a CMS score for display: whole numbers with no decimals (the
+ * common case, since subtask points are normally integers summing to 100),
+ * otherwise up to 2 decimals with no trailing zeros.
+ */
+function formatScore(score: number): string {
+  const rounded = Math.round(score * 100) / 100;
+  return rounded % 1 === 0 ? String(rounded) : String(rounded.toFixed(2)).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/**
  * Polls ApiSubmissionStatusHandler after a real Submeter (not Testar) and
  * shows the per-subtask score breakdown inline, same purpose as editor.ts's
  * pollTestStatus but for a real submission. details_html is CMS's own
@@ -35,7 +45,9 @@ function pollSubmissionStatus(taskId: string, submissionId: string): void {
     const result = await cmsSubmissionStatus(taskId, submissionId);
 
     if (result.status === 'scored') {
-      out?.display(`<div class="submission-detail">${result.details_html}</div>`);
+      const header = out.format(`<b>${out.time()}</b>: Correção recebida.`);
+      const totalLine = `<div class="submission-total-score">Total de pontos: ${formatScore(result.score)}</div>`;
+      out?.display(`${header}${totalLine}<div class="submission-detail">${result.details_html}</div>`);
       return;
     }
     if (result.status === 'compilation_failed') {
@@ -357,14 +369,11 @@ function getSubmitHandler() {
       if (result.success) {
         console.log('[SubmitModal] Submission successful!', result);
 
-        // Inline results only outside a gated/live exam (standalone dev use
-        // today, the Pratique profile once it exists) -- during a real
-        // proctored exam this stays exactly as before, pointing the
-        // student at the Prova tab instead. ApiSubmissionStatusHandler
-        // would show the same CMS-visibility-respecting result either way;
-        // this is a product choice about where it's surfaced, not a
-        // technical restriction.
-        const showInline = !(window as any).AppConfig?.examGate?.enabled;
+        // Results are now always shown inline, in exam mode too -- same
+        // ApiSubmissionStatusHandler output either way, respecting CMS's
+        // own visibility rules (feedback level, tokened/analysis mode),
+        // just surfaced in the editor instead of sending the student to
+        // the Prova tab to see it.
         const submissionId: string | undefined = result.data?.id;
 
         // Write confirmation to the output pane
@@ -375,7 +384,7 @@ function getSubmitHandler() {
           const lang = (document.getElementById('language-select') as HTMLSelectElement)?.value || 'cpp';
           const langExt: Record<string,string> = {c: 'c', cpp: 'cpp', java: 'java', python: 'py', blockly: 'bky'};
           const tabDisplay = `${tabBase}.${langExt[lang] || 'cpp'}`;
-          const resultHint = showInline && submissionId
+          const resultHint = submissionId
             ? 'Aguardando resultado...'
             : 'Consulte o resultado na aba Prova.';
           const msg = `\n<b>${out.time()}</b>: Submissão enviada com sucesso para tarefa ${taskName} (aba ${tabDisplay}). ${resultHint}\n`;
@@ -390,7 +399,7 @@ function getSubmitHandler() {
           );
         }
 
-        if (showInline && submissionId) {
+        if (submissionId) {
           pollSubmissionStatus(taskId, submissionId);
         }
 

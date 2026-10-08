@@ -826,6 +826,11 @@ body.pane-expanded .pane:not(.expanded) {
  * different Pratique-specific markup). Scoped under .submission-detail
  * (a class, not CMS's own #submission_detail id, since the output pane
  * can show results from several submissions in one scrolling history). */
+.submission-total-score {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 2px 0 10px;
+}
 .submission-detail .subtask {
   margin-bottom: 4px;
 }
